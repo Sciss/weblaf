@@ -17,6 +17,8 @@
 
 package com.alee.painter;
 
+import java.util.Map;
+
 /**
  * This interface is implemented by components which support custom painters.
  * It provides methods to modify component painter in runtime.
@@ -29,8 +31,11 @@ package com.alee.painter;
 public interface Paintable
 {
     /**
-     * todo 1. Merge into Styleable?
+     * Returns all custom painters for this component.
+     *
+     * @return all custom painters for this component
      */
+    public Map<String, Painter> getCustomPainters ();
 
     /**
      * Returns custom base painter for this component.
@@ -38,6 +43,14 @@ public interface Paintable
      * @return custom base painter for this component
      */
     public Painter getCustomPainter ();
+
+    /**
+     * Returns custom painter for this component.
+     *
+     * @param id painter ID
+     * @return custom painter for this component
+     */
+    public Painter getCustomPainter ( final String id );
 
     /**
      * Sets custom base painter for this component.
@@ -48,9 +61,18 @@ public interface Paintable
     public Painter setCustomPainter ( Painter painter );
 
     /**
-     * Resets painter for this component to default one.
+     * Sets custom painter for this component under the specified painter ID.
      *
-     * @return true if painter was successfully resetted, false otherwise
+     * @param id      painter ID
+     * @param painter painter
+     * @return old custom painter
      */
-    public boolean resetCustomPainter ();
+    public Painter setCustomPainter ( final String id, final Painter painter );
+
+    /**
+     * Restores default painters for this component.
+     *
+     * @return true if default painters were restored, false otherwise
+     */
+    public boolean restoreDefaultPainters ();
 }

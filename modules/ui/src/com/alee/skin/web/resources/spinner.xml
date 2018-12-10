@@ -1,4 +1,4 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.laf.spinner.WebSpinner -->
 
@@ -29,7 +29,7 @@
         <style type="panel" id="editor-container" extends="transparent" />
 
         <!-- Editor field -->
-        <style type="formattedtextfield" id="editor" extends="transparent" />
+        <style type="formattedtextfield" id="editor" extends="undecorated" />
 
         <!-- Buttons -->
         <style type="button" id="button" extends="icon">
@@ -41,9 +41,6 @@
                     <decoration>
                         <WebShadow type="outer" width="0" />
                         <ColorBackground color="245,245,245" />
-                    </decoration>
-                    <decoration states="in-focused-parent">
-                        <LineBorder color="85,130,190" />
                     </decoration>
                 </decorations>
             </painter>

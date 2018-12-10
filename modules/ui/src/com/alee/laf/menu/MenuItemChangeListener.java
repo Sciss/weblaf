@@ -17,6 +17,8 @@
 
 package com.alee.laf.menu;
 
+import com.alee.painter.Painter;
+
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -25,16 +27,15 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 
 /**
- * Special listener for {@link JMenuItem} that performs popup menu decoration updates.
- * It uses {@link ChangeListener} to track menu selection changes and {@link PropertyChangeListener} to track menu item model changes.
+ * Special menu item change listener required to update popup menu decoration properly.
  *
  * @author Mikle Garin
  */
 
-public class MenuItemChangeListener implements ChangeListener, PropertyChangeListener
+public class MenuItemChangeListener implements ChangeListener
 {
     /**
-     * {@link JMenuItem} to listen events for.
+     * Listened menu item.
      */
     protected JMenuItem menuItem;
 
@@ -48,7 +49,15 @@ public class MenuItemChangeListener implements ChangeListener, PropertyChangeLis
     {
         final MenuItemChangeListener listener = new MenuItemChangeListener ( menuItem );
         menuItem.getModel ().addChangeListener ( listener );
-        menuItem.addPropertyChangeListener ( AbstractButton.MODEL_CHANGED_PROPERTY, listener );
+        menuItem.addPropertyChangeListener ( AbstractButton.MODEL_CHANGED_PROPERTY, new PropertyChangeListener ()
+        {
+            @Override
+            public void propertyChange ( final PropertyChangeEvent evt )
+            {
+                ( ( ButtonModel ) evt.getOldValue () ).removeChangeListener ( listener );
+                menuItem.getModel ().addChangeListener ( listener );
+            }
+        } );
         return listener;
     }
 
@@ -57,13 +66,10 @@ public class MenuItemChangeListener implements ChangeListener, PropertyChangeLis
      *
      * @param listener listener to uninstall
      * @param menuItem menu item to uninstall listener from
-     * @return {@code null} for convenience reasons
      */
-    public static MenuItemChangeListener uninstall ( final MenuItemChangeListener listener, final JMenuItem menuItem )
+    public static void uninstall ( final MenuItemChangeListener listener, final JMenuItem menuItem )
     {
-        menuItem.removePropertyChangeListener ( AbstractButton.MODEL_CHANGED_PROPERTY, listener );
         menuItem.getModel ().removeChangeListener ( listener );
-        return null;
     }
 
     /**
@@ -78,33 +84,24 @@ public class MenuItemChangeListener implements ChangeListener, PropertyChangeLis
     }
 
     @Override
-    public void propertyChange ( final PropertyChangeEvent evt )
-    {
-        // Switching listener to new menu item model on its change
-        ( ( ButtonModel ) evt.getOldValue () ).removeChangeListener ( this );
-        ( ( ButtonModel ) evt.getNewValue () ).addChangeListener ( this );
-    }
-
-    @Override
     public void stateChanged ( final ChangeEvent e )
     {
-        // Checking whether we have a JPopupMenu parent
         final Container parent = menuItem.getParent ();
         if ( parent instanceof JPopupMenu )
         {
-            // Checking whether WebPopupMenuUI is used or not
             final JPopupMenu popupMenu = ( JPopupMenu ) parent;
             if ( popupMenu.getUI () instanceof WebPopupMenuUI )
             {
-                // Checking whether PopupMenuPainter is used or not
+                // Checking whether web-painter is used or not
                 final WebPopupMenuUI ui = ( WebPopupMenuUI ) popupMenu.getUI ();
-                if ( ui.getPainter () instanceof PopupMenuPainter )
+                final Painter painter = ui.getPainter ();
+                if ( painter instanceof PopupMenuPainter )
                 {
-                    // Checking painter sttyle settings
-                    final PopupMenuPainter webPainter = ( PopupMenuPainter ) ui.getPainter ();
+                    // Checking painter sttyle
+                    final PopupMenuPainter webPainter = ( PopupMenuPainter ) painter;
                     if ( webPainter.getPopupStyle () == PopupStyle.dropdown )
                     {
-                        // Checking whether or not this item state change affects the corner
+                        // Checking whether this item state change affect the corner
                         final int zOrder = popupMenu.getComponentZOrder ( menuItem );
                         if ( webPainter.getCornerSide () == SwingConstants.NORTH && zOrder == 0 )
                         {

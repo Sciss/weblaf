@@ -17,9 +17,10 @@
 
 package com.alee.extended.image;
 
+import com.alee.global.StyleConstants;
+import com.alee.managers.style.StyleId;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.hotkey.Hotkey;
-import com.alee.managers.style.StyleId;
 import com.alee.utils.GraphicsUtils;
 import com.alee.utils.ImageUtils;
 import com.alee.utils.LafUtils;
@@ -253,7 +254,7 @@ public class WebImageGallery extends JComponent
         }
 
         progress = 0f;
-        reflectionMover = new WebTimer ( "WebImageGallery.reflectionMoveTimer", SwingUtils.frameRateDelay ( 48 ), new ActionListener ()
+        reflectionMover = new WebTimer ( "WebImageGallery.reflectionMoveTimer", StyleConstants.fps48, new ActionListener ()
         {
             @Override
             public void actionPerformed ( final ActionEvent e )
@@ -311,9 +312,9 @@ public class WebImageGallery extends JComponent
             descriptions.add ( index, image.getIconWidth () + " x " + image.getIconHeight () + " px" );
             reflections.add ( index, reflection );
         }
-        catch ( final Exception e )
+        catch ( final Throwable e )
         {
-            // todo Handle out of memory?
+            // todo Handle out of memory
         }
 
         recalculateMaxSizes ();

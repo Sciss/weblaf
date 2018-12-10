@@ -17,23 +17,24 @@
 
 package com.alee.extended.tab;
 
-import com.alee.api.jdk.Function;
-import com.alee.extended.behavior.VisibilityBehavior;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.splitpane.WebSplitPane;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.managers.drag.DragManager;
-import com.alee.managers.settings.Configuration;
+import com.alee.managers.settings.DefaultValue;
+import com.alee.managers.settings.SettingsManager;
 import com.alee.managers.settings.SettingsMethods;
 import com.alee.managers.settings.SettingsProcessor;
-import com.alee.managers.settings.UISettingsManager;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
+import com.alee.utils.EventUtils;
 import com.alee.utils.TextUtils;
 import com.alee.utils.general.Pair;
+import com.alee.utils.swing.AncestorAdapter;
 import com.alee.utils.swing.Customizer;
 
 import javax.swing.*;
+import javax.swing.event.AncestorEvent;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -44,23 +45,32 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * {@link WebDocumentPane} is a special container for multiple documents described by {@link DocumentData} class.
- * This component uses either single or multiple {@link JTabbedPane}s and allow tabs reorder, drag, split and closeability.
- * It also allows usage of custom {@link DocumentData} implementations to adjust it's functionality or add custom data into it.
+ * This component is basically a special container for customizable documents described by DocumentData class.
+ * You can also override DocumentData class and for example include your own data into the document itself.
+ * <p>
+ * This component uses either single or multiply tabbed panes and allow tabs reorder, drag, split and closeability.
+ * All those features are of course configurable within the WebDocumentPane instance.
  *
  * @param <T> document type
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
- * @see PaneData
- * @see SplitData
- * @see DocumentData
+ * @see com.alee.extended.tab.PaneData
+ * @see com.alee.extended.tab.SplitData
+ * @see com.alee.extended.tab.DocumentData
  */
-public class WebDocumentPane<T extends DocumentData> extends WebPanel implements DocumentPaneEventMethods<T>, SettingsMethods
+
+public class WebDocumentPane<T extends DocumentData> extends WebPanel
+        implements DocumentPaneEventMethods<T>, SettingsMethods, SwingConstants
 {
     /**
-     * todo 1. Separate UI and make use of styling system
-     * todo 2. Possibility to edit tab title
+     * todo 1. Possibility to edit tab title
      */
+
+    /**
+     * Used icons.
+     */
+    public static final ImageIcon closeTabIcon = new ImageIcon ( PaneData.class.getResource ( "icons/close.png" ) );
+    public static final ImageIcon closeTabRolloverIcon = new ImageIcon ( PaneData.class.getResource ( "icons/close-rollover.png" ) );
 
     /**
      * Constant key used to put pane element data into the UI component.
@@ -102,7 +112,7 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
     /**
      * Whether documents can be closed or not.
      */
-    protected boolean closable = true;
+    protected boolean closeable = true;
 
     /**
      * Whether documents drag enabled or not.
@@ -130,16 +140,9 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
     protected WeakReference<T> previouslySelected = new WeakReference<T> ( null );
 
     /**
-     * {@link Function} that resolves {@link DocumentData} for provided identifier.
-     * It is used in to open documents by their identifiers instead of document references.
-     * This {@link Function} is essential for proper state restoration functioning.
+     * Documents data provider.
      */
-    protected Function<String, T> documentsProvider = null;
-
-    /**
-     * Document drag view handler.
-     */
-    protected final DocumentDragViewHandler dragViewHandler;
+    protected DocumentDataProvider<T> documentsProvider = null;
 
     /**
      * Constructs new document pane.
@@ -288,27 +291,25 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
         // Generating unique document pane ID
         this.id = TextUtils.generateId ( "WDP" );
 
-        // Registering drag view handler
-        dragViewHandler = new DocumentDragViewHandler ( this );
+        // Add initial pane
+        init ();
 
-        // Special behavior to keep view handler only while document pane is visible
-        new VisibilityBehavior ( this )
+        // Registering drag view handler
+        final DocumentDragViewHandler dragViewHandler = new DocumentDragViewHandler ( this );
+        addAncestorListener ( new AncestorAdapter ()
         {
             @Override
-            public void displayed ()
+            public void ancestorAdded ( final AncestorEvent event )
             {
                 DragManager.registerViewHandler ( dragViewHandler );
             }
 
             @Override
-            public void hidden ()
+            public void ancestorRemoved ( final AncestorEvent event )
             {
                 DragManager.unregisterViewHandler ( dragViewHandler );
             }
-        }.install ();
-
-        // Adding initial pane
-        initialize ();
+        } );
     }
 
     /**
@@ -413,19 +414,19 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
      *
      * @return true if tabs in this document pane are globally closable, false otherwise
      */
-    public boolean isClosable ()
+    public boolean isCloseable ()
     {
-        return closable;
+        return closeable;
     }
 
     /**
      * Sets whether tabs in this document pane should be globally closable or not.
      *
-     * @param closable whether tabs in this document pane should be globally closable or not
+     * @param closeable whether tabs in this document pane should be globally closable or not
      */
-    public void setClosable ( final boolean closable )
+    public void setCloseable ( final boolean closeable )
     {
-        this.closable = closable;
+        this.closeable = closeable;
     }
 
     /**
@@ -550,14 +551,14 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
         else
         {
             // Add initial pane
-            initialize ();
+            init ();
         }
     }
 
     /**
      * Initializes root and active pane.
      */
-    protected void initialize ()
+    protected void init ()
     {
         // Creating data for root pane
         final PaneData rootPane = new PaneData<T> ( this );
@@ -599,9 +600,8 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
         if ( splittedPane != null )
         {
             // Choosing course of action depending on splitted pane parent
-            final boolean ltr = direction == SwingConstants.RIGHT || direction == SwingConstants.BOTTOM;
-            final int orientation = direction == SwingConstants.LEFT || direction == SwingConstants.RIGHT ?
-                    SwingConstants.VERTICAL : SwingConstants.HORIZONTAL;
+            final boolean ltr = direction == RIGHT || direction == BOTTOM;
+            final int orientation = direction == LEFT || direction == RIGHT ? VERTICAL : HORIZONTAL;
             final SplitData<T> splitData;
             if ( splittedPane.getTabbedPane ().getParent () == WebDocumentPane.this )
             {
@@ -619,7 +619,7 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
                 add ( splitData.getSplitPane (), BorderLayout.CENTER );
 
                 // Restoring split locations
-                splitData.getSplitPane ().setDividerLocation ( orientation == SwingConstants.VERTICAL ? size.width / 2 : size.height / 2 );
+                splitData.getSplitPane ().setDividerLocation ( orientation == VERTICAL ? size.width / 2 : size.height / 2 );
 
                 // Changing root
                 root = splitData;
@@ -659,8 +659,7 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
                     parentSplitData.replace ( splittedPane, splitData );
 
                     // Restoring split locations
-                    final int location = orientation == SwingConstants.VERTICAL ? size.width / 2 : size.height / 2;
-                    splitData.getSplitPane ().setDividerLocation ( location );
+                    splitData.getSplitPane ().setDividerLocation ( orientation == VERTICAL ? size.width / 2 : size.height / 2 );
                     parentSplitData.getSplitPane ().setDividerLocation ( parentSplitLocation );
                 }
             }
@@ -948,15 +947,11 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
         {
             panes.add ( ( PaneData<T> ) structureData );
         }
-        else if ( structureData instanceof SplitData )
+        else
         {
             final SplitData<T> splitData = ( SplitData<T> ) structureData;
             collectPanes ( splitData.getFirst (), panes );
             collectPanes ( splitData.getLast (), panes );
-        }
-        else
-        {
-            throw new RuntimeException ( "Unknown structure data type: " + structureData.getClass () );
         }
     }
 
@@ -997,7 +992,7 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
      */
     public PaneData<T> getPane ( final T document )
     {
-        return document != null ? getPane ( document.getId () ) : null;
+        return getPane ( document.getId () );
     }
 
     /**
@@ -1118,21 +1113,9 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
      */
     public void openDocument ( final String documentId )
     {
-        openDocument ( documentId, true );
-    }
-
-    /**
-     * Opens document with the specified ID in this document pane.
-     * This method won't work in case you didn't set custom DocumentDataProvider.
-     *
-     * @param documentId ID of the document to open
-     * @param select     whether or not document tab should be selected
-     */
-    public void openDocument ( final String documentId, final boolean select )
-    {
         if ( documentsProvider != null )
         {
-            openDocument ( documentsProvider.apply ( documentId ), select );
+            openDocument ( documentsProvider.provide ( documentId ) );
         }
     }
 
@@ -1143,37 +1126,16 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
      */
     public void openDocument ( final T document )
     {
-        openDocument ( document, true );
-    }
-
-    /**
-     * Opens document in this document pane.
-     *
-     * @param document document to open
-     * @param select   whether or not document tab should be selected
-     */
-    public void openDocument ( final T document, final boolean select )
-    {
         if ( document != null )
         {
             if ( isDocumentOpened ( document ) )
             {
-                if ( select )
-                {
-                    setSelected ( document );
-                }
+                setSelected ( document );
             }
             else if ( activePane != null )
             {
                 activePane.open ( document );
-                if ( select )
-                {
-                    activePane.setSelected ( document );
-                }
-            }
-            else
-            {
-                throw new NullPointerException ( "Something went wrong, active pane is not available" );
+                activePane.setSelected ( document );
             }
         }
     }
@@ -1182,62 +1144,54 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
      * Closes document at the specified index in the active pane.
      *
      * @param index index of the document to close
-     * @return {@code true} if document was successfully closed, {@code false} otherwise
      */
-    public boolean closeDocument ( final int index )
+    public void closeDocument ( final int index )
     {
-        return activePane != null && activePane.close ( index );
+        if ( activePane != null )
+        {
+            activePane.close ( index );
+        }
     }
 
     /**
      * Closes document with the specified ID.
      *
      * @param id ID of the document to close
-     * @return {@code true} if document was successfully closed, {@code false} otherwise
      */
-    public boolean closeDocument ( final String id )
+    public void closeDocument ( final String id )
     {
         for ( final PaneData<T> paneData : getAllPanes () )
         {
-            if ( paneData.close ( id ) )
-            {
-                return true;
-            }
+            paneData.close ( id );
         }
-        return false;
     }
 
     /**
      * Closes the specified document.
      *
      * @param document document to close
-     * @return {@code true} if document was successfully closed, {@code false} otherwise
      */
-    public boolean closeDocument ( final T document )
+    public void closeDocument ( final T document )
     {
         for ( final PaneData<T> paneData : getAllPanes () )
         {
             if ( paneData.close ( document ) )
             {
-                return true;
+                break;
             }
         }
-        return false;
     }
 
     /**
      * Closes all documents.
-     *
-     * @return {@code true} if all documents were successfully closed, {@code false} otherwise
+     * Be aware that some documents might cancel their close operation and will still be opened after this call.
      */
-    public boolean closeAll ()
+    public void closeAll ()
     {
-        boolean success = true;
         for ( final PaneData<T> paneData : getAllPanes () )
         {
-            success &= paneData.closeAll ();
+            paneData.closeAll ();
         }
-        return success;
     }
 
     /**
@@ -1248,56 +1202,89 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
     protected void checkSelection ()
     {
         final T selected = getSelectedDocument ();
-        if ( previouslySelected.get () != selected )
+        if ( selected != null && previouslySelected.get () != selected )
         {
-            // Updating reference
             previouslySelected = new WeakReference<T> ( selected );
-
-            // Firing event only when something was actually selected
-            if ( selected != null )
-            {
-                final PaneData<T> pane = getPane ( selected );
-                fireDocumentSelected ( selected, pane, pane.indexOf ( selected ) );
-            }
+            final PaneData<T> pane = getPane ( selected );
+            fireDocumentSelected ( selected, pane, pane.indexOf ( selected ) );
         }
     }
 
     /**
-     * Returns {@link Function} that resolves {@link DocumentData} for provided identifier.
-     * It is used in to open documents by their identifiers instead of document references.
-     * This {@link Function} is essential for proper state restoration functioning.
+     * Returns custom documents provider.
+     * This may be used in to open documents by ID instead of document references.
+     * It may also be used for state restoration method.
      *
-     * @return {@link Function} that resolves {@link DocumentData} for provided identifier
+     * @return custom documents provider
      */
-    public Function<String, T> getDocumentsProvider ()
+    public DocumentDataProvider<T> getDocumentsProvider ()
     {
         return documentsProvider;
     }
 
     /**
-     * Sets {@link Function} that resolves {@link DocumentData} for provided identifier.
-     * It is used in to open documents by their identifiers instead of document references.
-     * This {@link Function} is essential for proper state restoration functioning.
+     * Sets custom documents provider.
+     * This may be used in to open documents by ID instead of document references.
+     * It may also be used for state restoration method.
      *
-     * @param provider new {@link Function} for resolving {@link DocumentData} by provided identifier
+     * @param provider custom documents provider
      */
-    public void setDocumentsProvider ( final Function<String, T> provider )
+    public void setDocumentsProvider ( final DocumentDataProvider<T> provider )
     {
         this.documentsProvider = provider;
     }
 
     /**
-     * Returns current {@link DocumentPaneState} for this {@link WebDocumentPane}.
-     * This {@link DocumentPaneState} contains opened document IDs references and structure composition.
-     * It can be used to save and restore {@link WebDocumentPane} structure and opened documents.
+     * Returns current document pane state.
+     * This state contains opened document IDs references and structure composition.
+     * It might basically be used to save/restore document pane documents structure.
      *
-     * @return current {@link DocumentPaneState} for this {@link WebDocumentPane}
+     * @return current document pane state
      * @see DocumentPaneState
      * @see #setDocumentPaneState(DocumentPaneState)
      */
     public DocumentPaneState getDocumentPaneState ()
     {
-        return root != null ? root.getDocumentPaneState () : null;
+        return getDocumentPaneStateImpl ( root );
+    }
+
+    /**
+     * Returns document pane state starting from the specified structure.
+     * This state contains opened document IDs references and structure composition.
+     * It might basically be used to save/restore document pane documents structure.
+     *
+     * @param structure structure level to start retrieving document pane state from
+     * @return document pane state starting from the specified structure
+     */
+    protected DocumentPaneState getDocumentPaneStateImpl ( final StructureData structure )
+    {
+        if ( structure != null )
+        {
+            // Provide proper according to structure type
+            if ( structure instanceof PaneData )
+            {
+                final PaneData<T> paneData = ( PaneData<T> ) structure;
+                final T selected = paneData.getSelected ();
+                return new DocumentPaneState ( selected != null ? selected.getId () : null, paneData.getDocumentIds () );
+            }
+            else
+            {
+                final SplitData<T> splitData = ( SplitData<T> ) structure;
+                final DocumentPaneState first = getDocumentPaneStateImpl ( splitData.getFirst () );
+                final DocumentPaneState last = getDocumentPaneStateImpl ( splitData.getLast () );
+                final Pair<DocumentPaneState, DocumentPaneState> splitState =
+                        new Pair<DocumentPaneState, DocumentPaneState> ( first, last );
+                return new DocumentPaneState ( splitData.getOrientation (), splitData.getDividerLocation (), splitState );
+            }
+        }
+        else
+        {
+            // This null case might occur in case one of split sides doesn't have child
+            // That is the case when last side's document is dragged or moved
+            // Or in case something is splitted/merged
+            // We just pass null state in this case as a workaround
+            return null;
+        }
     }
 
     /**
@@ -1333,11 +1320,11 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
     }
 
     /**
-     * Restores {@link StructureData} restored from provided {@link DocumentPaneState}.
+     * Restores {@link com.alee.extended.tab.StructureData} restored from provided {@link com.alee.extended.tab.DocumentPaneState}.
      *
      * @param state     document pane state to restore
      * @param documents existing documents
-     * @return {@link StructureData} restored from provided {@link DocumentPaneState}
+     * @return {@link com.alee.extended.tab.StructureData} restored from provided {@link com.alee.extended.tab.DocumentPaneState}
      */
     protected StructureData<T> restoreStructureStateImpl ( final DocumentPaneState state, final Map<String, T> documents )
     {
@@ -1381,7 +1368,7 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
                     // In case document doesn't exist, try requesting it from provider if we have one
                     if ( documentsProvider != null && !documents.containsKey ( id ) )
                     {
-                        documents.put ( id, documentsProvider.apply ( id ) );
+                        documents.put ( id, documentsProvider.provide ( id ) );
                     }
 
                     // Simply open document if it exists
@@ -1580,57 +1567,121 @@ public class WebDocumentPane<T extends DocumentData> extends WebPanel implements
     }
 
     @Override
-    public DocumentListener<T> onDocumentOpen ( final DocumentDataRunnable<T> runnable )
+    public DocumentAdapter<T> onDocumentOpen ( final DocumentDataRunnable<T> runnable )
     {
-        return DocumentPaneEventMethodsImpl.onDocumentOpen ( this, runnable );
+        return EventUtils.onDocumentOpen ( this, runnable );
     }
 
     @Override
-    public DocumentListener<T> onDocumentSelection ( final DocumentDataRunnable<T> runnable )
+    public DocumentAdapter<T> onDocumentSelection ( final DocumentDataRunnable<T> runnable )
     {
-        return DocumentPaneEventMethodsImpl.onDocumentSelection ( this, runnable );
+        return EventUtils.onDocumentSelection ( this, runnable );
     }
 
     @Override
-    public DocumentListener<T> onDocumentClosing ( final DocumentDataCancellableRunnable<T> runnable )
+    public DocumentAdapter<T> onDocumentClosing ( final DocumentDataCancellableRunnable<T> runnable )
     {
-        return DocumentPaneEventMethodsImpl.onDocumentClosing ( this, runnable );
+        return EventUtils.onDocumentClosing ( this, runnable );
     }
 
     @Override
-    public DocumentListener<T> onDocumentClose ( final DocumentDataRunnable<T> runnable )
+    public DocumentAdapter<T> onDocumentClose ( final DocumentDataRunnable<T> runnable )
     {
-        return DocumentPaneEventMethodsImpl.onDocumentClose ( this, runnable );
+        return EventUtils.onDocumentClose ( this, runnable );
     }
 
     @Override
-    public void registerSettings ( final Configuration configuration )
+    public void registerSettings ( final String key )
     {
-        UISettingsManager.registerComponent ( this, configuration );
+        SettingsManager.registerComponent ( this, key );
     }
 
     @Override
-    public void registerSettings ( final SettingsProcessor processor )
+    public <V extends DefaultValue> void registerSettings ( final String key, final Class<V> defaultValueClass )
     {
-        UISettingsManager.registerComponent ( this, processor );
+        SettingsManager.registerComponent ( this, key, defaultValueClass );
+    }
+
+    @Override
+    public void registerSettings ( final String key, final Object defaultValue )
+    {
+        SettingsManager.registerComponent ( this, key, defaultValue );
+    }
+
+    @Override
+    public void registerSettings ( final String group, final String key )
+    {
+        SettingsManager.registerComponent ( this, group, key );
+    }
+
+    @Override
+    public <V extends DefaultValue> void registerSettings ( final String group, final String key, final Class<V> defaultValueClass )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValueClass );
+    }
+
+    @Override
+    public void registerSettings ( final String group, final String key, final Object defaultValue )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValue );
+    }
+
+    @Override
+    public void registerSettings ( final String key, final boolean loadInitialSettings, final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, key, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public <V extends DefaultValue> void registerSettings ( final String key, final Class<V> defaultValueClass,
+                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final String key, final Object defaultValue, final boolean loadInitialSettings,
+                                   final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, key, defaultValue, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public <V extends DefaultValue> void registerSettings ( final String group, final String key, final Class<V> defaultValueClass,
+                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final String group, final String key, final Object defaultValue, final boolean loadInitialSettings,
+                                   final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValue, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final SettingsProcessor settingsProcessor )
+    {
+        SettingsManager.registerComponent ( this, settingsProcessor );
     }
 
     @Override
     public void unregisterSettings ()
     {
-        UISettingsManager.unregisterComponent ( this );
+        SettingsManager.unregisterComponent ( this );
     }
 
     @Override
     public void loadSettings ()
     {
-        UISettingsManager.loadSettings ( this );
+        SettingsManager.loadComponentSettings ( this );
     }
 
     @Override
     public void saveSettings ()
     {
-        UISettingsManager.saveSettings ( this );
+        SettingsManager.saveComponentSettings ( this );
     }
 
     /**

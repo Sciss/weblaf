@@ -17,42 +17,46 @@
 
 package com.alee.managers.style.data;
 
-import com.alee.api.merge.Overwriting;
-import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
+import com.alee.utils.MergeUtils;
 import com.thoughtworks.xstream.annotations.XStreamConverter;
 
 import java.io.Serializable;
-import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * Contains single {@link com.alee.painter.Painter} style data.
- * It stores any {@link com.alee.painter.Painter}-related data without instantiating {@link com.alee.painter.Painter} itself.
+ * Painter style information class.
  *
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
  * @see com.alee.managers.style.StyleManager
  */
+
 @XStreamConverter ( PainterStyleConverter.class )
-public final class PainterStyle implements Overwriting, Cloneable, Serializable
+public final class PainterStyle implements Serializable, Cloneable
 {
     /**
-     * Whether or not this {@link com.alee.painter.Painter} should overwrite another one when merged.
+     * Painter ID.
+     * Refers to painter type.
+     * It is required since a lot of components has more than just one painter.
      */
-    @XStreamAsAttribute
-    private Boolean overwrite;
+    private String id;
+
+    /**
+     * Whether this is base component painter or not.
+     */
+    private boolean base;
 
     /**
      * Painter class canonical name.
      * Used for painter instantiation.
      */
-    @XStreamAsAttribute
     private String painterClass;
 
     /**
      * Painter properties.
      * Contains parsed painter settings.
      */
-    private LinkedHashMap<String, Object> properties;
+    private Map<String, Object> properties;
 
     /**
      * Constructs new painter style information.
@@ -62,20 +66,44 @@ public final class PainterStyle implements Overwriting, Cloneable, Serializable
         super ();
     }
 
-    @Override
-    public boolean isOverwrite ()
+    /**
+     * Returns painter ID.
+     *
+     * @return painter ID
+     */
+    public String getId ()
     {
-        return overwrite != null && overwrite;
+        return id;
     }
 
     /**
-     * Sets whether or not this {@link com.alee.painter.Painter} should overwrite another one when merged.
+     * Sets painter ID.
      *
-     * @param overwrite whether or not this {@link com.alee.painter.Painter} should overwrite another one when merged
+     * @param id new painter ID
      */
-    public void setOverwrite ( final Boolean overwrite )
+    public void setId ( final String id )
     {
-        this.overwrite = overwrite;
+        this.id = id;
+    }
+
+    /**
+     * Returns whether this is base component painter or not.
+     *
+     * @return true if this is base component painter, false otherwise
+     */
+    public boolean isBase ()
+    {
+        return base;
+    }
+
+    /**
+     * Sets whether this is base component painter or not.
+     *
+     * @param base whether this is base component painter or not
+     */
+    public void setBase ( final boolean base )
+    {
+        this.base = base;
     }
 
     /**
@@ -103,7 +131,7 @@ public final class PainterStyle implements Overwriting, Cloneable, Serializable
      *
      * @return painter properties
      */
-    public LinkedHashMap<String, Object> getProperties ()
+    public Map<String, Object> getProperties ()
     {
         return properties;
     }
@@ -113,8 +141,19 @@ public final class PainterStyle implements Overwriting, Cloneable, Serializable
      *
      * @param properties new painter properties
      */
-    public void setProperties ( final LinkedHashMap<String, Object> properties )
+    public void setProperties ( final Map<String, Object> properties )
     {
         this.properties = properties;
+    }
+
+    /**
+     * Returns cloned instance of this painter style.
+     *
+     * @return cloned instance of this painter style
+     */
+    @Override
+    public PainterStyle clone ()
+    {
+        return MergeUtils.cloneByFieldsSafely ( this );
     }
 }

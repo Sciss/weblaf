@@ -22,17 +22,17 @@ import com.alee.painter.SectionPainter;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JTree} component row painters.
+ * Base interface for JTree component row painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Mikle Garin
  */
 
-public interface ITreeRowPainter<C extends JTree, U extends WTreeUI> extends SectionPainter<C, U>
+public interface ITreeRowPainter<E extends JTree, U extends WebTreeUI> extends SectionPainter<E, U>
 {
     /**
-     * Prepares painter to paint tree row.
+     * Prepares painter to pain tree row.
      *
      * @param row painted row index
      */

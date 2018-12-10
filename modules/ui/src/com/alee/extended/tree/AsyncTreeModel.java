@@ -17,96 +17,150 @@
 
 package com.alee.extended.tree;
 
-import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.tree.TreeState;
 import com.alee.laf.tree.WebTreeModel;
-import com.alee.laf.tree.WebTreeNode;
 import com.alee.utils.CollectionUtils;
-import com.alee.utils.CoreSwingUtils;
+import com.alee.utils.MapUtils;
+import com.alee.utils.SwingUtils;
+import com.alee.utils.collection.DoubleMap;
 import com.alee.utils.compare.Filter;
 
-import javax.swing.event.EventListenerList;
 import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreeNode;
-import javax.swing.tree.TreePath;
 import java.util.*;
 
 /**
- * {@link WebTreeModel} extension that is based on data from {@link AsyncTreeDataProvider}.
- * It allows tree to load its data asynchronously but only supports sorting and filtering of loaded nodes.
+ * Special model for asynchronous tree that provides asynchronous data loading.
+ * This class also controls the loading animation in elements.
  *
- * @param <N> {@link AsyncUniqueNode} type
+ * @param <E> custom node type
  * @author Mikle Garin
- * @see WebAsyncTree
- * @see AsyncTreeDataProvider
+ * @see com.alee.extended.tree.WebAsyncTree
+ * @see com.alee.extended.tree.AsyncTreeDataProvider
  */
-public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> implements FilterableNodes<N>, SortableNodes<N>
+
+public class AsyncTreeModel<E extends AsyncUniqueNode> extends WebTreeModel<E>
 {
     /**
-     * todo 1. Add {@link AsyncTreeDataUpdater} support
+     * todo 1. Add AsyncTreeDataUpdater support
      */
 
     /**
-     * {@link AsyncTreeDataProvider} implementation.
-     * It is used to provide all {@link AsyncUniqueNode}s for the tree.
+     * Lock object for asynchronous tree listeners.
      */
-    protected final AsyncTreeDataProvider<N> dataProvider;
+    protected final Object modelListenersLock = new Object ();
 
     /**
-     * Event listeners.
+     * Asynchronous tree listeners.
      */
-    protected final EventListenerList listeners;
-
-    /**
-     * Nodes cached states (parent identifier -&gt; children cached state).
-     * If child nodes for some parent node are cached then this map contains "true" value under that parent node identifier as a key.
-     */
-    protected transient Map<String, Boolean> nodeCached;
-
-    /**
-     * Cache for children nodes returned by data provider (parent identifier -&gt; list of raw child nodes).
-     * This map contains raw children which weren't affected by sorting and filtering operations.
-     * If children needs to be re-sorted or re-filtered they are simply taken from the cache and re-organized once again.
-     */
-    protected transient Map<String, List<N>> rawNodeChildrenCache;
-
-    /**
-     * Direct nodes cache (node identifier -&gt; node).
-     * Used for quick node search within the tree.
-     */
-    protected transient Map<String, N> nodeById;
+    protected final List<AsyncTreeModelListener> asyncTreeModelListeners = new ArrayList<AsyncTreeModelListener> ( 1 );
 
     /**
      * Asynchronous tree that uses this model.
      */
-    protected transient WebAsyncTree<N> tree;
+    protected final WebAsyncTree<E> tree;
+
+    /**
+     * Asynchronous tree data provider.
+     */
+    protected final AsyncTreeDataProvider<E> dataProvider;
+
+    /**
+     * Whether to load children asynchronously or not.
+     */
+    protected boolean asyncLoading = true;
+
+    //    /**
+    //     * Data updater for this asynchronous tree.
+    //     */
+    //    protected AsyncTreeDataUpdater<E> dataUpdater;
 
     /**
      * Root node cache.
      * Cached when root is requested for the first time.
      */
-    protected transient N rootNode;
+    protected E rootNode = null;
 
     /**
-     * {@link Filter} for {@link AsyncUniqueNode}s.
+     * Lock object for cache changes.
      */
-    protected transient Filter<N> filter;
+    protected final Object cacheLock = new Object ();
 
     /**
-     * {@link Comparator} for {@link AsyncUniqueNode}s.
+     * Nodes cached states (parent ID -&gt; children cached state).
+     * If child nodes for some parent node are cached then this map contains "true" value under that parent node ID as a key.
      */
-    protected transient Comparator<N> comparator;
+    protected final Map<String, Boolean> nodeCached = new HashMap<String, Boolean> ();
 
     /**
-     * Constructs new {@link AsyncTreeModel} with custom {@link AsyncTreeDataProvider}.
+     * Cache for children nodes returned by data provider (parent ID -&gt; list of raw child nodes).
+     * This map contains raw children which weren't affected by sorting and filtering operations.
+     * If children needs to be re-sorted or re-filtered they are simply taken from the cache and re-organized once again.
+     */
+    protected final Map<String, List<E>> rawNodeChildrenCache = new HashMap<String, List<E>> ();
+
+    /**
+     * Direct nodes cache (node ID -&gt; node).
+     * Used for quick node search within the tree.
+     */
+    protected final DoubleMap<String, E> nodeById = new DoubleMap<String, E> ();
+
+    /**
+     * Lock object for busy state changes.
+     */
+    protected final Object busyLock = new Object ();
+
+    /**
+     * Constructs default asynchronous tree model using custom data provider.
      *
-     * @param dataProvider {@link AsyncTreeDataProvider}
+     * @param tree         asynchronous tree
+     * @param dataProvider data provider
      */
-    public AsyncTreeModel ( final AsyncTreeDataProvider<N> dataProvider )
+    public AsyncTreeModel ( final WebAsyncTree<E> tree, final AsyncTreeDataProvider<E> dataProvider )
     {
         super ( null );
+        this.tree = tree;
         this.dataProvider = dataProvider;
-        this.listeners = new EventListenerList ();
+    }
+
+    //    /**
+    //     * Returns data updater for this asynchronous tree.
+    //     *
+    //     * @return data updater
+    //     */
+    //    public AsyncTreeDataUpdater<E> getDataUpdater ()
+    //    {
+    //        return dataUpdater;
+    //    }
+    //
+    //    /**
+    //     * Changes data updater for this asynchronous tree.
+    //     *
+    //     * @param dataUpdater new data updater
+    //     */
+    //    public void setDataUpdater ( final AsyncTreeDataUpdater<E> dataUpdater )
+    //    {
+    //        this.dataUpdater = dataUpdater;
+    //    }
+
+    /**
+     * Returns whether children are loaded asynchronously or not.
+     *
+     * @return true if children are loaded asynchronously, false otherwise
+     */
+    public boolean isAsyncLoading ()
+    {
+        return asyncLoading;
+    }
+
+    /**
+     * Sets whether to load children asynchronously or not.
+     *
+     * @param asyncLoading whether to load children asynchronously or not
+     */
+    public void setAsyncLoading ( final boolean asyncLoading )
+    {
+        this.asyncLoading = asyncLoading;
     }
 
     /**
@@ -114,155 +168,83 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
      *
      * @return data provider
      */
-    public AsyncTreeDataProvider<N> getDataProvider ()
+    public AsyncTreeDataProvider<E> getDataProvider ()
     {
         return dataProvider;
     }
 
     /**
-     * Installs this {@link AsyncTreeModel} into the specified {@link WebAsyncTree}.
+     * Returns tree root node.
      *
-     * @param tree {@link WebAsyncTree}
+     * @return root node
      */
-    public void install ( final WebAsyncTree<N> tree )
-    {
-        WebLookAndFeel.checkEventDispatchThread ();
-        this.nodeCached = new HashMap<String, Boolean> ( 50 );
-        this.rawNodeChildrenCache = new HashMap<String, List<N>> ( 10 );
-        this.nodeById = new HashMap<String, N> ( 50 );
-        this.tree = tree;
-        this.rootNode = null;
-        addAsyncTreeModelListener ( tree );
-    }
-
-    /**
-     * Uninstalls this {@link AsyncTreeModel} from the specified {@link WebAsyncTree}.
-     *
-     * @param tree {@link WebAsyncTree}
-     */
-    public void uninstall ( final WebAsyncTree<N> tree )
-    {
-        WebLookAndFeel.checkEventDispatchThread ();
-        removeAsyncTreeModelListener ( tree );
-        for ( final Map.Entry<String, N> entry : nodeById.entrySet () )
-        {
-            final N node = entry.getValue ();
-            node.detachLoadIconObserver ( tree );
-        }
-        this.rootNode = null;
-        this.tree = null;
-        this.nodeById = null;
-        this.rawNodeChildrenCache = null;
-        this.nodeCached = null;
-    }
-
-    /**
-     * Returns whether or not this {@link AsyncTreeModel} is installed into some {@link WebAsyncTree}.
-     *
-     * @return {@code true} if this {@link AsyncTreeModel} is installed into some {@link WebAsyncTree}, {@code false} otherwise
-     */
-    public boolean isInstalled ()
-    {
-        return tree != null;
-    }
-
-    /**
-     * Checks whether or not this {@link AsyncTreeModel} is installed into some {@link WebAsyncTree}.
-     * If it is not installed - {@link IllegalStateException} is thrown to emphasize problem.
-     */
-    protected void checkInstalled ()
-    {
-        if ( !isInstalled () )
-        {
-            throw new IllegalStateException ( "This operation cannot be performed before model is installed into WebAsyncTree" );
-        }
-    }
-
     @Override
-    public N getRoot ()
+    public E getRoot ()
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Creating root node if needed
         if ( rootNode == null )
         {
             // Retrieving and caching root node
-            rootNode = getDataProvider ().getRoot ();
+            rootNode = dataProvider.getRoot ();
 
-            // Caching root node by identifier
+            // Caching root node by ID
             cacheNodeById ( rootNode );
 
             // Adding image observer
             rootNode.attachLoadIconObserver ( tree );
         }
-
         return rootNode;
     }
 
+    /**
+     * Returns whether the specified node is leaf or not.
+     *
+     * @param node node
+     * @return true if node is leaf, false otherwise
+     */
     @Override
     public boolean isLeaf ( final Object node )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Redirecting check to provider
-        return getDataProvider ().isLeaf ( ( N ) node );
+        return dataProvider.isLeaf ( ( E ) node );
     }
 
     /**
-     * todo Generally speaking children loading shouldn't be invoked by this method as it might be a problem
-     * todo There should be a separate UI for async tree where we would listen for nodes expansion and perform loading and updates
+     * Returns children count for specified node.
+     *
+     * @param parent parent node
+     * @return children count
      */
     @Override
     public int getChildCount ( final Object parent )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Counting child nodes
-        final int count;
-        final N node = ( N ) parent;
-        if ( areChildrenLoaded ( node ) )
+        final E node = ( E ) parent;
+        if ( isLeaf ( node ) )
         {
-            // Simply using nodes count
-            count = super.getChildCount ( parent );
+            return 0;
         }
-        else if ( isLeaf ( node ) )
+        else if ( areChildrenLoaded ( node ) )
         {
-            // Caching empty children and returning zero
-            count = loadEmptyChildren ( node );
+            return super.getChildCount ( parent );
         }
         else
         {
-            // Loading children and returning count right away if possible
-            count = loadChildren ( node );
+            return loadChildren ( node );
         }
-        return count;
     }
 
+    /**
+     * Returns child node for parent node at the specified index.
+     *
+     * @param parent parent node
+     * @param index  child node index
+     * @return child node
+     */
     @Override
-    public N getChild ( final Object parent, final int index )
+    public E getChild ( final Object parent, final int index )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
-        final N node = ( N ) parent;
+        final E node = ( E ) parent;
         if ( areChildrenLoaded ( node ) )
         {
-            return ( N ) super.getChild ( parent, index );
+            return ( E ) super.getChild ( parent, index );
         }
         else
         {
@@ -270,312 +252,406 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
         }
     }
 
+    /**
+     * Returns whether children for the specified node are already loaded or not.
+     *
+     * @param node node to process
+     * @return true if children for the specified node are already loaded, false otherwise
+     */
+    public boolean areChildrenLoaded ( final E node )
+    {
+        synchronized ( cacheLock )
+        {
+            final Boolean cached = nodeCached.get ( node.getId () );
+            return cached != null && cached;
+        }
+    }
+
+    /**
+     * Reloads node children.
+     *
+     * @param node node
+     */
     @Override
     public void reload ( final TreeNode node )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
         // Cancels tree editing
         tree.cancelEditing ();
 
         // Cleaning up nodes cache
-        clearNodeChildrenCache ( ( N ) node, false );
+        clearNodeChildrenCache ( ( E ) node, false );
 
         // Forcing children reload
         super.reload ( node );
     }
 
     /**
-     * Loads empty node children.
-     * It is called for any node that {@link #isLeaf(Object)} has returned {@code true}.
-     * This is a small workaround to avoid {@link #loadChildren(AsyncUniqueNode)} call upon child nodes insert into empty parent node.
+     * Clears node and all of its child nodes children cached states.
      *
-     * @param parent node to load empty children for
-     * @return {@code 0} children count
+     * @param node      node to clear cache for
+     * @param clearNode whether should clear node cache or not
      */
-    protected int loadEmptyChildren ( final N parent )
+    protected void clearNodeChildrenCache ( final E node, final boolean clearNode )
     {
-        // Caching empty raw children
-        rawNodeChildrenCache.put ( parent.getId (), new ArrayList<N> ( 0 ) );
+        synchronized ( cacheLock )
+        {
+            // Clears node cache
+            if ( clearNode )
+            {
+                nodeById.remove ( node.getId () );
+            }
 
-        // Updatng cache
-        nodeCached.put ( parent.getId (), true );
+            // Clears node children cached state
+            nodeCached.remove ( node.getId () );
 
-        // Updating parent node load state
-        parent.setState ( AsyncNodeState.loaded );
+            // Clears node raw children cache
+            final List<E> children = rawNodeChildrenCache.remove ( node.getId () );
 
-        // Always return zero children count
-        return 0;
+            // Clears chld nodes cache
+            if ( children != null )
+            {
+                clearNodeChildrenCache ( children, true );
+            }
+        }
+    }
+
+    /**
+     * Clears nodes children cached states.
+     *
+     * @param nodes      nodes to clear cache for
+     * @param clearNodes whether should clear nodes cache or not
+     */
+    protected void clearNodeChildrenCache ( final List<E> nodes, final boolean clearNodes )
+    {
+        synchronized ( cacheLock )
+        {
+            for ( final E node : nodes )
+            {
+                clearNodeChildrenCache ( node, clearNodes );
+            }
+        }
+    }
+
+    /**
+     * Clears nodes children cached states.
+     *
+     * @param nodes      nodes to clear cache for
+     * @param clearNodes whether should clear nodes cache or not
+     */
+    protected void clearNodeChildrenCache ( final E[] nodes, final boolean clearNodes )
+    {
+        synchronized ( cacheLock )
+        {
+            for ( final E node : nodes )
+            {
+                clearNodeChildrenCache ( node, clearNodes );
+            }
+        }
+    }
+
+    /**
+     * Caches node by its IDs.
+     *
+     * @param node node to cache
+     */
+    protected void cacheNodeById ( final E node )
+    {
+        synchronized ( cacheLock )
+        {
+            nodeById.put ( node.getId (), node );
+        }
+    }
+
+    /**
+     * Caches nodes by their IDs.
+     *
+     * @param nodes list of nodes to cache
+     */
+    protected void cacheNodesById ( final List<E> nodes )
+    {
+        synchronized ( cacheLock )
+        {
+            for ( final E node : nodes )
+            {
+                nodeById.put ( node.getId (), node );
+            }
+        }
     }
 
     /**
      * Loads (or reloads) node children and returns zero or children count if async mode is off.
-     * This is base method that uses installed {@link AsyncTreeDataProvider} to retrieve tree node children.
+     * This is base method that uses installed AsyncTreeDataProvider to retrieve tree node children.
      *
      * @param parent node to load children for
      * @return zero or children count if async mode is off
-     * @see AsyncTreeDataProvider#loadChildren(AsyncUniqueNode, NodesLoadCallback)
+     * @see AsyncTreeDataProvider#loadChildren(AsyncUniqueNode, ChildrenListener)
      */
-    protected int loadChildren ( final N parent )
+    protected int loadChildren ( final E parent )
     {
-        // Ensure that we aren't already loading children
-        if ( !parent.isLoading () )
+        // todo Use when moved to JDK8?
+        // final SecondaryLoop loop = Toolkit.getDefaultToolkit ().getSystemEventQueue ().createSecondaryLoop ();
+        // loop.enter/exit
+
+        // Checking if the node is busy already
+        synchronized ( busyLock )
         {
-            // Updating parent node load state
-            parent.setState ( AsyncNodeState.loading );
-            nodeChanged ( parent );
-
-            // Firing load started event
-            fireChildrenLoadStarted ( parent );
-
-            // todo This should actually be called on node reload?
-            // Removing all old children if such exist
-            final int childCount = parent.getChildCount ();
-            if ( childCount > 0 )
+            if ( parent.isLoading () )
             {
-                final int[] indices = new int[ childCount ];
-                final Object[] children = new Object[ childCount ];
-                for ( int i = childCount - 1; i >= 0; i-- )
-                {
-                    indices[ i ] = i;
-                    children[ i ] = parent.getChildAt ( i );
-                    parent.remove ( i );
-                }
-                nodesWereRemoved ( parent, indices, children );
-            }
-
-            // Loading node children
-            if ( tree.isAsyncLoading () )
-            {
-                // Executing children load in a separate thread to avoid locking EDT
-                // This queue will also take care of amount of threads to execute async trees requests
-                AsyncTreeQueue.getInstance ( tree ).execute ( new Runnable ()
-                {
-                    @Override
-                    public void run ()
-                    {
-                        // Loading children
-                        getDataProvider ().loadChildren ( parent, new NodesLoadCallback<N> ()
-                        {
-                            @Override
-                            public void completed ( final List<N> children )
-                            {
-                                CoreSwingUtils.invokeLater ( new Runnable ()
-                                {
-                                    @Override
-                                    public void run ()
-                                    {
-                                        loadChildrenCompleted ( parent, children );
-                                    }
-                                } );
-                            }
-
-                            @Override
-                            public void failed ( final Throwable cause )
-                            {
-                                CoreSwingUtils.invokeLater ( new Runnable ()
-                                {
-                                    @Override
-                                    public void run ()
-                                    {
-                                        loadChildrenFailed ( parent, cause );
-                                    }
-                                } );
-                            }
-                        } );
-                    }
-                } );
                 return 0;
             }
             else
             {
-                // Loading children
-                // todo There is no guarantee that provider won't load children asynchronously
-                // todo Practically speaking - it's better to get rid of sync loading option in this tree and remove this part
-                getDataProvider ().loadChildren ( parent, new NodesLoadCallback<N> ()
-                {
-                    @Override
-                    public void completed ( final List<N> children )
-                    {
-                        loadChildrenCompleted ( parent, children );
-                    }
-
-                    @Override
-                    public void failed ( final Throwable cause )
-                    {
-                        loadChildrenFailed ( parent, cause );
-                    }
-                } );
-                return parent.getChildCount ();
+                parent.setState ( AsyncNodeState.loading );
+                nodeChanged ( parent );
             }
+        }
+
+        // Firing load started event
+        fireChildrenLoadStarted ( parent );
+
+        // todo This should actually be called on node reload?
+        // Removing all old children if such exist
+        final int childCount = parent.getChildCount ();
+        if ( childCount > 0 )
+        {
+            final int[] indices = new int[ childCount ];
+            final Object[] children = new Object[ childCount ];
+            for ( int i = childCount - 1; i >= 0; i-- )
+            {
+                indices[ i ] = i;
+                children[ i ] = parent.getChildAt ( i );
+                parent.remove ( i );
+            }
+            nodesWereRemoved ( parent, indices, children );
+        }
+
+        // Loading node children
+        if ( asyncLoading )
+        {
+            // Executing children load in a separate thread to avoid locking EDT
+            // This queue will also take care of amount of threads to execute async trees requests
+            AsyncTreeQueue.execute ( tree, new Runnable ()
+            {
+                @Override
+                public void run ()
+                {
+                    // Loading children
+                    dataProvider.loadChildren ( parent, new ChildrenListener<E> ()
+                    {
+                        @Override
+                        public void loadCompleted ( final List<E> children )
+                        {
+                            // Caching raw children
+                            synchronized ( cacheLock )
+                            {
+                                rawNodeChildrenCache.put ( parent.getId (), children );
+                                cacheNodesById ( children );
+                            }
+
+                            // Filtering and sorting raw children
+                            final List<E> realChildren = filterAndSort ( parent, children );
+
+                            // Updating cache
+                            synchronized ( cacheLock )
+                            {
+                                nodeCached.put ( parent.getId (), true );
+                            }
+
+                            // Performing UI updates and event notification in EDT
+                            SwingUtils.invokeLater ( new Runnable ()
+                            {
+                                @Override
+                                public void run ()
+                                {
+                                    // Checking if any nodes loaded
+                                    if ( realChildren != null && realChildren.size () > 0 )
+                                    {
+                                        // Inserting loaded nodes
+                                        insertNodesIntoImpl ( realChildren, parent, 0 );
+                                    }
+
+                                    // Releasing node busy state
+                                    synchronized ( busyLock )
+                                    {
+                                        parent.setState ( AsyncNodeState.loaded );
+                                        nodeChanged ( parent );
+                                    }
+
+                                    // Firing load completed event
+                                    fireChildrenLoadCompleted ( parent, realChildren );
+                                }
+                            } );
+                        }
+
+                        @Override
+                        public void loadFailed ( final Throwable cause )
+                        {
+                            // Caching children
+                            synchronized ( cacheLock )
+                            {
+                                rawNodeChildrenCache.put ( parent.getId (), new ArrayList<E> ( 0 ) );
+                                nodeCached.put ( parent.getId (), true );
+                            }
+
+                            // Performing event notification in EDT
+                            SwingUtils.invokeLater ( new Runnable ()
+                            {
+                                @Override
+                                public void run ()
+                                {
+                                    // Releasing node busy state
+                                    synchronized ( busyLock )
+                                    {
+                                        parent.setState ( AsyncNodeState.failed );
+                                        parent.setFailureCause ( cause );
+                                        nodeChanged ( parent );
+                                    }
+
+                                    // Firing load failed event
+                                    fireChildrenLoadFailed ( parent, cause );
+                                }
+                            } );
+                        }
+                    } );
+                }
+            } );
+            return 0;
         }
         else
         {
-            // Simply return zero if we are still loading children
-            return 0;
+            // Loading children
+            dataProvider.loadChildren ( parent, new ChildrenListener<E> ()
+            {
+                @Override
+                public void loadCompleted ( final List<E> children )
+                {
+                    // Caching raw children
+                    synchronized ( cacheLock )
+                    {
+                        rawNodeChildrenCache.put ( parent.getId (), children );
+                        cacheNodesById ( children );
+                    }
+
+                    // Filtering and sorting raw children
+                    final List<E> realChildren = filterAndSort ( parent, children );
+
+                    // Updating cache
+                    synchronized ( cacheLock )
+                    {
+                        nodeCached.put ( parent.getId (), true );
+                    }
+
+                    // Checking if any nodes loaded
+                    if ( realChildren != null && realChildren.size () > 0 )
+                    {
+                        // Inserting loaded nodes
+                        insertNodesIntoImpl ( realChildren, parent, 0 );
+                    }
+
+                    // Releasing node busy state
+                    synchronized ( busyLock )
+                    {
+                        parent.setState ( AsyncNodeState.loaded );
+                        nodeChanged ( parent );
+                    }
+
+                    // Firing load completed event
+                    fireChildrenLoadCompleted ( parent, realChildren );
+                }
+
+                @Override
+                public void loadFailed ( final Throwable cause )
+                {
+                    // Caching children
+                    synchronized ( cacheLock )
+                    {
+                        rawNodeChildrenCache.put ( parent.getId (), new ArrayList<E> ( 0 ) );
+                        nodeCached.put ( parent.getId (), true );
+                    }
+
+                    // Releasing node busy state
+                    synchronized ( busyLock )
+                    {
+                        parent.setState ( AsyncNodeState.failed );
+                        parent.setFailureCause ( cause );
+                        nodeChanged ( parent );
+                    }
+
+                    // Firing load failed event
+                    fireChildrenLoadFailed ( parent, cause );
+                }
+            } );
+            return parent.getChildCount ();
         }
     }
 
     /**
-     * Finishes children loading for the specified parent.
-     *
-     * @param parent   parent node
-     * @param children loaded child nodes
-     */
-    protected void loadChildrenCompleted ( final N parent, final List<N> children )
-    {
-        // Operation might have finished after model was removed from the tree
-        if ( isInstalled () )
-        {
-            // Event Dispatch Thread check
-            WebLookAndFeel.checkEventDispatchThread ();
-
-            // Caching raw children
-            rawNodeChildrenCache.put ( parent.getId (), children );
-            cacheNodesById ( children );
-
-            // Adding image observers
-            // We need to do this separately here since some nodes might not be inserted right away
-            // Instead they will appear on the next global update and will "escape" observer addition in that case
-            for ( final N child : children )
-            {
-                child.attachLoadIconObserver ( tree );
-            }
-
-            // Filtering and sorting raw children
-            final List<N> realChildren = filterAndSort ( parent, children );
-
-            // Updating cache
-            nodeCached.put ( parent.getId (), true );
-
-            // Checking if any nodes loaded
-            if ( realChildren != null && realChildren.size () > 0 )
-            {
-                // Inserting loaded nodes
-                insertNodesIntoImpl ( realChildren, parent, 0 );
-            }
-
-            // Updating parent node load state
-            parent.setState ( AsyncNodeState.loaded );
-            nodeChanged ( parent );
-
-            // Firing load completed event
-            fireChildrenLoadCompleted ( parent, realChildren );
-        }
-    }
-
-    /**
-     * Cancells children loading upon failure.
-     *
-     * @param parent parent node
-     * @param cause  failure cause
-     */
-    protected void loadChildrenFailed ( final N parent, final Throwable cause )
-    {
-        // Operation might have finished after model was removed from the tree
-        if ( isInstalled () )
-        {
-            // Event Dispatch Thread check
-            WebLookAndFeel.checkEventDispatchThread ();
-
-            // Caching children
-            rawNodeChildrenCache.put ( parent.getId (), new ArrayList<N> ( 0 ) );
-            nodeCached.put ( parent.getId (), true );
-
-            // Updating parent node load state
-            parent.setState ( AsyncNodeState.failed );
-            parent.setFailureCause ( cause );
-            nodeChanged ( parent );
-
-            // Firing load failed event
-            fireChildrenLoadFailed ( parent, cause );
-        }
-    }
-
-    @Override
-    public void valueForPathChanged ( final TreePath path, final Object newValue )
-    {
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Perform default operations
-        super.valueForPathChanged ( path, newValue );
-
-        // Updating filtering and sorting for parent of this node unless it is root node
-        final N node = tree.getNodeForPath ( path );
-        if ( node != null )
-        {
-            final WebTreeNode parent = node.getParent ();
-            if ( parent != null )
-            {
-                filterAndSort ( ( N ) parent, false );
-            }
-        }
-    }
-
-    /**
-     * Replaces child nodes for the specified node.
+     * Sets child nodes for the specified node.
      * This method might be used to manually change tree node children without causing any structure corruptions.
      *
      * @param parent   node to process
      * @param children new node children
      */
-    public void setChildNodes ( final N parent, final List<N> children )
+    public void setChildNodes ( final E parent, final List<E> children )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Ensure that node is not busy right now
-        // Although unlike other methods we don't care if node children are loaded or not since we are replacing them
-        if ( !parent.isLoading () )
+        // Check if the node is busy already
+        synchronized ( busyLock )
         {
-            // Caching raw children
+            if ( parent.isLoading () )
+            {
+                return;
+            }
+            else
+            {
+                parent.setState ( AsyncNodeState.loading );
+                nodeChanged ( parent );
+            }
+        }
+
+        // Caching raw children
+        synchronized ( cacheLock )
+        {
             rawNodeChildrenCache.put ( parent.getId (), children );
             cacheNodesById ( children );
-
-            // Filtering and sorting raw children
-            final List<N> realChildren = filterAndSort ( parent, children );
-
-            // Updating cache
-            nodeCached.put ( parent.getId (), true );
-
-            // Checking if any nodes loaded
-            if ( realChildren != null && realChildren.size () > 0 )
-            {
-                // Clearing raw nodes cache
-                // That might be required in case nodes were moved inside of the tree
-                clearNodeChildrenCache ( children, false );
-
-                // Inserting nodes
-                insertNodesIntoImpl ( realChildren, parent, 0 );
-            }
-
-            // Updating parent node load state
-            parent.setState ( AsyncNodeState.loaded );
-            nodeChanged ( parent );
-
-            // Firing load completed event
-            fireChildrenLoadCompleted ( parent, realChildren );
         }
-    }
 
-    /**
-     * Adds child node for the specified node.
-     * This method might be used to manually change tree node children without causing any structure corruptions.
-     *
-     * @param parent node to process
-     * @param child  new child node
-     */
-    public void addChildNode ( final N parent, final N child )
-    {
-        addChildNodes ( parent, CollectionUtils.asList ( child ) );
+        // Filtering and sorting raw children
+        final List<E> realChildren = filterAndSort ( parent, children );
+
+        // Updating cache
+        synchronized ( cacheLock )
+        {
+            nodeCached.put ( parent.getId (), true );
+        }
+
+        // Performing UI updates in EDT
+        SwingUtils.invokeLater ( new Runnable ()
+        {
+            @Override
+            public void run ()
+            {
+                // Checking if any nodes loaded
+                if ( realChildren != null && realChildren.size () > 0 )
+                {
+                    // Clearing raw nodes cache
+                    // That might be required in case nodes were moved inside of the tree
+                    clearNodeChildrenCache ( children, false );
+
+                    // Inserting nodes
+                    insertNodesIntoImpl ( realChildren, parent, 0 );
+                }
+
+                // Release node busy state
+                synchronized ( busyLock )
+                {
+                    parent.setState ( AsyncNodeState.loaded );
+                    nodeChanged ( parent );
+                }
+
+                // Firing load completed event
+                fireChildrenLoadCompleted ( parent, realChildren );
+            }
+        } );
     }
 
     /**
@@ -585,81 +661,222 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
      * @param parent   node to process
      * @param children new node children
      */
-    public void addChildNodes ( final N parent, final List<N> children )
+    public void addChildNodes ( final E parent, final List<E> children )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Ensure node children are loaded
-        if ( parent.isLoaded () )
+        // Simply ignore if parent node is not yet loaded
+        if ( !parent.isLoaded () )
         {
-            // Adding new raw children
-            List<N> cachedChildren = rawNodeChildrenCache.get ( parent.getId () );
+            return;
+        }
+
+        // Adding new raw children
+        synchronized ( cacheLock )
+        {
+            List<E> cachedChildren = rawNodeChildrenCache.get ( parent.getId () );
             if ( cachedChildren == null )
             {
-                cachedChildren = new ArrayList<N> ( children.size () );
+                cachedChildren = new ArrayList<E> ( children.size () );
                 rawNodeChildrenCache.put ( parent.getId (), cachedChildren );
             }
             cachedChildren.addAll ( children );
             cacheNodesById ( children );
-
-            // Clearing nodes cache
-            // That might be required in case nodes were moved inside of the tree
-            clearNodeChildrenCache ( children, false );
-
-            // Inserting nodes
-            insertNodesIntoImpl ( children, parent, parent.getChildCount () );
-
-            // Updating parent node sorting and filtering
-            filterAndSort ( parent, false );
         }
+
+        // Clearing nodes cache
+        // That might be required in case nodes were moved inside of the tree
+        clearNodeChildrenCache ( children, false );
+
+        // Inserting nodes
+        insertNodesIntoImpl ( children, parent, parent.getChildCount () );
+
+        // Updating parent node sorting and filtering
+        updateSortingAndFiltering ( parent );
     }
+
+    /**
+     * Removes specified node from parent node.
+     *
+     * @param node node to remove
+     */
+    @Override
+    public void removeNodeFromParent ( final MutableTreeNode node )
+    {
+        // Simply ignore null nodes
+        if ( node == null )
+        {
+            return;
+        }
+
+        final E childNode = ( E ) node;
+        final E parentNode = ( E ) childNode.getParent ();
+
+        // Simply ignore if parent node is null or not yet loaded
+        if ( parentNode == null || !parentNode.isLoaded () )
+        {
+            return;
+        }
+
+        // Removing raw children
+        synchronized ( cacheLock )
+        {
+            final List<E> children = rawNodeChildrenCache.get ( parentNode.getId () );
+            if ( children != null )
+            {
+                children.remove ( childNode );
+            }
+        }
+
+        // Clearing node cache
+        clearNodeChildrenCache ( childNode, true );
+
+        // Removing node children so they won't mess up anything when we place node back into tree
+        childNode.removeAllChildren ();
+
+        // Removing node from parent
+        super.removeNodeFromParent ( node );
+
+        // Updating parent node sorting and filtering
+        updateSortingAndFiltering ( parentNode );
+
+        // Removing image observer
+        childNode.detachLoadIconObserver ();
+    }
+
+    // todo Implement when those methods will be separate from single one
+    //    public void removeNodesFromParent ( List<E> nodes )
+    //    {
+    //        super.removeNodesFromParent ( nodes );
+    //    }
+    //
+    //    public void removeNodesFromParent ( E[] nodes )
+    //    {
+    //        super.removeNodesFromParent ( nodes );
+    //    }
 
     /**
      * Inserts new child node into parent node at the specified index.
      *
-     * @param child  new child node
-     * @param parent parent node
-     * @param index  insert index
+     * @param newChild new child node
+     * @param parent   parent node
+     * @param index    insert index
      */
     @Override
-    public void insertNodeInto ( final MutableTreeNode child, final MutableTreeNode parent, final int index )
+    public void insertNodeInto ( final MutableTreeNode newChild, final MutableTreeNode parent, final int index )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
+        final E childNode = ( E ) newChild;
+        final E parentNode = ( E ) parent;
 
-        // Ensure model is installed
-        checkInstalled ();
-
-        final N parentNode = ( N ) parent;
-        final N childNode = ( N ) child;
-
-        // Ensure node children are loaded
-        if ( parentNode.isLoaded () )
+        // Simply ignore if parent node is not yet loaded
+        if ( !parentNode.isLoaded () )
         {
-            // Inserting new raw children
-            List<N> cachedChildren = rawNodeChildrenCache.get ( parentNode.getId () );
+            return;
+        }
+
+        // Inserting new raw children
+        synchronized ( cacheLock )
+        {
+            List<E> cachedChildren = rawNodeChildrenCache.get ( parentNode.getId () );
             if ( cachedChildren == null )
             {
-                cachedChildren = new ArrayList<N> ( 1 );
+                cachedChildren = new ArrayList<E> ( 1 );
                 rawNodeChildrenCache.put ( parentNode.getId (), cachedChildren );
             }
             cachedChildren.add ( index, childNode );
             cacheNodeById ( childNode );
-
-            // Clearing node cache
-            // That might be required in case nodes were moved inside of the tree
-            clearNodeChildrenCache ( childNode, false );
-
-            // Inserting node
-            insertNodeIntoImpl ( childNode, parentNode, index );
-
-            // Updating parent node sorting and filtering
-            filterAndSort ( parentNode, false );
         }
+
+        // Clearing node cache
+        // That might be required in case nodes were moved inside of the tree
+        clearNodeChildrenCache ( childNode, false );
+
+        // Inserting node
+        insertNodeIntoImpl ( childNode, parentNode, index );
+
+        // Updating parent node sorting and filtering
+        updateSortingAndFiltering ( parentNode );
+    }
+
+    /**
+     * Inserts a list of child nodes into parent node.
+     *
+     * @param children list of new child nodes
+     * @param parent   parent node
+     * @param index    insert index
+     */
+    @Override
+    public void insertNodesInto ( final List<E> children, final E parent, final int index )
+    {
+        // Simply ignore if parent node is not yet loaded
+        if ( !parent.isLoaded () )
+        {
+            return;
+        }
+
+        // Inserting new raw children
+        synchronized ( cacheLock )
+        {
+            List<E> cachedChildren = rawNodeChildrenCache.get ( parent.getId () );
+            if ( cachedChildren == null )
+            {
+                cachedChildren = new ArrayList<E> ( 1 );
+                rawNodeChildrenCache.put ( parent.getId (), cachedChildren );
+            }
+            cachedChildren.addAll ( index, children );
+            cacheNodesById ( children );
+        }
+
+        // Clearing nodes cache
+        // That might be required in case nodes were moved inside of the tree
+        clearNodeChildrenCache ( children, false );
+
+        // Performing actual nodes insertion
+        insertNodesIntoImpl ( children, parent, index );
+
+        // Updating parent node sorting and filtering
+        updateSortingAndFiltering ( parent );
+    }
+
+    /**
+     * Inserts an array of child nodes into parent node.
+     *
+     * @param children array of new child nodes
+     * @param parent   parent node
+     * @param index    insert index
+     */
+    @Override
+    public void insertNodesInto ( final E[] children, final E parent, final int index )
+    {
+        // Simply ignore if parent node is not yet loaded
+        if ( !parent.isLoaded () )
+        {
+            return;
+        }
+
+        // Inserting new raw children
+        synchronized ( cacheLock )
+        {
+            List<E> cachedChildren = rawNodeChildrenCache.get ( parent.getId () );
+            if ( cachedChildren == null )
+            {
+                cachedChildren = new ArrayList<E> ( 1 );
+                rawNodeChildrenCache.put ( parent.getId (), cachedChildren );
+            }
+            for ( int i = children.length - 1; i >= 0; i-- )
+            {
+                cachedChildren.add ( index, children[ i ] );
+            }
+            cacheNodesById ( Arrays.asList ( children ) );
+        }
+
+        // Clearing nodes cache
+        // That might be required in case nodes were moved inside of the tree
+        clearNodeChildrenCache ( children, false );
+
+        // Inserting nodes
+        insertNodesIntoImpl ( children, parent, index );
+
+        // Updating parent node sorting and filtering
+        updateSortingAndFiltering ( parent );
     }
 
     /**
@@ -669,7 +886,7 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
      * @param parent parent node
      * @param index  insert index
      */
-    protected void insertNodeIntoImpl ( final N child, final N parent, final int index )
+    protected void insertNodeIntoImpl ( final E child, final E parent, final int index )
     {
         super.insertNodeInto ( child, parent, index );
 
@@ -684,53 +901,12 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
      * @param parent   parent node
      * @param index    insert index
      */
-    @Override
-    public void insertNodesInto ( final List<N> children, final N parent, final int index )
-    {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Ensure node children are loaded
-        if ( parent.isLoaded () )
-        {
-            // Inserting new raw children
-            List<N> cachedChildren = rawNodeChildrenCache.get ( parent.getId () );
-            if ( cachedChildren == null )
-            {
-                cachedChildren = new ArrayList<N> ( 1 );
-                rawNodeChildrenCache.put ( parent.getId (), cachedChildren );
-            }
-            cachedChildren.addAll ( index, children );
-            cacheNodesById ( children );
-
-            // Clearing nodes cache
-            // That might be required in case nodes were moved inside of the tree
-            clearNodeChildrenCache ( children, false );
-
-            // Performing actual nodes insertion
-            insertNodesIntoImpl ( children, parent, index );
-
-            // Updating parent node sorting and filtering
-            filterAndSort ( parent, false );
-        }
-    }
-
-    /**
-     * Inserts a list of child nodes into parent node.
-     *
-     * @param children list of new child nodes
-     * @param parent   parent node
-     * @param index    insert index
-     */
-    protected void insertNodesIntoImpl ( final List<N> children, final N parent, final int index )
+    protected void insertNodesIntoImpl ( final List<E> children, final E parent, final int index )
     {
         super.insertNodesInto ( children, parent, index );
 
         // Adding image observers
-        for ( final N child : children )
+        for ( final E child : children )
         {
             child.attachLoadIconObserver ( tree );
         }
@@ -743,330 +919,85 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
      * @param parent   parent node
      * @param index    insert index
      */
-    @Override
-    public void insertNodesInto ( final N[] children, final N parent, final int index )
-    {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Ensure node children are loaded
-        if ( parent.isLoaded () )
-        {
-            // Inserting new raw children
-            List<N> cachedChildren = rawNodeChildrenCache.get ( parent.getId () );
-            if ( cachedChildren == null )
-            {
-                cachedChildren = new ArrayList<N> ( 1 );
-                rawNodeChildrenCache.put ( parent.getId (), cachedChildren );
-            }
-            for ( int i = children.length - 1; i >= 0; i-- )
-            {
-                cachedChildren.add ( index, children[ i ] );
-            }
-            cacheNodesById ( CollectionUtils.asList ( children ) );
-
-            // Clearing nodes cache
-            // That might be required in case nodes were moved inside of the tree
-            clearNodeChildrenCache ( children, false );
-
-            // Inserting nodes
-            insertNodesIntoImpl ( children, parent, index );
-
-            // Updating parent node sorting and filtering
-            filterAndSort ( parent, false );
-        }
-    }
-
-    /**
-     * Inserts an array of child nodes into parent node.
-     *
-     * @param children array of new child nodes
-     * @param parent   parent node
-     * @param index    insert index
-     */
-    protected void insertNodesIntoImpl ( final N[] children, final N parent, final int index )
+    protected void insertNodesIntoImpl ( final E[] children, final E parent, final int index )
     {
         super.insertNodesInto ( children, parent, index );
 
         // Adding image observers
-        for ( final N child : children )
+        for ( final E child : children )
         {
             child.attachLoadIconObserver ( tree );
         }
     }
 
-    @Override
-    public void removeNodeFromParent ( final MutableTreeNode node )
-    {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Simply ignore null nodes
-        if ( node != null )
-        {
-            final N child = ( N ) node;
-            final N parent = ( N ) child.getParent ();
-
-            // Ensure parent exists and children are loaded
-            if ( parent != null && parent.isLoaded () )
-            {
-                // Removing raw children
-                final List<N> children = rawNodeChildrenCache.get ( parent.getId () );
-                if ( children != null )
-                {
-                    children.remove ( child );
-                }
-
-                // Clearing node cache
-                clearNodeChildrenCache ( child, true );
-
-                // Removing node children so they won't mess up anything when we place node back into tree
-                child.removeAllChildren ();
-
-                // Removing node from parent
-                super.removeNodeFromParent ( node );
-
-                // Removing image observer
-                child.detachLoadIconObserver ( tree );
-            }
-        }
-    }
-
-    @Override
-    public void removeNodesFromParent ( final N parent )
-    {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Ensure parent exists and children are loaded
-        if ( parent != null && parent.isLoaded () )
-        {
-            // Removing raw children
-            final List<N> removed = rawNodeChildrenCache.get ( parent.getId () );
-
-            // Clearing node children caches
-            clearNodeChildrenCache ( parent, false );
-
-            // Removing node children
-            super.removeNodesFromParent ( parent );
-
-            // Removing image observers
-            if ( CollectionUtils.notEmpty ( removed ) )
-            {
-                for ( final N node : removed )
-                {
-                    node.detachLoadIconObserver ( tree );
-                }
-            }
-        }
-    }
-
-    @Override
-    public void removeNodesFromParent ( final N[] nodes )
-    {
-        // Redirecting to another method
-        removeNodesFromParent ( CollectionUtils.toList ( nodes ) );
-    }
-
-    @Override
-    public void removeNodesFromParent ( final List<N> nodes )
-    {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Removing raw children
-        final List<N> removed = new ArrayList<N> ( nodes.size () );
-        for ( final N child : nodes )
-        {
-            // Ensure parent exists and children are loaded
-            final N parent = ( N ) child.getParent ();
-            if ( parent != null && parent.isLoaded () )
-            {
-                // Updating children caches
-                final List<N> children = rawNodeChildrenCache.get ( parent.getId () );
-                if ( children != null )
-                {
-                    children.remove ( child );
-                }
-
-                // Clearing nodes children caches
-                clearNodeChildrenCache ( child, true );
-
-                // Removing node children so they won't mess up anything when we place node back into tree
-                child.removeAllChildren ();
-
-                // Saving removed node
-                removed.add ( child );
-            }
-        }
-
-        // Removing nodes from parent
-        super.removeNodesFromParent ( nodes );
-
-        // Removing image observers
-        if ( CollectionUtils.notEmpty ( removed ) )
-        {
-            for ( final N node : removed )
-            {
-                node.detachLoadIconObserver ( tree );
-            }
-        }
-    }
-
-    @Override
-    public Filter<N> getFilter ()
-    {
-        return filter;
-    }
-
-    @Override
-    public void setFilter ( final Filter<N> filter )
-    {
-        this.filter = filter;
-        filter ();
-    }
-
-    @Override
-    public void clearFilter ()
-    {
-        setFilter ( null );
-    }
-
-    @Override
-    public void filter ()
-    {
-        filterAndSort ( true );
-    }
-
-    @Override
-    public void filter ( final N node )
-    {
-        filterAndSort ( node, false );
-    }
-
-    @Override
-    public void filter ( final N node, final boolean recursively )
-    {
-        filterAndSort ( node, recursively );
-    }
-
-    @Override
-    public Comparator<N> getComparator ()
-    {
-        return comparator;
-    }
-
-    @Override
-    public void setComparator ( final Comparator<N> comparator )
-    {
-        this.comparator = comparator;
-        sort ();
-    }
-
-    @Override
-    public void clearComparator ()
-    {
-        setComparator ( null );
-    }
-
-    @Override
-    public void sort ()
-    {
-        filterAndSort ( true );
-    }
-
-    @Override
-    public void sort ( final N node )
-    {
-        filterAndSort ( node, false );
-    }
-
-    @Override
-    public void sort ( final N node, final boolean recursively )
-    {
-        filterAndSort ( node, recursively );
-    }
-
     /**
-     * Updates sorting and filtering for the root node children.
-     *
-     * @param recursively whether should update the whole children structure recursively or not
+     * Updates nodes sorting and filtering for all loaded nodes.
      */
-    public void filterAndSort ( final boolean recursively )
+    public void updateSortingAndFiltering ()
     {
-        filterAndSort ( null, recursively );
+        updateSortingAndFiltering ( getRoot (), true );
     }
 
     /**
      * Updates sorting and filtering for the specified node children.
      *
-     * @param parent      node which children sorting and filtering should be updated
+     * @param parentNode node which children sorting and filtering should be updated
+     */
+    public void updateSortingAndFiltering ( final E parentNode )
+    {
+        updateSortingAndFiltering ( parentNode, false );
+    }
+
+    /**
+     * Updates sorting and filtering for the specified node children.
+     *
+     * @param parentNode  node which children sorting and filtering should be updated
      * @param recursively whether should update the whole children structure recursively or not
      */
-    public void filterAndSort ( final N parent, final boolean recursively )
+    public void updateSortingAndFiltering ( final E parentNode, final boolean recursively )
     {
-        // Operation might have finished after model was removed from the tree
-        if ( isInstalled () )
+        // Process only this is not a root node
+        // We don't need to update root sorting as there is always one root in the tree
+        if ( parentNode != null )
         {
-            // Event Dispatch Thread check
-            WebLookAndFeel.checkEventDispatchThread ();
-
-            // Determining actual parent
-            final N actualParent = parent != null ? parent : getRoot ();
-
-            // Redirecting call to internal implementation
-            filterAndSort ( actualParent, recursively, true );
+            updateSortingAndFilteringImpl ( parentNode, recursively, true );
         }
     }
 
     /**
      * Updates sorting and filtering for the specified node children.
      *
-     * @param parent         node which children sorting and filtering should be updated
+     * @param parentNode     node which children sorting and filtering should be updated
      * @param recursively    whether should update the whole children structure recursively or not
      * @param performUpdates whether tree updates should be triggered within this method
      */
-    protected void filterAndSort ( final N parent, final boolean recursively, final boolean performUpdates )
+    protected void updateSortingAndFilteringImpl ( final E parentNode, final boolean recursively, final boolean performUpdates )
     {
         // Process this action only if node children are already loaded and cached
-        if ( parent.isLoaded () && rawNodeChildrenCache.containsKey ( parent.getId () ) )
+        if ( parentNode.isLoaded () && rawNodeChildrenCache.containsKey ( parentNode.getId () ) )
         {
             // Children are already loaded, simply updating their sorting and filtering
-            filterAndSortRecursively ( parent, recursively, performUpdates );
+            performSortingAndFiltering ( parentNode, recursively, performUpdates );
         }
-        else if ( parent.isLoading () )
+        else if ( parentNode.isLoading () )
         {
             // Children are being loaded, wait until the operation finishes
             addAsyncTreeModelListener ( new AsyncTreeModelAdapter ()
             {
                 @Override
-                public void loadCompleted ( final AsyncUniqueNode completedFor, final List children )
+                public void loadCompleted ( final AsyncUniqueNode parent, final List children )
                 {
-                    // Performing delayed filtering and sorting
-                    if ( parent.getId ().equals ( completedFor.getId () ) )
+                    if ( parentNode.getId ().equals ( parent.getId () ) )
                     {
                         removeAsyncTreeModelListener ( this );
-                        filterAndSortRecursively ( parent, recursively, performUpdates );
+                        performSortingAndFiltering ( parentNode, recursively, performUpdates );
                     }
                 }
 
                 @Override
-                public void loadFailed ( final AsyncUniqueNode failedFor, final Throwable cause )
+                public void loadFailed ( final AsyncUniqueNode parent, final Throwable cause )
                 {
-                    // Cancelling any further operations
-                    if ( parent.getId ().equals ( failedFor.getId () ) )
+                    if ( parentNode.getId ().equals ( parent.getId () ) )
                     {
                         removeAsyncTreeModelListener ( this );
                     }
@@ -1079,40 +1010,41 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
      * Updates node children using current comparator and filter.
      * Updates the whole node children structure if recursive update requested.
      *
-     * @param parent         node which children sorting and filtering should be updated
+     * @param parentNode     node which children sorting and filtering should be updated
      * @param recursively    whether should update the whole children structure recursively or not
      * @param performUpdates whether tree updates should be triggered within this method
      */
-    protected void filterAndSortRecursively ( final N parent, final boolean recursively, final boolean performUpdates )
+    protected void performSortingAndFiltering ( final E parentNode, final boolean recursively, final boolean performUpdates )
     {
+        // todo Restore tree state only for the updated node
+        // todo This also won't work if some of the children updates are delayed using listener
         // Saving tree state to restore it right after children update
-        // todo This doesn't work if some of the children updates are delayed using listener
-        final TreeState treeState = tree.getTreeState ( parent );
+        final TreeState treeState = tree.getTreeState ();
 
         // Updating node children sorting and filtering
         // Process this action only if node children are already loaded and cached
-        final List<N> cachedChildren = rawNodeChildrenCache.get ( parent.getId () );
+        final List<E> cachedChildren = rawNodeChildrenCache.get ( parentNode.getId () );
         if ( cachedChildren != null )
         {
             // Removing old children
-            parent.removeAllChildren ();
+            parentNode.removeAllChildren ();
 
             // Filtering and sorting raw children
-            final List<N> children = filterAndSort ( parent, cachedChildren );
+            final List<E> children = filterAndSort ( parentNode, cachedChildren );
 
             // Inserting new children
-            for ( final N child : children )
+            for ( final E child : children )
             {
-                parent.add ( child );
+                parentNode.add ( child );
             }
         }
 
         // Updating children's children
         if ( recursively )
         {
-            for ( int i = 0; i < parent.getChildCount (); i++ )
+            for ( int i = 0; i < parentNode.getChildCount (); i++ )
             {
-                filterAndSort ( ( N ) parent.getChildAt ( i ), true, false );
+                updateSortingAndFilteringImpl ( ( E ) parentNode.getChildAt ( i ), true, false );
             }
         }
 
@@ -1120,154 +1052,82 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
         if ( performUpdates )
         {
             // Forcing tree structure update for the node
-            nodeStructureChanged ( parent );
+            nodeStructureChanged ( parentNode );
 
             // Restoring tree state including all selections and expansions
-            tree.setTreeState ( treeState, parent );
+            tree.setTreeState ( treeState );
         }
     }
 
     /**
      * Returns list of filtered and sorted raw children.
      *
-     * @param parent   parent node
-     * @param children children to filter and sort
+     * @param parentNode parent node
+     * @param children   children to filter and sort
      * @return list of filtered and sorted children
      */
-    protected List<N> filterAndSort ( final N parent, final List<N> children )
+    protected List<E> filterAndSort ( final E parentNode, List<E> children )
     {
-        final List<N> result;
-        if ( CollectionUtils.notEmpty ( children ) )
+        // Simply return an empty array if there is no children
+        if ( children == null || children.size () == 0 )
         {
-            // Data provider
-            final AsyncTreeDataProvider<N> dataProvider = getDataProvider ();
+            return new ArrayList<E> ( 0 );
+        }
 
-            // Filtering children
-            final Filter<N> dataProviderFilter = dataProvider.getChildrenFilter ( parent, children );
-            final Filter<N> treeFilter = tree.getFilter ();
-            final Filter<N> modelFilter = getFilter ();
-            result = CollectionUtils.filter ( children, dataProviderFilter, treeFilter, modelFilter );
-
-            // Sorting children
-            final Comparator<N> dataProviderComparator = dataProvider.getChildrenComparator ( parent, result );
-            final Comparator<N> treeComparator = tree.getComparator ();
-            final Comparator<N> modelComparator = getComparator ();
-            CollectionUtils.sort ( result, dataProviderComparator, treeComparator, modelComparator );
+        // Filter and sort children
+        final Filter<E> filter = dataProvider.getChildrenFilter ( parentNode );
+        final Comparator<E> comparator = dataProvider.getChildrenComparator ( parentNode );
+        if ( filter != null )
+        {
+            final List<E> filtered = CollectionUtils.filter ( children, filter );
+            if ( comparator != null )
+            {
+                Collections.sort ( filtered, comparator );
+            }
+            return filtered;
         }
         else
         {
-            // Simply return an empty list if there is no children
-            result = new ArrayList<N> ( 0 );
+            if ( comparator != null )
+            {
+                children = CollectionUtils.copy ( children );
+                Collections.sort ( children, comparator );
+            }
+            return children;
         }
-        return result;
     }
 
     /**
-     * Looks for the node with the specified identifier in the tree model and returns it or null if it was not found.
+     * Looks for the node with the specified ID in the tree model and returns it or null if it was not found.
      *
-     * @param nodeId node identifier
-     * @return node with the specified identifier or null if it was not found
+     * @param nodeId node ID
+     * @return node with the specified ID or null if it was not found
      */
-    public N findNode ( final String nodeId )
+    public E findNode ( final String nodeId )
     {
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Get node from cache
         return nodeById.get ( nodeId );
     }
 
     /**
-     * Returns whether children for the specified node are already loaded or not.
+     * Returns nodes cache map copy.
      *
-     * @param node node to process
-     * @return true if children for the specified node are already loaded, false otherwise
+     * @return nodes cache map copy
      */
-    public boolean areChildrenLoaded ( final N node )
+    public DoubleMap<String, E> getNodesCache ()
     {
-        // Ensure model is installed
-        checkInstalled ();
-
-        // Check children load state
-        final Boolean cached = nodeCached.get ( node.getId () );
-        return cached != null && cached;
+        return MapUtils.copyDoubleMap ( nodeById );
     }
 
     /**
-     * Clears node and all of its child nodes children cached states.
+     * Returns list of all available asynchronous tree model listeners.
      *
-     * @param node      node to clear cache for
-     * @param clearNode whether should clear node cache or not
+     * @return asynchronous tree model listeners list
      */
-    protected void clearNodeChildrenCache ( final N node, final boolean clearNode )
+    public List<AsyncTreeModelListener> getAsyncTreeModelListeners ()
     {
-        // Clears node cache
-        if ( clearNode )
+        synchronized ( modelListenersLock )
         {
-            nodeById.remove ( node.getId () );
-        }
-
-        // Clears node children cached state
-        nodeCached.remove ( node.getId () );
-
-        // Clears node raw children cache
-        final List<N> children = rawNodeChildrenCache.remove ( node.getId () );
-
-        // Clears chld nodes cache
-        if ( children != null )
-        {
-            clearNodeChildrenCache ( children, true );
-        }
-    }
-
-    /**
-     * Clears nodes children cached states.
-     *
-     * @param nodes      nodes to clear cache for
-     * @param clearNodes whether should clear nodes cache or not
-     */
-    protected void clearNodeChildrenCache ( final List<N> nodes, final boolean clearNodes )
-    {
-        for ( final N node : nodes )
-        {
-            clearNodeChildrenCache ( node, clearNodes );
-        }
-    }
-
-    /**
-     * Clears nodes children cached states.
-     *
-     * @param nodes      nodes to clear cache for
-     * @param clearNodes whether should clear nodes cache or not
-     */
-    protected void clearNodeChildrenCache ( final N[] nodes, final boolean clearNodes )
-    {
-        for ( final N node : nodes )
-        {
-            clearNodeChildrenCache ( node, clearNodes );
-        }
-    }
-
-    /**
-     * Caches node by its identifier.
-     *
-     * @param node node to cache
-     */
-    protected void cacheNodeById ( final N node )
-    {
-        nodeById.put ( node.getId (), node );
-    }
-
-    /**
-     * Caches nodes by their identifiers.
-     *
-     * @param nodes list of nodes to cache
-     */
-    protected void cacheNodesById ( final List<N> nodes )
-    {
-        for ( final N node : nodes )
-        {
-            nodeById.put ( node.getId (), node );
+            return CollectionUtils.copy ( asyncTreeModelListeners );
         }
     }
 
@@ -1278,11 +1138,10 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
      */
     public void addAsyncTreeModelListener ( final AsyncTreeModelListener listener )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Adding new listener
-        listeners.add ( AsyncTreeModelListener.class, listener );
+        synchronized ( modelListenersLock )
+        {
+            asyncTreeModelListeners.add ( listener );
+        }
     }
 
     /**
@@ -1292,11 +1151,10 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
      */
     public void removeAsyncTreeModelListener ( final AsyncTreeModelListener listener )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Removing existing listener
-        listeners.remove ( AsyncTreeModelListener.class, listener );
+        synchronized ( modelListenersLock )
+        {
+            asyncTreeModelListeners.remove ( listener );
+        }
     }
 
     /**
@@ -1304,13 +1162,14 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
      *
      * @param parent node which children are being loaded
      */
-    protected void fireChildrenLoadStarted ( final N parent )
+    protected void fireChildrenLoadStarted ( final E parent )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Firing listeners
-        for ( final AsyncTreeModelListener listener : listeners.getListeners ( AsyncTreeModelListener.class ) )
+        final List<AsyncTreeModelListener> listeners;
+        synchronized ( modelListenersLock )
+        {
+            listeners = CollectionUtils.copy ( asyncTreeModelListeners );
+        }
+        for ( final AsyncTreeModelListener listener : listeners )
         {
             listener.loadStarted ( parent );
         }
@@ -1322,13 +1181,14 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
      * @param parent   node which children were loaded
      * @param children loaded child nodes
      */
-    protected void fireChildrenLoadCompleted ( final N parent, final List<N> children )
+    protected void fireChildrenLoadCompleted ( final E parent, final List<E> children )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Firing listeners
-        for ( final AsyncTreeModelListener listener : listeners.getListeners ( AsyncTreeModelListener.class ) )
+        final List<AsyncTreeModelListener> listeners;
+        synchronized ( modelListenersLock )
+        {
+            listeners = CollectionUtils.copy ( asyncTreeModelListeners );
+        }
+        for ( final AsyncTreeModelListener listener : listeners )
         {
             listener.loadCompleted ( parent, children );
         }
@@ -1340,13 +1200,14 @@ public class AsyncTreeModel<N extends AsyncUniqueNode> extends WebTreeModel<N> i
      * @param parent node which children were loaded
      * @param cause  children load failure cause
      */
-    protected void fireChildrenLoadFailed ( final N parent, final Throwable cause )
+    protected void fireChildrenLoadFailed ( final E parent, final Throwable cause )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Firing listeners
-        for ( final AsyncTreeModelListener listener : listeners.getListeners ( AsyncTreeModelListener.class ) )
+        final List<AsyncTreeModelListener> listeners;
+        synchronized ( modelListenersLock )
+        {
+            listeners = CollectionUtils.copy ( asyncTreeModelListeners );
+        }
+        for ( final AsyncTreeModelListener listener : listeners )
         {
             listener.loadFailed ( parent, cause );
         }

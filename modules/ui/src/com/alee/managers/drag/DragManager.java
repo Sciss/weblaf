@@ -17,24 +17,17 @@
 
 package com.alee.managers.drag;
 
-import com.alee.api.jdk.BiConsumer;
-import com.alee.managers.drag.view.DragViewHandler;
 import com.alee.managers.glasspane.GlassPaneManager;
 import com.alee.managers.glasspane.WebGlassPane;
-import com.alee.utils.ArrayUtils;
-import com.alee.utils.CoreSwingUtils;
-import com.alee.utils.swing.WeakComponentDataList;
-import org.slf4j.LoggerFactory;
+import com.alee.managers.log.Log;
+import com.alee.utils.SwingUtils;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.dnd.*;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -43,28 +36,18 @@ import java.util.Map;
  * So far custom DataFlavor view will be displayed only within application window bounds.
  *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-DragManager">How to use DragManager</a>
  */
+
 public final class DragManager
 {
     /**
-     * todo 1. Move dragged object display to a separate transparent non-focusable window on systems where it is possible
+     * todo 1. Move dragged object display to a separate transparent non-focusable window
      */
-
-    /**
-     * Various manager listeners.
-     *
-     * @see DragListener
-     */
-    private static final WeakComponentDataList<JComponent, DragListener> dragListeners =
-            new WeakComponentDataList<JComponent, DragListener> ( "DragManager.DragListener", 50 );
 
     /**
      * Drag view handlers map.
-     *
-     * @see DragViewHandler
      */
-    private static final Map<DataFlavor, List<DragViewHandler>> viewHandlers = new HashMap<DataFlavor, List<DragViewHandler>> ();
+    private static Map<DataFlavor, DragViewHandler> viewHandlers;
 
     /**
      * Whether or not something is being dragged right now.
@@ -72,21 +55,12 @@ public final class DragManager
     private static boolean dragging = false;
 
     /**
-     * Drag operation data flavors.
-     */
-    private static DataFlavor[] flavors = null;
-
-    /**
-     * Currently dragged transferable.
-     */
-    private static Transferable transferable = null;
-
-    /**
      * Dragged object representation variables.
      */
     private static WebGlassPane glassPane;
     private static Object data;
     private static BufferedImage view;
+    private static Component dropLocation;
     private static DragViewHandler dragViewHandler;
 
     /**
@@ -105,18 +79,31 @@ public final class DragManager
             // Remember that initialization happened
             initialized = true;
 
-            // Global drag listener
+            // View handlers map
+            viewHandlers = new HashMap<DataFlavor, DragViewHandler> ();
+
             final DragSourceAdapter dsa = new DragSourceAdapter ()
             {
-                /**
-                 * Informs about drag operation start.
-                 *
-                 * @param event drag event
-                 */
-                protected void dragStarted ( final DragSourceDragEvent event )
+                @Override
+                public void dragEnter ( final DragSourceDragEvent dsde )
                 {
+                    dragEnterImpl ( dsde );
+                }
+
+                /**
+                 * Performs actions on drag enter.
+                 *
+                 * @param dsde drag source drag event
+                 */
+                protected void dragEnterImpl ( final DragSourceDragEvent dsde )
+                {
+                    // todo Do not recreate view few times while dragging
+
+                    // Save drop location component
+                    final DragSourceContext dsc = dsde.getDragSourceContext ();
+                    dropLocation = dsc.getComponent ();
+
                     // Deciding on enter what to display for this kind of data
-                    final DragSourceContext dsc = event.getDragSourceContext ();
                     final Transferable transferable = dsc.getTransferable ();
                     final DataFlavor[] flavors = transferable.getTransferDataFlavors ();
                     for ( final DataFlavor flavor : flavors )
@@ -126,134 +113,45 @@ public final class DragManager
                             try
                             {
                                 data = transferable.getTransferData ( flavor );
-                                for ( final DragViewHandler handler : viewHandlers.get ( flavor ) )
-                                {
-                                    if ( handler.supports ( data, event ) )
-                                    {
-                                        dragViewHandler = handler;
-                                        break;
-                                    }
-                                }
-                                if ( dragViewHandler != null )
-                                {
-                                    view = dragViewHandler.getView ( data, event );
-                                    glassPane = GlassPaneManager.getGlassPane ( dsc.getComponent () );
-                                    glassPane.setPaintedImage ( view, getLocation ( glassPane, event, view ) );
-                                    break;
-                                }
+                                dragViewHandler = viewHandlers.get ( flavor );
+                                view = dragViewHandler.getView ( data, dsde );
+
+                                glassPane = GlassPaneManager.getGlassPane ( dsc.getComponent () );
+                                glassPane.setPaintedImage ( view, getLocation ( glassPane, dsde ) );
+
+                                break;
                             }
-                            catch ( final Exception e )
+                            catch ( final Throwable e )
                             {
-                                LoggerFactory.getLogger ( DragManager.class ).error ( e.toString (), e );
+                                Log.error ( DragManager.class, e );
                             }
                         }
                     }
 
                     // Marking drag operation
-                    DragManager.transferable = transferable;
-                    DragManager.flavors = flavors;
-                    DragManager.dragging = true;
-
-                    // Informing dragListeners
-                    dragListeners.forEachData ( new BiConsumer<JComponent, DragListener> ()
-                    {
-                        @Override
-                        public void accept ( final JComponent component, final DragListener dragListener )
-                        {
-                            dragListener.started ( event );
-                        }
-                    } );
+                    dragging = true;
                 }
 
                 @Override
-                public void dragEnter ( final DragSourceDragEvent event )
+                public void dragMouseMoved ( final DragSourceDragEvent dsde )
                 {
-                    // Informing dragListeners
-                    dragListeners.forEachData ( new BiConsumer<JComponent, DragListener> ()
+                    final DragSourceContext dsc = dsde.getDragSourceContext ();
+                    if ( dsc.getComponent () != dropLocation )
                     {
-                        @Override
-                        public void accept ( final JComponent component, final DragListener dragListener )
-                        {
-                            dragListener.entered ( event );
-                        }
-                    } );
-                }
-
-                @Override
-                public void dragExit ( final DragSourceEvent event )
-                {
-                    // Informing dragListeners
-                    dragListeners.forEachData ( new BiConsumer<JComponent, DragListener> ()
-                    {
-                        @Override
-                        public void accept ( final JComponent component, final DragListener dragListener )
-                        {
-                            dragListener.exited ( event );
-                        }
-                    } );
-                }
-
-                @Override
-                public void dragMouseMoved ( final DragSourceDragEvent event )
-                {
-                    // Create synthetic drag start event
-                    // This is required because there is no drag start even in default listener
-                    if ( !dragging )
-                    {
-                        dragStarted ( event );
+                        dragEnterImpl ( dsde );
                     }
 
                     // Move displayed data
                     if ( view != null )
                     {
-                        final WebGlassPane gp = GlassPaneManager.getGlassPane ( event.getDragSourceContext ().getComponent () );
+                        final WebGlassPane gp = GlassPaneManager.getGlassPane ( dsde.getDragSourceContext ().getComponent () );
                         if ( gp != glassPane )
                         {
                             glassPane.clearPaintedImage ();
                             glassPane = gp;
                         }
-                        glassPane.setPaintedImage ( view, getLocation ( glassPane, event, view ) );
+                        glassPane.setPaintedImage ( view, getLocation ( glassPane, dsde ) );
                     }
-
-                    // Informing dragListeners
-                    dragListeners.forEachData ( new BiConsumer<JComponent, DragListener> ()
-                    {
-                        @Override
-                        public void accept ( final JComponent component, final DragListener dragListener )
-                        {
-                            dragListener.moved ( event );
-                        }
-                    } );
-                }
-
-                @Override
-                public void dragDropEnd ( final DragSourceDropEvent event )
-                {
-                    // Marking drag operation
-                    DragManager.dragging = false;
-                    DragManager.flavors = null;
-                    DragManager.transferable = null;
-
-                    // Cleanup displayed data
-                    if ( view != null )
-                    {
-                        dragViewHandler.dragEnded ( data, event );
-                        glassPane.clearPaintedImage ();
-                        glassPane = null;
-                        data = null;
-                        view = null;
-                        dragViewHandler = null;
-                    }
-
-                    // Informing dragListeners
-                    dragListeners.forEachData ( new BiConsumer<JComponent, DragListener> ()
-                    {
-                        @Override
-                        public void accept ( final JComponent component, final DragListener dragListener )
-                        {
-                            dragListener.finished ( event );
-                        }
-                    } );
                 }
 
                 /**
@@ -261,23 +159,38 @@ public final class DragManager
                  *
                  * @param gp   glass pane
                  * @param dsde drag source drag event
-                 * @param view resulting view of the dragged object
                  * @return preferred dragged element location on glass pane
                  */
-                public Point getLocation ( final WebGlassPane gp, final DragSourceDragEvent dsde, final BufferedImage view )
+                public Point getLocation ( final WebGlassPane gp, final DragSourceDragEvent dsde )
                 {
-                    final Point mp = CoreSwingUtils.getMouseLocation ( gp );
-                    final Point vp = dragViewHandler.getViewRelativeLocation ( data, dsde, view );
+                    final Point mp = SwingUtils.getMousePoint ( gp );
+                    final Point vp = dragViewHandler.getViewRelativeLocation ( data, dsde );
                     return new Point ( mp.x + vp.x, mp.y + vp.y );
                 }
-            };
 
-            // Listeners could only be registered on non-headless environment
-            if ( !GraphicsEnvironment.isHeadless () )
-            {
-                DragSource.getDefaultDragSource ().addDragSourceListener ( dsa );
-                DragSource.getDefaultDragSource ().addDragSourceMotionListener ( dsa );
-            }
+                @Override
+                public void dragDropEnd ( final DragSourceDropEvent dsde )
+                {
+                    // Marking drag operation
+                    dragging = false;
+
+                    // Cleanup drop location component
+                    dropLocation = null;
+
+                    // Cleanup displayed data
+                    if ( view != null )
+                    {
+                        dragViewHandler.dragEnded ( data, dsde );
+                        glassPane.clearPaintedImage ();
+                        glassPane = null;
+                        data = null;
+                        view = null;
+                        dragViewHandler = null;
+                    }
+                }
+            };
+            DragSource.getDefaultDragSource ().addDragSourceListener ( dsa );
+            DragSource.getDefaultDragSource ().addDragSourceMotionListener ( dsa );
         }
     }
 
@@ -292,86 +205,22 @@ public final class DragManager
     }
 
     /**
-     * Returns whether or not something with the specified data flavor is being dragged right now within the application.
+     * Registers new DragViewHandler.
      *
-     * @param flavor data flavor
-     * @return true if something with the specified data flavor is being dragged right now within the application, false otherwise
+     * @param dragViewHandler DragViewHandler to register
      */
-    public static boolean isDragging ( final DataFlavor flavor )
+    public static void registerViewHandler ( final DragViewHandler dragViewHandler )
     {
-        return dragging && ArrayUtils.contains ( flavor, flavors );
+        viewHandlers.put ( dragViewHandler.getObjectFlavor (), dragViewHandler );
     }
 
     /**
-     * Returns data flavors of the current drag operation.
+     * Unregisters new DragViewHandler.
      *
-     * @return data flavors of the current drag operation
+     * @param dragViewHandler DragViewHandler to unregister
      */
-    public static DataFlavor[] getFlavors ()
+    public static void unregisterViewHandler ( final DragViewHandler dragViewHandler )
     {
-        return dragging ? flavors : null;
-    }
-
-    /**
-     * Returns currently dragged transferable.
-     *
-     * @return currently dragged transferable
-     */
-    public static Transferable getTransferable ()
-    {
-        return transferable;
-    }
-
-    /**
-     * Registers {@link DragViewHandler}.
-     *
-     * @param handler {@link DragViewHandler} to register
-     */
-    public static void registerViewHandler ( final DragViewHandler handler )
-    {
-        final DataFlavor flavor = handler.getObjectFlavor ();
-        List<DragViewHandler> handlers = viewHandlers.get ( flavor );
-        if ( handlers == null )
-        {
-            handlers = new ArrayList<DragViewHandler> ( 1 );
-            viewHandlers.put ( flavor, handlers );
-        }
-        handlers.add ( handler );
-    }
-
-    /**
-     * Unregisters {@link DragViewHandler}.
-     *
-     * @param handler {@link DragViewHandler} to unregister
-     */
-    public static void unregisterViewHandler ( final DragViewHandler handler )
-    {
-        final List<DragViewHandler> handlers = viewHandlers.get ( handler.getObjectFlavor () );
-        if ( handlers != null )
-        {
-            handlers.remove ( handler );
-        }
-    }
-
-    /**
-     * Adds {@link DragListener} for the specified {@link JComponent}.
-     *
-     * @param component {@link JComponent} to add {@link DragListener} for
-     * @param listener  {@link DragListener} to add
-     */
-    public static void addDragListener ( final JComponent component, final DragListener listener )
-    {
-        dragListeners.add ( component, listener );
-    }
-
-    /**
-     * Removes {@link DragListener} from the specified {@link JComponent}.
-     *
-     * @param component {@link JComponent} to remove {@link DragListener} from
-     * @param listener  {@link DragListener} to remove
-     */
-    public static void removeDragListener ( final JComponent component, final DragListener listener )
-    {
-        dragListeners.remove ( component, listener );
+        viewHandlers.remove ( dragViewHandler.getObjectFlavor () );
     }
 }

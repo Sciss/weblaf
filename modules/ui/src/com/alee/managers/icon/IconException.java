@@ -19,15 +19,17 @@ package com.alee.managers.icon;
 
 /**
  * Special exception class used to display various icon problems.
+ * It extends RuntimeException to allow throwing this exception while normal runtime.
  *
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-IconManager">How to use IconManager</a>
- * @see IconManager
+ * @see com.alee.managers.icon.IconManager
  */
+
 public final class IconException extends RuntimeException
 {
     /**
-     * Constructs a new {@link IconException} with {@code null} as its detail message.
+     * Constructs a new IconException with {@code null} as its detail message.
      */
     public IconException ()
     {
@@ -35,7 +37,7 @@ public final class IconException extends RuntimeException
     }
 
     /**
-     * Constructs a new {@link IconException} with the specified detail message.
+     * Constructs a new IconException with the specified detail message.
      *
      * @param message exception message
      */
@@ -45,7 +47,7 @@ public final class IconException extends RuntimeException
     }
 
     /**
-     * Constructs a new {@link IconException} with the specified detail message and cause.
+     * Constructs a new IconException with the specified detail message and cause.
      *
      * @param message exception message
      * @param cause   exception cause
@@ -56,7 +58,7 @@ public final class IconException extends RuntimeException
     }
 
     /**
-     * Constructs a new {@link IconException} with the specified cause.
+     * Constructs a new IconException with the specified cause.
      *
      * @param cause exception cause
      */

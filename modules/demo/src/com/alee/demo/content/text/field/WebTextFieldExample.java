@@ -17,9 +17,8 @@
 
 package com.alee.demo.content.text.field;
 
-import com.alee.demo.api.example.*;
-import com.alee.demo.skin.DemoIcons;
-import com.alee.demo.skin.DemoStyles;
+import com.alee.demo.api.*;
+import com.alee.demo.icons.DemoIcons;
 import com.alee.extended.image.WebImage;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.style.StyleId;
@@ -31,7 +30,8 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-public class WebTextFieldExample extends AbstractStylePreviewExample
+
+public class WebTextFieldExample extends AbstractExample
 {
     @Override
     public String getId ()
@@ -54,11 +54,10 @@ public class WebTextFieldExample extends AbstractStylePreviewExample
     @Override
     protected List<Preview> createPreviews ()
     {
-        return CollectionUtils.<Preview>asList (
-                new InputPromptField ( StyleId.textfield ),
-                new LeadingComponentField ( StyleId.textfield ),
-                new TrailingComponentField ( StyleId.textfield )
-        );
+        final InputPromptField e1 = new InputPromptField ( StyleId.textfield );
+        final LeadingComponentField e2 = new LeadingComponentField ( StyleId.textfield );
+        final TrailingComponentField e3 = new TrailingComponentField ( StyleId.textfield );
+        return CollectionUtils.<Preview>asList ( e1, e2, e3 );
     }
 
     /**
@@ -77,7 +76,7 @@ public class WebTextFieldExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebTextField textField = new WebTextField ( getStyleId (), 20 );
             textField.setInputPrompt ( getPreviewLanguagePrefix () + "prompt" );
@@ -101,11 +100,11 @@ public class WebTextFieldExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebTextField textField = new WebTextField ( getStyleId (), 18 );
             textField.setInputPrompt ( getPreviewLanguagePrefix () + "prompt" );
-            textField.setLeadingComponent ( new WebImage ( DemoStyles.leadingImage, DemoIcons.key16 ) );
+            textField.setLeadingComponent ( new WebImage ( DemoIcons.key16 ).setMargin ( 0, 0, 0, 4 ) );
             return CollectionUtils.asList ( textField );
         }
     }
@@ -126,11 +125,11 @@ public class WebTextFieldExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebTextField textField = new WebTextField ( getStyleId (), 18 );
             textField.setInputPrompt ( getPreviewLanguagePrefix () + "prompt" );
-            textField.setTrailingComponent ( new WebImage ( DemoStyles.trailingImage, DemoIcons.github16 ) );
+            textField.setTrailingComponent ( new WebImage ( DemoIcons.github16 ).setMargin ( 0, 4, 0, 0 ) );
             return CollectionUtils.asList ( textField );
         }
     }

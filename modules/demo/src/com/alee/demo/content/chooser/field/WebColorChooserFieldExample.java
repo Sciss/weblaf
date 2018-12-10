@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.chooser.field;
 
-import com.alee.demo.api.example.*;
+import com.alee.demo.api.*;
 import com.alee.extended.colorchooser.WebColorChooserField;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
@@ -29,7 +29,8 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-public class WebColorChooserFieldExample extends AbstractStylePreviewExample
+
+public class WebColorChooserFieldExample extends AbstractExample
 {
     @Override
     public String getId ()
@@ -52,9 +53,8 @@ public class WebColorChooserFieldExample extends AbstractStylePreviewExample
     @Override
     protected List<Preview> createPreviews ()
     {
-        return CollectionUtils.<Preview>asList (
-                new ColorChooserField ( StyleId.colorchooserfield )
-        );
+        final ColorChooserField e1 = new ColorChooserField ( StyleId.colorchooserfield );
+        return CollectionUtils.<Preview>asList ( e1 );
     }
 
     /**
@@ -73,7 +73,7 @@ public class WebColorChooserFieldExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebColorChooserField colorChooserField = new WebColorChooserField ( getStyleId (), Color.RED );
             return CollectionUtils.asList ( colorChooserField );

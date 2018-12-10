@@ -55,13 +55,14 @@ import java.awt.*;
 import java.io.Serializable;
 
 /**
- * SingleFiledLayout lays out components singled filed.
- * This layout manager is like {@link FlowLayout} except that all components are placed in a single row or column.
+ * SingleFiledLayout lays out components singled filed.  This layout manager is like FlowLayout
+ * except that all components are placed in a single row or column.
  *
  * @author Daniel E. Barbalace
  * @version 1.1 April 4, 2002
  */
 
+@SuppressWarnings ( { "ALL" } )
 public class SingleFiledLayout implements LayoutManager, Serializable
 {
     /**
@@ -140,7 +141,7 @@ public class SingleFiledLayout implements LayoutManager, Serializable
      *
      * @param orientation ROW or COLUMN -- should the components be aligned in a row or column
      */
-    public SingleFiledLayout ( final int orientation )
+    public SingleFiledLayout ( int orientation )
     {
         this ( orientation, LEFT, DEFAULT_GAP );
     }
@@ -161,7 +162,8 @@ public class SingleFiledLayout implements LayoutManager, Serializable
             orientation = COLUMN;
         }
 
-        if ( justification != CENTER && justification != FULL && justification != RIGHT )
+        if ( ( justification != CENTER ) && ( justification != FULL ) &&
+                ( justification != RIGHT ) )
         {
             justification = LEFT;
         }
@@ -184,30 +186,29 @@ public class SingleFiledLayout implements LayoutManager, Serializable
      *
      * @param container container being served by this layout manager
      */
-    @Override
-    public void layoutContainer ( final Container container )
+    public void layoutContainer ( Container container )
     {
         // Use preferred size to get maximum width or height
-        final Dimension size = container.getSize ();
+        Dimension size = container.getSize ();
 
         // Get the container's insets
-        final Insets inset = container.getInsets ();
+        Insets inset = container.getInsets ();
 
         // Start at top left of container
         int x = inset.left;
         int y = inset.top;
 
         // Get the components inside the container
-        final Component[] components = container.getComponents ();
+        Component component[] = container.getComponents ();
 
         // Components arranged in a column
         if ( orientation == COLUMN )
         // Add each component
         {
-            for ( final Component component : components )
+            for ( int counter = 0; counter < component.length; counter++ )
             {
                 // Use preferred size of component
-                final Dimension d = component.getPreferredSize ();
+                Dimension d = component[ counter ].getPreferredSize ();
 
                 // Align component
                 switch ( justification )
@@ -217,7 +218,7 @@ public class SingleFiledLayout implements LayoutManager, Serializable
                         break;
 
                     case CENTER:
-                        x = ( size.width - d.width >> 1 ) + inset.left - inset.right;
+                        x = ( ( size.width - d.width ) >> 1 ) + inset.left - inset.right;
                         break;
 
                     case FULL:
@@ -231,7 +232,7 @@ public class SingleFiledLayout implements LayoutManager, Serializable
                 }
 
                 // Set size and location
-                component.setBounds ( x, y, d.width, d.height );
+                component[ counter ].setBounds ( x, y, d.width, d.height );
 
                 // Increment y
                 y += d.height + gap;
@@ -241,10 +242,10 @@ public class SingleFiledLayout implements LayoutManager, Serializable
         else
         // Add each component
         {
-            for ( final Component component : components )
+            for ( int counter = 0; counter < component.length; counter++ )
             {
                 // Use preferred size of component
-                final Dimension d = component.getPreferredSize ();
+                Dimension d = component[ counter ].getPreferredSize ();
 
                 // Align component
                 switch ( justification )
@@ -254,7 +255,7 @@ public class SingleFiledLayout implements LayoutManager, Serializable
                         break;
 
                     case CENTER:
-                        y = ( size.height - d.height >> 1 ) + inset.top - inset.bottom;
+                        y = ( ( size.height - d.height ) >> 1 ) + inset.top - inset.bottom;
                         break;
 
                     case FULL:
@@ -268,7 +269,7 @@ public class SingleFiledLayout implements LayoutManager, Serializable
                 }
 
                 // Set size and location
-                component.setBounds ( x, y, d.width, d.height );
+                component[ counter ].setBounds ( x, y, d.width, d.height );
 
                 // Increment x
                 x += d.width + gap;
@@ -284,22 +285,21 @@ public class SingleFiledLayout implements LayoutManager, Serializable
      * @param container container being served by this layout manager
      * @return a dimension indicating the container's preferred size
      */
-    @Override
-    public Dimension preferredLayoutSize ( final Container container )
+    public Dimension preferredLayoutSize ( Container container )
     {
         int totalWidth = 0;  // Width of all components
         int totalHeight = 0; // Height of all components
 
         // Get the components inside the container
-        final Component[] components = container.getComponents ();
+        Component component[] = container.getComponents ();
 
         // Components arranged in a column
         if ( orientation == COLUMN )
         {
             // Add each component
-            for ( final Component component : components )
+            for ( int counter = 0; counter < component.length; counter++ )
             {
-                final Dimension d = component.getPreferredSize ();
+                Dimension d = component[ counter ].getPreferredSize ();
 
                 if ( totalWidth < d.width )
                 {
@@ -316,9 +316,9 @@ public class SingleFiledLayout implements LayoutManager, Serializable
         else
         {
             // Add each component
-            for ( final Component component : components )
+            for ( int counter = 0; counter < component.length; counter++ )
             {
-                final Dimension d = component.getPreferredSize ();
+                Dimension d = component[ counter ].getPreferredSize ();
 
                 totalWidth += d.width + gap;
 
@@ -333,7 +333,7 @@ public class SingleFiledLayout implements LayoutManager, Serializable
         }
 
         // Add insets to preferred size
-        final Insets inset = container.getInsets ();
+        Insets inset = container.getInsets ();
         totalWidth += inset.left + inset.right;
         totalHeight += inset.top + inset.bottom;
 
@@ -348,22 +348,21 @@ public class SingleFiledLayout implements LayoutManager, Serializable
      * @param container container being served by this layout manager
      * @return a dimension indicating the container's minimum size
      */
-    @Override
-    public Dimension minimumLayoutSize ( final Container container )
+    public Dimension minimumLayoutSize ( Container container )
     {
         int totalWidth = 0;  // Width of all components
         int totalHeight = 0; // Height of all components
 
         // Get the components inside the container
-        final Component[] components = container.getComponents ();
+        Component component[] = container.getComponents ();
 
         // Components arranged in a column
         if ( orientation == COLUMN )
         {
             // Add each component
-            for ( final Component component : components )
+            for ( int counter = 0; counter < component.length; counter++ )
             {
-                final Dimension d = component.getMinimumSize ();
+                Dimension d = component[ counter ].getMinimumSize ();
 
                 if ( totalWidth < d.width )
                 {
@@ -380,9 +379,9 @@ public class SingleFiledLayout implements LayoutManager, Serializable
         else
         {
             // Add each component
-            for ( final Component component : components )
+            for ( int counter = 0; counter < component.length; counter++ )
             {
-                final Dimension d = component.getMinimumSize ();
+                Dimension d = component[ counter ].getMinimumSize ();
 
                 totalWidth += d.width + gap;
 
@@ -397,7 +396,7 @@ public class SingleFiledLayout implements LayoutManager, Serializable
         }
 
         // Add insets to preferred size
-        final Insets inset = container.getInsets ();
+        Insets inset = container.getInsets ();
         totalWidth += inset.left + inset.right;
         totalHeight += inset.top + inset.bottom;
 
@@ -410,8 +409,7 @@ public class SingleFiledLayout implements LayoutManager, Serializable
      * @param name      dummy parameter
      * @param component component to add
      */
-    @Override
-    public void addLayoutComponent ( final String name, final Component component )
+    public void addLayoutComponent ( String name, Component component )
     {
         //
     }
@@ -421,8 +419,7 @@ public class SingleFiledLayout implements LayoutManager, Serializable
      *
      * @param component component being removed
      */
-    @Override
-    public void removeLayoutComponent ( final Component component )
+    public void removeLayoutComponent ( Component component )
     {
         //
     }

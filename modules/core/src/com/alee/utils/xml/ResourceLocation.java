@@ -22,26 +22,13 @@ import com.thoughtworks.xstream.annotations.XStreamAlias;
 import java.io.Serializable;
 
 /**
- * Supported {@link Resource} location types.
- *
  * @author Mikle Garin
  */
 
-@XStreamAlias ( "ResourceLocation" )
+@XStreamAlias ("ResourceLocation")
 public enum ResourceLocation implements Serializable
 {
-    /**
-     * Resource referenced through direct URL address.
-     */
     url,
-
-    /**
-     * Resource in local file system.
-     */
     filePath,
-
-    /**
-     * Resource within application JAR file.
-     */
     nearClass
 }

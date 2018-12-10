@@ -22,6 +22,7 @@ package com.alee.api;
  *
  * @author Mikle Garin
  */
+
 public interface Identifiable
 {
     /**

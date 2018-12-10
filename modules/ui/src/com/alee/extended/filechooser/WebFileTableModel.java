@@ -17,21 +17,23 @@
 
 package com.alee.extended.filechooser;
 
-import com.alee.managers.language.LM;
+import com.alee.managers.language.LanguageManager;
 import com.alee.utils.CollectionUtils;
 import com.alee.utils.FileUtils;
 
 import javax.swing.table.AbstractTableModel;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
 /**
- * {@link javax.swing.table.TableModel} implementation for {@link WebFileTable}.
+ * Data model for WebFileTable.
  *
  * @author Mikle Garin
  */
+
 public class WebFileTableModel extends AbstractTableModel implements FileTableColumns
 {
     /**
@@ -59,7 +61,7 @@ public class WebFileTableModel extends AbstractTableModel implements FileTableCo
      */
     public WebFileTableModel ( final String... columns )
     {
-        this ( new ArrayList<File> (), CollectionUtils.asList ( columns ) );
+        this ( new ArrayList<File> (), Arrays.asList ( columns ) );
     }
 
     /**
@@ -90,7 +92,7 @@ public class WebFileTableModel extends AbstractTableModel implements FileTableCo
      */
     public WebFileTableModel ( final Collection<File> files, final String... columns )
     {
-        this ( files, CollectionUtils.asList ( columns ) );
+        this ( files, Arrays.asList ( columns ) );
     }
 
     /**
@@ -202,7 +204,7 @@ public class WebFileTableModel extends AbstractTableModel implements FileTableCo
     @Override
     public String getColumnName ( final int column )
     {
-        return LM.get ( columns.get ( column ) );
+        return LanguageManager.get ( columns.get ( column ) );
     }
 
     @Override

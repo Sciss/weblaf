@@ -17,23 +17,17 @@
 
 package com.alee.managers.version;
 
-import com.alee.utils.xml.XmlException;
 import com.thoughtworks.xstream.converters.SingleValueConverter;
 
 import java.sql.Date;
 import java.text.SimpleDateFormat;
 
 /**
- * Custom XStream converter for {@link Long} version date.
- *
  * @author Mikle Garin
- * @see VersionInfo
  */
-public final class VersionDateConverter implements SingleValueConverter
+
+public class VersionDateConverter implements SingleValueConverter
 {
-    /**
-     * Version date format.
-     */
     private static final SimpleDateFormat sdf = new SimpleDateFormat ( "dd.MM.yyyy" );
 
     @Override
@@ -43,21 +37,35 @@ public final class VersionDateConverter implements SingleValueConverter
     }
 
     @Override
-    public String toString ( final Object date )
+    public String toString ( final Object o )
     {
-        return sdf.format ( new Date ( ( Long ) date ) );
+        if ( o == null )
+        {
+            return "";
+        }
+        else
+        {
+            return sdf.format ( new Date ( ( Long ) o ) );
+        }
     }
 
     @Override
-    public Object fromString ( final String date )
+    public Object fromString ( final String s )
     {
         try
         {
-            return sdf.parse ( date ).getTime ();
+            return sdf.parse ( s ).getTime ();
         }
-        catch ( final Exception e )
+        catch ( final Throwable e )
         {
-            throw new XmlException ( "Unable to parse version date: " + date, e );
+            try
+            {
+                return Long.parseLong ( s );
+            }
+            catch ( final Throwable ex )
+            {
+                return 0L;
+            }
         }
     }
 }

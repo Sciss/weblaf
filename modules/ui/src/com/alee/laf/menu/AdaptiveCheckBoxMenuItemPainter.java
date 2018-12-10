@@ -6,19 +6,17 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link CheckBoxMenuItemPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WebCheckBoxMenuItemUI}.
+ * Simple CheckBoxMenuItemPainter adapter class.
+ * It is used to install simple non-specific painters into WebCheckBoxMenuItemUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveCheckBoxMenuItemPainter<C extends JMenuItem, U extends WebCheckBoxMenuItemUI> extends AdaptivePainter<C, U>
-        implements ICheckBoxMenuItemPainter<C, U>
+public final class AdaptiveCheckBoxMenuItemPainter<E extends JMenuItem, U extends WebCheckBoxMenuItemUI> extends AdaptivePainter<E, U>
+        implements ICheckBoxMenuItemPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveCheckBoxMenuItemPainter} for the specified painter.
+     * Constructs new AdaptiveCheckBoxMenuItemPainter for the specified painter.
      *
      * @param painter painter to adapt
      */

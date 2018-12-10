@@ -17,8 +17,6 @@
 
 package com.alee.extended.date;
 
-import com.alee.api.jdk.Consumer;
-import com.alee.api.jdk.Objects;
 import com.alee.extended.window.PopOverAlignment;
 import com.alee.extended.window.PopOverDirection;
 import com.alee.extended.window.WebPopOver;
@@ -30,44 +28,42 @@ import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
+import com.alee.utils.CompareUtils;
 import com.alee.utils.ImageUtils;
 import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.extensions.FocusEventRunnable;
-import com.alee.utils.swing.extensions.KeyEventRunnable;
+import com.alee.utils.swing.DataRunnable;
+import com.alee.utils.swing.FocusEventRunnable;
+import com.alee.utils.swing.KeyEventRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.text.DateFormat;
 import java.util.Date;
 
 /**
- * Custom UI for {@link WebDateField} component.
+ * Custom UI for WebDateField component.
  *
- * @param <C> component type
  * @author Mikle Garin
  */
-public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> implements ShapeSupport, MarginSupport, PaddingSupport
+
+public class WebDateFieldUI extends DateFieldUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport, PropertyChangeListener
 {
     /**
-     * todo 1. Change popover to popup-based window
-     * todo    Probably another variation of popover would be handy?
+     * todo 1. Change popover to popup-based window. Probably another variation of popover would be handy?
      */
 
     /**
      * Component painter.
      */
-    @DefaultPainter ( DateFieldPainter.class )
+    @DefaultPainter (DateFieldPainter.class)
     protected IDateFieldPainter painter;
-
-    /**
-     * Listeners.
-     */
-    protected transient PropertyChangeListener propertyChangeListener;
-    protected transient FocusAdapter focusListener;
 
     /**
      * UI elements.
@@ -80,43 +76,63 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
     /**
      * Runtime variables.
      */
+    protected WebDateField dateField;
+    protected Insets margin = null;
+    protected Insets padding = null;
     protected boolean updating = false;
 
     /**
-     * Returns an instance of the {@link WebDateFieldUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Returns an instance of the WebDateFieldUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebDateFieldUI}
+     * @return instance of the WebDateFieldUI
      */
+    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebDateFieldUI ();
     }
 
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
-        // Installing UI
         super.installUI ( c );
 
-        // Applying skin
-        StyleManager.installSkin ( dateField );
+        // Saving date field reference
+        dateField = ( WebDateField ) c;
 
         // Creating date field UI
         installComponents ();
         installActions ();
+
+        // Applying skin
+        StyleManager.installSkin ( dateField );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
+        // Uninstalling applied skin
+        StyleManager.uninstallSkin ( dateField );
+
         // Destroying date field UI
         uninstallActions ();
         uninstallComponents ();
 
-        // Uninstalling applied skin
-        StyleManager.uninstallSkin ( dateField );
+        // Removing date field reference
+        dateField.removePropertyChangeListener ( this );
+        dateField = null;
 
         // Uninstalling UI
         super.uninstallUI ( c );
@@ -147,22 +163,10 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
         dateField.removeAll ();
         dateField.revalidate ();
         dateField.repaint ();
-
-        if ( calendar != null )
-        {
-            calendar.resetStyleId ();
-            calendar = null;
-        }
-        if ( popup != null )
-        {
-            popup.resetStyleId ();
-            popup = null;
-        }
-        button.resetStyleId ();
+        calendar = null;
+        popup = null;
         button = null;
-        field.resetStyleId ();
         field = null;
-
         SwingUtils.removeHandlesEnableStateMark ( dateField );
     }
 
@@ -172,47 +176,8 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
     protected void installActions ()
     {
         // Date field property listener
-        propertyChangeListener = new PropertyChangeListener ()
-        {
-            @Override
-            public void propertyChange ( final PropertyChangeEvent evt )
-            {
-                final String property = evt.getPropertyName ();
-                if ( Objects.equals ( property, WebDateField.ALLOW_USER_INPUT_PROPERTY ) )
-                {
-                    field.setEditable ( ( Boolean ) evt.getNewValue () );
-                }
-                if ( Objects.equals ( property, WebLookAndFeel.ENABLED_PROPERTY ) )
-                {
-                    updateEnabledState ();
-                }
-                if ( Objects.equals ( property, WebDateField.DATE_FORMAT_PROPERTY ) )
-                {
-                    updateExpectedFieldLength ();
-                }
-                else if ( Objects.equals ( property, WebDateField.DATE_PROPERTY ) )
-                {
-                    setDate ( dateField.getDate (), UpdateSource.datefield );
-                }
-                else if ( Objects.equals ( property, WebDateField.CALENDAR_CUSTOMIZER_PROPERTY ) )
-                {
-                    customizeCalendar ();
-                }
-            }
-        };
-        dateField.addPropertyChangeListener ( propertyChangeListener );
+        dateField.addPropertyChangeListener ( this );
         updateExpectedFieldLength ();
-
-        // Date field focus handling
-        focusListener = new FocusAdapter ()
-        {
-            @Override
-            public void focusGained ( final FocusEvent e )
-            {
-                field.requestFocusInWindow ();
-            }
-        };
-        dateField.addFocusListener ( focusListener );
 
         // UI elements actions
         field.addActionListener ( new ActionListener ()
@@ -228,24 +193,14 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
             @Override
             public void run ( final FocusEvent e )
             {
-                // Date from the text field
-                final Date fieldDate = getDate ( field.getText () );
-                final String fieldDateText = getText ( fieldDate );
-
-                // Stored model date
-                final Date modelDate = dateField.getDate ();
-                final String modelDateText = getText ( modelDate );
-
-                // Comparing date texts instead of dates
-                // This is important to avoid issues with milliseconds precision when text is parsed into date
-                // If we compare dates - they might be different, but visually they would be exactly same within the field
-                if ( Objects.notEquals ( fieldDateText, modelDateText ) )
+                final Date date = getDate ( field.getText () );
+                if ( !CompareUtils.equals ( date, dateField.getDate () ) )
                 {
-                    setDate ( fieldDate, UpdateSource.field );
+                    setDate ( date, UpdateSource.field );
                 }
                 else
                 {
-                    field.setText ( fieldDateText );
+                    field.setText ( getText ( date ) );
                 }
             }
         } );
@@ -255,7 +210,6 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
             public void run ( final KeyEvent e )
             {
                 showDateChooserPopup ();
-                e.consume ();
             }
         } );
         button.addActionListener ( new ActionListener ()
@@ -269,17 +223,37 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
     }
 
     /**
-     * Uninstalls actions from UI elements.
+     * Uninstalls actions for UI elements.
      */
     protected void uninstallActions ()
     {
-        // Date field focus handling
-        dateField.removeFocusListener ( focusListener );
-        focusListener = null;
+        dateField.removePropertyChangeListener ( this );
+    }
 
-        // Date field property listener
-        dateField.removePropertyChangeListener ( propertyChangeListener );
-        propertyChangeListener = null;
+    @Override
+    public void propertyChange ( final PropertyChangeEvent evt )
+    {
+        final String property = evt.getPropertyName ();
+        if ( CompareUtils.equals ( property, WebDateField.ALLOW_USER_INPUT_PROPERTY ) )
+        {
+            field.setEditable ( ( Boolean ) evt.getNewValue () );
+        }
+        if ( CompareUtils.equals ( property, WebLookAndFeel.ENABLED_PROPERTY ) )
+        {
+            updateEnabledState ();
+        }
+        if ( CompareUtils.equals ( property, WebDateField.DATE_FORMAT_PROPERTY ) )
+        {
+            updateExpectedFieldLength ();
+        }
+        else if ( CompareUtils.equals ( property, WebDateField.DATE_PROPERTY ) )
+        {
+            setDate ( dateField.getDate (), UpdateSource.datefield );
+        }
+        else if ( CompareUtils.equals ( property, WebDateField.CALENDAR_CUSTOMIZER_PROPERTY ) )
+        {
+            customizeCalendar ();
+        }
     }
 
     /**
@@ -321,14 +295,6 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
                     popup.setVisible ( false );
                 }
             } );
-            calendar.registerKeyboardAction ( new ActionListener ()
-            {
-                @Override
-                public void actionPerformed ( final ActionEvent e )
-                {
-                    popup.setVisible ( false );
-                }
-            }, Hotkey.ESCAPE.getKeyStroke (), JComponent.WHEN_IN_FOCUSED_WINDOW );
             popup.add ( calendar );
 
             customizeCalendar ();
@@ -389,13 +355,6 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
                 calendar.setDate ( date );
             }
 
-            // Passing focus into the field
-            if ( source == UpdateSource.calendar )
-            {
-                field.setCaretPosition ( field.getText ().length () );
-                field.requestFocusInWindow ();
-            }
-
             // Resetting mark
             updating = false;
         }
@@ -421,7 +380,7 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
                 return null;
             }
         }
-        catch ( final Exception ex )
+        catch ( final Throwable ex )
         {
             return dateField.getDate ();
         }
@@ -439,45 +398,47 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
     }
 
     @Override
-    public Shape getShape ()
+    public StyleId getStyleId ()
+    {
+        return StyleManager.getStyleId ( dateField );
+    }
+
+    @Override
+    public StyleId setStyleId ( final StyleId id )
+    {
+        return StyleManager.setStyleId ( dateField, id );
+    }
+
+    @Override
+    public Shape provideShape ()
     {
         return PainterSupport.getShape ( dateField, painter );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return PainterSupport.isShapeDetectionEnabled ( dateField, painter );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        PainterSupport.setShapeDetectionEnabled ( dateField, painter, enabled );
-    }
-
-    @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( dateField );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( dateField, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( dateField );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( dateField, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -487,7 +448,7 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -498,34 +459,14 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( dateField, new Consumer<IDateFieldPainter> ()
+        PainterSupport.setPainter ( dateField, new DataRunnable<IDateFieldPainter> ()
         {
             @Override
-            public void accept ( final IDateFieldPainter newPainter )
+            public void run ( final IDateFieldPainter newPainter )
             {
                 WebDateFieldUI.this.painter = newPainter;
             }
         }, this.painter, painter, IDateFieldPainter.class, AdaptiveDateFieldPainter.class );
-    }
-
-    @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
-    {
-        return PainterSupport.contains ( c, this, painter, x, y );
-    }
-
-    @Override
-    public int getBaseline ( final JComponent c, final int width, final int height )
-    {
-        // todo Requires proper support
-        return PainterSupport.getBaseline ( c, this, painter, width, height );
-    }
-
-    @Override
-    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
-    {
-        // todo Requires proper support
-        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
     }
 
     /**
@@ -539,7 +480,7 @@ public class WebDateFieldUI<C extends WebDateField> extends WDateFieldUI<C> impl
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
     }
 

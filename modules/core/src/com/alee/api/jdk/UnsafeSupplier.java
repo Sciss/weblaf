@@ -20,19 +20,20 @@ package com.alee.api.jdk;
 /**
  * Represents a supplier of results.
  * There is no requirement that a new or distinct result be returned each time the supplier is invoked.
- *
+ * <p>
  * This is a custom supplier for JDK6 support.
  *
  * @param <T> the type of results supplied by this supplier
  * @author Mikle Garin
  */
+
 public interface UnsafeSupplier<T>
 {
     /**
      * Returns a result.
      *
      * @return a result
-     * @throws java.lang.Exception in case exception occured while retrieving result
+     * @throws java.lang.Throwable in case exception occured while retrieving result
      */
-    public T get () throws Exception;
+    public T get () throws Throwable;
 }

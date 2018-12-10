@@ -17,32 +17,35 @@
 
 package com.alee.laf.viewport;
 
-import com.alee.managers.style.*;
 import com.alee.painter.Paintable;
 import com.alee.painter.Painter;
+import com.alee.laf.WebLookAndFeel;
+import com.alee.managers.log.Log;
+import com.alee.managers.style.StyleId;
+import com.alee.managers.style.StyleManager;
+import com.alee.managers.style.Styleable;
+import com.alee.managers.style.Skin;
+import com.alee.managers.style.StyleListener;
+import com.alee.managers.style.Skinnable;
+import com.alee.utils.ReflectUtils;
 
 import javax.swing.*;
+import java.util.Map;
 
 /**
- * {@link JViewport} extension class.
- * It contains various useful methods to simplify core component usage.
- *
- * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
- * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
+ * This JViewport extension class provides a direct access to WebViewportUI methods.
  *
  * @author Mikle Garin
- * @see JViewport
- * @see WebViewportUI
- * @see ViewportPainter
  */
-public class WebViewport extends JViewport implements Styleable, Paintable
+
+public class WebViewport extends JViewport implements Styleable, Skinnable, Paintable
 {
     /**
      * Constructs new viewport component.
      */
     public WebViewport ()
     {
-        this ( StyleId.auto );
+        super ();
     }
 
     /**
@@ -57,27 +60,15 @@ public class WebViewport extends JViewport implements Styleable, Paintable
     }
 
     @Override
-    public StyleId getDefaultStyleId ()
-    {
-        return StyleId.viewport;
-    }
-
-    @Override
     public StyleId getStyleId ()
     {
-        return StyleManager.getStyleId ( this );
+        return getWebUI ().getStyleId ();
     }
 
     @Override
     public StyleId setStyleId ( final StyleId id )
     {
-        return StyleManager.setStyleId ( this, id );
-    }
-
-    @Override
-    public StyleId resetStyleId ()
-    {
-        return StyleManager.resetStyleId ( this );
+        return getWebUI ().setStyleId ( id );
     }
 
     @Override
@@ -99,9 +90,9 @@ public class WebViewport extends JViewport implements Styleable, Paintable
     }
 
     @Override
-    public Skin resetSkin ()
+    public Skin restoreSkin ()
     {
-        return StyleManager.resetSkin ( this );
+        return StyleManager.restoreSkin ( this );
     }
 
     @Override
@@ -117,9 +108,21 @@ public class WebViewport extends JViewport implements Styleable, Paintable
     }
 
     @Override
+    public Map<String, Painter> getCustomPainters ()
+    {
+        return StyleManager.getCustomPainters ( this );
+    }
+
+    @Override
     public Painter getCustomPainter ()
     {
         return StyleManager.getCustomPainter ( this );
+    }
+
+    @Override
+    public Painter getCustomPainter ( final String id )
+    {
+        return StyleManager.getCustomPainter ( this, id );
     }
 
     @Override
@@ -129,41 +132,48 @@ public class WebViewport extends JViewport implements Styleable, Paintable
     }
 
     @Override
-    public boolean resetCustomPainter ()
+    public Painter setCustomPainter ( final String id, final Painter painter )
     {
-        return StyleManager.resetCustomPainter ( this );
+        return StyleManager.setCustomPainter ( this, id, painter );
     }
 
-    /**
-     * Returns the look and feel (LaF) object that renders this component.
-     *
-     * @return the {@link WViewportUI} object that renders this component
-     */
     @Override
-    public WViewportUI getUI ()
+    public boolean restoreDefaultPainters ()
     {
-        return ( WViewportUI ) ui;
+        return StyleManager.restoreDefaultPainters ( this );
     }
 
     /**
-     * Sets the LaF object that renders this component.
+     * Returns Web-UI applied to this class.
      *
-     * @param ui {@link WViewportUI}
+     * @return Web-UI applied to this class
      */
-    public void setUI ( final WViewportUI ui )
+    private WebViewportUI getWebUI ()
     {
-        super.setUI ( ui );
+        return ( WebViewportUI ) getUI ();
     }
 
+    /**
+     * Installs a Web-UI into this component.
+     */
     @Override
     public void updateUI ()
     {
-        StyleManager.getDescriptor ( this ).updateUI ( this );
-    }
-
-    @Override
-    public String getUIClassID ()
-    {
-        return StyleManager.getDescriptor ( this ).getUIClassId ();
+        if ( getUI () == null || !( getUI () instanceof WebViewportUI ) )
+        {
+            try
+            {
+                setUI ( ( WebViewportUI ) ReflectUtils.createInstance ( WebLookAndFeel.viewportUI ) );
+            }
+            catch ( final Throwable e )
+            {
+                Log.error ( this, e );
+                setUI ( new WebViewportUI () );
+            }
+        }
+        else
+        {
+            setUI ( getUI () );
+        }
     }
 }

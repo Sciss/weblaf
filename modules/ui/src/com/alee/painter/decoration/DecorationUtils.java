@@ -19,13 +19,11 @@ package com.alee.painter.decoration;
 
 import com.alee.painter.decoration.background.GradientColor;
 import com.alee.painter.decoration.background.GradientType;
-import com.alee.utils.CollectionUtils;
 import com.alee.utils.MathUtils;
 import com.alee.utils.SwingUtils;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -123,31 +121,9 @@ public final class DecorationUtils
     }
 
     /**
-     * Returns {@link List} of extra decoration states from {@link Object} based on its {@link Stateful} implementation.
-     * It performs all necessary checks and always returns non-{@code null} {@link List} of states, though it might be empty.
+     * Informs about decoratable state changes.
      *
-     * @param object {@link Object} to retrieve {@link List} of extra decoration states from
-     * @return {@link List} of extra decoration states from {@link Object} based on its {@link Stateful} implementation
-     */
-    public static List<String> getExtraStates ( final Object object )
-    {
-        final List<String> states;
-        if ( object instanceof Stateful )
-        {
-            final List<String> extra = ( ( Stateful ) object ).getStates ();
-            states = CollectionUtils.notEmpty ( extra ) ? extra : Collections.<String>emptyList ();
-        }
-        else
-        {
-            states = Collections.emptyList ();
-        }
-        return states;
-    }
-
-    /**
-     * Informs about {@link JComponent} decoration state changes.
-     *
-     * @param component {@link JComponent} decoration states changed for
+     * @param component component states changed for
      */
     public static void fireStatesChanged ( final JComponent component )
     {

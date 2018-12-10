@@ -17,7 +17,7 @@
 
 package com.alee.extended.filechooser;
 
-import com.alee.utils.collection.ImmutableList;
+import com.alee.utils.CollectionUtils;
 
 import java.util.List;
 
@@ -26,6 +26,7 @@ import java.util.List;
  *
  * @author Mikle Garin
  */
+
 public interface FileTableColumns
 {
     /**
@@ -46,10 +47,6 @@ public interface FileTableColumns
     /**
      * Default file table columns.
      */
-    public static final List<String> DEFAULT_COLUMNS = new ImmutableList<String> (
-            NAME_COLUMN,
-            EXTENSION_COLUMN,
-            SIZE_COLUMN,
-            MODIFICATION_DATE_COLUMN
-    );
+    public static final List<String> DEFAULT_COLUMNS =
+            CollectionUtils.asList ( NAME_COLUMN, EXTENSION_COLUMN, SIZE_COLUMN, MODIFICATION_DATE_COLUMN );
 }

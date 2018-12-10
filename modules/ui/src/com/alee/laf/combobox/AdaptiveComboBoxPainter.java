@@ -6,19 +6,17 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link ComboBoxPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WComboBoxUI}.
+ * Simple ComboBoxPainter adapter class.
+ * It is used to install simple non-specific painters into WebComboBoxUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveComboBoxPainter<C extends JComboBox, U extends WComboBoxUI> extends AdaptivePainter<C, U>
-        implements IComboBoxPainter<C, U>
+public final class AdaptiveComboBoxPainter<E extends JComboBox, U extends WebComboBoxUI> extends AdaptivePainter<E, U>
+        implements IComboBoxPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveComboBoxPainter} for the specified painter.
+     * Constructs new AdaptiveComboBoxPainter for the specified painter.
      *
      * @param painter painter to adapt
      */

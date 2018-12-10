@@ -17,6 +17,7 @@
 
 package com.alee.laf.checkbox;
 
+import com.alee.painter.decoration.DecorationState;
 import com.alee.painter.decoration.IDecoration;
 import com.alee.painter.decoration.content.AbstractContent;
 import com.alee.utils.GraphicsUtils;
@@ -28,25 +29,20 @@ import java.awt.*;
 import java.awt.geom.GeneralPath;
 
 /**
- * Checked state icon content for {@link AbstractButton} component.
+ * Checked state icon content for {@link javax.swing.JCheckBox} component.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <D> decoration type
  * @param <I> content type
  * @author Mikle Garin
  */
+
 @XStreamAlias ( "CheckIcon" )
-public class CheckIcon<C extends AbstractButton, D extends IDecoration<C, D>, I extends CheckIcon<C, D, I>> extends AbstractContent<C, D, I>
+public class CheckIcon<E extends JCheckBox, D extends IDecoration<E, D>, I extends CheckIcon<E, D, I>> extends AbstractContent<E, D, I>
 {
     /**
      * todo 1. Move check shape into some kind of settings presented in XML
      */
-
-    /**
-     * Preferred icon size.
-     */
-    @XStreamAsAttribute
-    protected Dimension size;
 
     /**
      * Check icon shape stroke.
@@ -63,17 +59,11 @@ public class CheckIcon<C extends AbstractButton, D extends IDecoration<C, D>, I 
     @Override
     public String getId ()
     {
-        return id != null ? id : "check";
+        return DecorationState.checked;
     }
 
     @Override
-    public boolean isEmpty ( final C c, final D d )
-    {
-        return false;
-    }
-
-    @Override
-    protected void paintContent ( final Graphics2D g2d, final C c, final D d, final Rectangle bounds )
+    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final D d )
     {
         final Stroke os = GraphicsUtils.setupStroke ( g2d, stroke, stroke != null );
         final Paint op = GraphicsUtils.setupPaint ( g2d, color );
@@ -93,8 +83,16 @@ public class CheckIcon<C extends AbstractButton, D extends IDecoration<C, D>, I 
     }
 
     @Override
-    protected Dimension getContentPreferredSize ( final C c, final D d, final Dimension available )
+    public I merge ( final I icon )
     {
-        return size != null ? new Dimension ( size ) : new Dimension ( 0, 0 );
+        if ( icon.stroke != null )
+        {
+            stroke = icon.stroke;
+        }
+        if ( icon.color != null )
+        {
+            color = icon.color;
+        }
+        return ( I ) this;
     }
 }

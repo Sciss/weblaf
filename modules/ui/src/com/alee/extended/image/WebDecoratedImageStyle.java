@@ -17,6 +17,7 @@
 
 package com.alee.extended.image;
 
+import com.alee.global.StyleConstants;
 import com.alee.utils.laf.ShadeType;
 
 import javax.swing.*;

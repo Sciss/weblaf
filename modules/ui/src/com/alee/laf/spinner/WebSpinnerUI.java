@@ -17,13 +17,13 @@
 
 package com.alee.laf.spinner;
 
-import com.alee.api.jdk.Consumer;
 import com.alee.laf.button.WebButton;
-import com.alee.managers.icon.Icons;
 import com.alee.managers.style.*;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -32,12 +32,17 @@ import javax.swing.text.JTextComponent;
 import java.awt.*;
 
 /**
- * Custom UI for {@link JSpinner} component.
- *
  * @author Mikle Garin
  */
-public class WebSpinnerUI extends BasicSpinnerUI implements ShapeSupport, MarginSupport, PaddingSupport
+
+public class WebSpinnerUI extends BasicSpinnerUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
 {
+    /**
+     * Spinner button icons.
+     */
+    protected static final ImageIcon UP_ICON = new ImageIcon ( WebSpinnerUI.class.getResource ( "icons/up.png" ) );
+    protected static final ImageIcon DOWN_ICON = new ImageIcon ( WebSpinnerUI.class.getResource ( "icons/down.png" ) );
+
     /**
      * Component painter.
      */
@@ -45,17 +50,29 @@ public class WebSpinnerUI extends BasicSpinnerUI implements ShapeSupport, Margin
     protected ISpinnerPainter painter;
 
     /**
-     * Returns an instance of the {@link WebSpinnerUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Runtime variables.
+     */
+    protected Insets margin = null;
+    protected Insets padding = null;
+
+    /**
+     * Returns an instance of the WebSpinnerUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebSpinnerUI}
+     * @return instance of the WebSpinnerUI
      */
+    @SuppressWarnings ( "UnusedParameters" )
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebSpinnerUI ();
     }
 
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
@@ -66,6 +83,11 @@ public class WebSpinnerUI extends BasicSpinnerUI implements ShapeSupport, Margin
         StyleManager.installSkin ( spinner );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -91,7 +113,7 @@ public class WebSpinnerUI extends BasicSpinnerUI implements ShapeSupport, Margin
         {
             configureEditor ( ( JTextComponent ) editor, spinner );
         }
-        else if ( editor instanceof JSpinner.DefaultEditor )
+        else
         {
             final JSpinner.DefaultEditor container = ( JSpinner.DefaultEditor ) editor;
             configureEditorContainer ( container, spinner );
@@ -127,7 +149,7 @@ public class WebSpinnerUI extends BasicSpinnerUI implements ShapeSupport, Margin
     @Override
     protected Component createNextButton ()
     {
-        final WebButton nextButton = new WebButton ( StyleId.spinnerNextButton.at ( spinner ), Icons.upSmall );
+        final WebButton nextButton = new WebButton ( StyleId.spinnerNextButton.at ( spinner ), UP_ICON );
         nextButton.setName ( "Spinner.nextButton" );
         installNextButtonListeners ( nextButton );
         return nextButton;
@@ -136,52 +158,54 @@ public class WebSpinnerUI extends BasicSpinnerUI implements ShapeSupport, Margin
     @Override
     protected Component createPreviousButton ()
     {
-        final WebButton prevButton = new WebButton ( StyleId.spinnerPreviousButton.at ( spinner ), Icons.downSmall );
+        final WebButton prevButton = new WebButton ( StyleId.spinnerPreviousButton.at ( spinner ), DOWN_ICON );
         prevButton.setName ( "Spinner.previousButton" );
         installPreviousButtonListeners ( prevButton );
         return prevButton;
     }
 
     @Override
-    public Shape getShape ()
+    public StyleId getStyleId ()
+    {
+        return StyleManager.getStyleId ( spinner );
+    }
+
+    @Override
+    public StyleId setStyleId ( final StyleId id )
+    {
+        return StyleManager.setStyleId ( spinner, id );
+    }
+
+    @Override
+    public Shape provideShape ()
     {
         return PainterSupport.getShape ( spinner, painter );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return PainterSupport.isShapeDetectionEnabled ( spinner, painter );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        PainterSupport.setShapeDetectionEnabled ( spinner, painter, enabled );
-    }
-
-    @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( spinner );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( spinner, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( spinner );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( spinner, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -191,7 +215,7 @@ public class WebSpinnerUI extends BasicSpinnerUI implements ShapeSupport, Margin
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -202,10 +226,10 @@ public class WebSpinnerUI extends BasicSpinnerUI implements ShapeSupport, Margin
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( spinner, new Consumer<ISpinnerPainter> ()
+        PainterSupport.setPainter ( spinner, new DataRunnable<ISpinnerPainter> ()
         {
             @Override
-            public void accept ( final ISpinnerPainter newPainter )
+            public void run ( final ISpinnerPainter newPainter )
             {
                 WebSpinnerUI.this.painter = newPainter;
             }
@@ -213,24 +237,17 @@ public class WebSpinnerUI extends BasicSpinnerUI implements ShapeSupport, Margin
     }
 
     @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
-    {
-        return PainterSupport.contains ( c, this, painter, x, y );
-    }
-
-    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
     }
 
     @Override
     public Dimension getPreferredSize ( final JComponent c )
     {
-        // return PainterSupport.getPreferredSize ( c, super.getPreferredSize ( c ), painter );
-        return null;
+        return PainterSupport.getPreferredSize ( c, super.getPreferredSize ( c ), painter );
     }
 }

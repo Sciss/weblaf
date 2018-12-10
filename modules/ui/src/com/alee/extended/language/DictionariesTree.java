@@ -19,10 +19,7 @@ package com.alee.extended.language;
 
 import com.alee.laf.tree.WebTree;
 import com.alee.managers.hotkey.Hotkey;
-import com.alee.managers.language.data.Dictionary;
-import com.alee.managers.language.data.Record;
-import com.alee.managers.language.data.Text;
-import com.alee.managers.language.data.Value;
+import com.alee.managers.language.data.*;
 
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
@@ -111,7 +108,7 @@ public class DictionariesTree extends WebTree
                             if ( uo != null )
                             {
                                 final Dictionary parent = ( Dictionary ) uo;
-                                parent.removeDictionary ( ( Dictionary ) type );
+                                parent.removeSubDictionary ( ( Dictionary ) type );
                             }
                         }
                         else if ( type instanceof Record )
@@ -131,6 +128,12 @@ public class DictionariesTree extends WebTree
                             // Removing Text from Value
                             final Object uo = ( ( DefaultMutableTreeNode ) node.getParent () ).getUserObject ();
                             ( ( Value ) uo ).removeText ( ( Text ) type );
+                        }
+                        else if ( type instanceof Tooltip )
+                        {
+                            // Removing Tooltip from Value
+                            final Object uo = ( ( DefaultMutableTreeNode ) node.getParent () ).getUserObject ();
+                            ( ( Value ) uo ).removeTooltip ( ( Tooltip ) type );
                         }
 
                         // Removing node from tree model
@@ -200,13 +203,19 @@ public class DictionariesTree extends WebTree
     public DefaultMutableTreeNode createDictionaryNode ( final Dictionary dictionary )
     {
         final DefaultMutableTreeNode dn = new DefaultMutableTreeNode ( dictionary );
-        for ( final Record record : dictionary.getRecords () )
+        if ( dictionary.getRecords () != null )
         {
-            dn.add ( createRecordNode ( record ) );
+            for ( final Record record : dictionary.getRecords () )
+            {
+                dn.add ( createRecordNode ( record ) );
+            }
         }
-        for ( final Dictionary sub : dictionary.getDictionaries () )
+        if ( dictionary.getSubdictionaries () != null )
         {
-            dn.add ( createDictionaryNode ( sub ) );
+            for ( final Dictionary sub : dictionary.getSubdictionaries () )
+            {
+                dn.add ( createDictionaryNode ( sub ) );
+            }
         }
         return dn;
     }
@@ -234,12 +243,24 @@ public class DictionariesTree extends WebTree
                 vn.add ( createTextNode ( text ) );
             }
         }
+        if ( value.getTooltips () != null )
+        {
+            for ( final Tooltip tooltip : value.getTooltips () )
+            {
+                vn.add ( createTooltipNode ( tooltip ) );
+            }
+        }
         return vn;
     }
 
     public DefaultMutableTreeNode createTextNode ( final Text text )
     {
         return new DefaultMutableTreeNode ( text );
+    }
+
+    public DefaultMutableTreeNode createTooltipNode ( final Tooltip tooltip )
+    {
+        return new DefaultMutableTreeNode ( tooltip );
     }
 
     public DefaultTreeModel getActualModel ()

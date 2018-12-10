@@ -156,7 +156,7 @@ public class PaletteColorChooserPaint implements Paint
     {
         if ( webSafe )
         {
-            color = ColorUtils.webSafe ( color );
+            color = ColorUtils.getWebSafeValue ( color );
         }
         if ( color < 0 )
         {

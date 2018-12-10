@@ -17,69 +17,50 @@
 
 package com.alee.demo;
 
-import com.alee.api.data.CompassDirection;
-import com.alee.api.jdk.SerializableSupplier;
-import com.alee.demo.api.example.Example;
-import com.alee.demo.api.example.ExampleData;
-import com.alee.demo.content.ExamplesManager;
-import com.alee.demo.frames.examples.ExamplesFrame;
-import com.alee.demo.frames.inspector.InspectorFrame;
-import com.alee.demo.frames.source.SourceFrame;
-import com.alee.demo.frames.style.StyleFrame;
-import com.alee.demo.skin.*;
-import com.alee.demo.skin.decoration.FeatureStateBackground;
-import com.alee.demo.ui.tools.*;
-import com.alee.extended.behavior.ComponentResizeBehavior;
-import com.alee.extended.canvas.WebCanvas;
-import com.alee.extended.dock.SidebarVisibility;
+import com.alee.demo.api.Example;
+import com.alee.demo.api.ExampleData;
+import com.alee.demo.api.ExamplesManager;
+import com.alee.demo.icons.DemoIcons;
+import com.alee.demo.skin.DemoApplicationSkin;
+import com.alee.demo.skin.DemoStyles;
+import com.alee.demo.skin.FeatureStateBackground;
+import com.alee.demo.ui.examples.ExamplesFrame;
+import com.alee.extended.dock.DockingPaneLayout;
 import com.alee.extended.dock.WebDockablePane;
-import com.alee.extended.label.TextWrap;
+import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.label.WebStyledLabel;
-import com.alee.extended.layout.AlignLayout;
-import com.alee.extended.link.UrlLinkAction;
-import com.alee.extended.link.WebLink;
+import com.alee.extended.magnifier.MagnifierGlass;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.WebOverlay;
 import com.alee.extended.statusbar.WebMemoryBar;
 import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.tab.*;
 import com.alee.laf.WebLookAndFeel;
+import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
-import com.alee.laf.rootpane.WindowState;
-import com.alee.laf.toolbar.WebToolBar;
-import com.alee.laf.window.WebFrame;
+import com.alee.laf.rootpane.WebFrame;
 import com.alee.managers.language.LM;
-import com.alee.managers.language.LanguageLocaleUpdater;
 import com.alee.managers.language.LanguageManager;
-import com.alee.managers.language.data.Dictionary;
 import com.alee.managers.notification.NotificationManager;
-import com.alee.managers.settings.Configuration;
 import com.alee.managers.settings.SettingsManager;
-import com.alee.managers.style.Skin;
 import com.alee.managers.style.StyleId;
-import com.alee.managers.style.StyleManager;
 import com.alee.managers.version.VersionManager;
-import com.alee.skin.dark.DarkSkin;
-import com.alee.utils.CollectionUtils;
-import com.alee.utils.CoreSwingUtils;
+import com.alee.utils.SwingUtils;
 import com.alee.utils.XmlUtils;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * WebLaF demo application containing various component and feature examples.
  *
  * @author Mikle Garin
  */
+
 public final class DemoApplication extends WebFrame
 {
-    /**
-     * Available application and example skins.
-     */
-    public static ArrayList<Skin> skins;
-
     /**
      * Developer contacts.
      * Also used as data for some examples.
@@ -95,14 +76,17 @@ public final class DemoApplication extends WebFrame
     private static DemoApplication instance;
 
     /**
+     * Magnifier used by examples across this application.
+     */
+    private final MagnifierGlass magnifier = new MagnifierGlass ();
+    private final List<MagnifierListener> magnifierListeners = new ArrayList<MagnifierListener> ();
+
+    /**
      * Demo application base UI elements.
      */
     private WebDockablePane dockablePane;
     private ExamplesFrame examplesFrame;
-    private StyleFrame styleFrame;
-    private SourceFrame sourceFrame;
-    private InspectorFrame inspectorFrame;
-    private WebDocumentPane<ExampleData> examplesPane;
+    private WebDocumentPane<DocumentData> contentPane;
 
     /**
      * Returns demo application instance.
@@ -119,34 +103,15 @@ public final class DemoApplication extends WebFrame
     }
 
     /**
-     * Constructs new {@link DemoApplication}.
+     * Initializes demo application content.
      */
-    private DemoApplication ()
+    private void initialize ()
     {
-        super ();
-        setIconImages ( WebLookAndFeel.getImages () );
         updateTitle ();
         initializeDocks ();
-        initializeToolBar ();
+        initializeContent ();
         initializeStatus ();
-        setDefaultCloseOperation ( WindowConstants.EXIT_ON_CLOSE );
-        registerSettings ( new Configuration<WindowState> ( "application", new SerializableSupplier<WindowState> ()
-        {
-            @Override
-            public WindowState get ()
-            {
-                return new WindowState ( new Dimension ( 1200, 820 ) );
-            }
-        } ) );
-    }
-
-    /**
-     * Displays demo application.
-     */
-    public void display ()
-    {
-        setVisible ( true );
-        examplesFrame.requestFocusInWindow ();
+        setupFrame ();
     }
 
     /**
@@ -155,10 +120,10 @@ public final class DemoApplication extends WebFrame
     private void initializeDocks ()
     {
         dockablePane = new WebDockablePane ();
-        dockablePane.setSidebarVisibility ( SidebarVisibility.anyMinimized );
-        initializeContent ();
-        initializeFrames ();
         add ( dockablePane, BorderLayout.CENTER );
+
+        examplesFrame = new ExamplesFrame ();
+        dockablePane.add ( examplesFrame, DockingPaneLayout.LEFT_FRAME );
     }
 
     /**
@@ -166,99 +131,46 @@ public final class DemoApplication extends WebFrame
      */
     private void initializeContent ()
     {
-        examplesPane = new WebDocumentPane<ExampleData> ( DemoStyles.expamplesPane );
-        examplesPane.setClosable ( true );
-        examplesPane.setDragEnabled ( true );
-        examplesPane.setDragBetweenPanesEnabled ( false );
-        examplesPane.setSplitEnabled ( true );
-        examplesPane.onDocumentSelection ( new DocumentDataRunnable<ExampleData> ()
+        contentPane = new WebDocumentPane<DocumentData> ();
+        contentPane.setCloseable ( true );
+        contentPane.setDragEnabled ( true );
+        contentPane.setDragBetweenPanesEnabled ( false );
+        contentPane.setSplitEnabled ( true );
+        contentPane.onDocumentSelection ( new DocumentDataRunnable<DocumentData> ()
         {
             @Override
-            public void run ( final ExampleData document, final PaneData<ExampleData> pane, final int index )
+            public void run ( final DocumentData document, final PaneData<DocumentData> pane, final int index )
             {
                 updateTitle ();
             }
         } );
 
-        final WebOverlay overlay = new WebOverlay ( StyleId.panelFocusable, examplesPane );
-        final WebPanel overlayContainer = new WebPanel ( DemoStyles.emptycontentPanel, new AlignLayout () );
+        final WebOverlay overlay = new WebOverlay ( contentPane );
 
-        final StyleId guideId = DemoStyles.emptycontentInfoLabel.at ( overlayContainer );
-        final WebStyledLabel guide = new WebStyledLabel ( guideId, "demo.content.empty", DemoIcons.compass36 );
-        guide.changeFontSize ( 5 ).setBoldFont ().setWrap ( TextWrap.none );
+        final WebPanel overlayContainer = new WebPanel ( DemoStyles.emptycontentPanel );
 
-        final StyleId issuesId = DemoStyles.emptycontentWarnLabel.at ( overlayContainer );
-        final WebStyledLabel issues = new WebStyledLabel ( issuesId, "demo.content.issues", DemoIcons.bug36 );
-        issues.changeFontSize ( 5 ).setBoldFont ().setWrap ( TextWrap.none );
+        final StyleId overlayLabelId = DemoStyles.emptycontentLabel.at ( overlayContainer );
+        final WebStyledLabel guide = new WebStyledLabel ( overlayLabelId, "demo.content.empty", DemoIcons.compass36 ).changeFontSize ( 5 );
+        final WebStyledLabel issues = new WebStyledLabel ( overlayLabelId, "demo.content.issues", DemoIcons.bug36 ).changeFontSize ( 5 );
+        overlayContainer.add ( new GroupPanel ( 20, false, guide, issues ) );
 
-        overlayContainer.add ( new GroupPanel ( 20, false, guide, issues ), "0,0" );
-        overlay.addOverlay ( overlayContainer );
-
-        examplesPane.addDocumentListener ( new DocumentAdapter<ExampleData> ()
+        contentPane.addDocumentListener ( new DocumentAdapter<DocumentData> ()
         {
             @Override
-            public void opened ( final ExampleData document, final PaneData<ExampleData> pane, final int index )
+            public void opened ( final DocumentData document, final PaneData<DocumentData> pane, final int index )
             {
                 overlayContainer.setVisible ( false );
             }
 
             @Override
-            public void closed ( final ExampleData document, final PaneData<ExampleData> pane, final int index )
+            public void closed ( final DocumentData document, final PaneData<DocumentData> pane, final int index )
             {
-                overlayContainer.setVisible ( examplesPane.getDocumentsCount () == 0 );
+                overlayContainer.setVisible ( contentPane.getDocumentsCount () == 0 );
             }
         } );
+        overlay.addOverlay ( overlayContainer, SwingConstants.CENTER, SwingConstants.CENTER );
 
-        dockablePane.setContent ( overlay );
-    }
-
-    /**
-     * Returns content pane.
-     *
-     * @return content pane
-     */
-    public WebDocumentPane<ExampleData> getExamplesPane ()
-    {
-        return examplesPane;
-    }
-
-    /**
-     * Initializes demo application dockable frames.
-     */
-    private void initializeFrames ()
-    {
-        examplesFrame = new ExamplesFrame ();
-        dockablePane.addFrame ( examplesFrame );
-
-        inspectorFrame = new InspectorFrame ( this );
-        dockablePane.addFrame ( inspectorFrame );
-
-        sourceFrame = new SourceFrame ( this );
-        dockablePane.addFrame ( sourceFrame );
-
-        styleFrame = new StyleFrame ( this );
-        dockablePane.addFrame ( styleFrame );
-    }
-
-    /**
-     * Initializes demo application toolbar and its content.
-     */
-    private void initializeToolBar ()
-    {
-        final WebToolBar toolBar = new WebToolBar ( StyleId.toolbarAttachedNorth );
-        toolBar.setFloatable ( false );
-
-        toolBar.add ( new SkinChooserTool () );
-        toolBar.addSeparator ();
-        toolBar.add ( new OrientationChooserTool () );
-        toolBar.addSeparator ();
-        toolBar.add ( new LanguageChooserTool () );
-
-        toolBar.addToEnd ( new HeatMapTool ( DemoApplication.this ) );
-        toolBar.addSeparatorToEnd ();
-        toolBar.addToEnd ( new MagnifierToggleTool ( DemoApplication.this ) );
-
-        add ( toolBar, BorderLayout.NORTH );
+        dockablePane.add ( overlay, DockingPaneLayout.CONTENT );
     }
 
     /**
@@ -268,22 +180,30 @@ public final class DemoApplication extends WebFrame
     {
         final WebStatusBar statusBar = new WebStatusBar ();
 
-        statusBar.add ( new WebLink ( DemoStyles.resourceLink, DemoIcons.java19, "demo.statusbar.resources.weblaf",
-                new UrlLinkAction ( WEBLAF_SITE ) ) );
+        final WebLinkLabel weblaf = new WebLinkLabel ( DemoStyles.resourceLink );
+        weblaf.setLink ( "demo.statusbar.resources.weblaf", WEBLAF_SITE );
+        weblaf.setIcon ( WebLookAndFeel.getIcon ( 16 ) );
+        statusBar.add ( weblaf );
 
-        statusBar.add ( new WebLink ( DemoStyles.resourceLink, DemoIcons.github19, "demo.statusbar.resources.github",
-                new UrlLinkAction ( WEBLAF_GITHUB ) ) );
+        final WebLinkLabel github = new WebLinkLabel ( DemoStyles.resourceLink );
+        github.setLink ( "demo.statusbar.resources.github", WEBLAF_GITHUB );
+        github.setIcon ( DemoIcons.github16 );
+        statusBar.add ( github );
 
-        statusBar.add ( new WebLink ( DemoStyles.resourceLink, DemoIcons.gitter19, "demo.statusbar.resources.gitter",
-                new UrlLinkAction ( WEBLAF_GITTER ) ) );
+        final WebLinkLabel gitter = new WebLinkLabel ( DemoStyles.resourceLink );
+        gitter.setLink ( "demo.statusbar.resources.gitter", WEBLAF_GITTER );
+        gitter.setIcon ( DemoIcons.gitter16 );
+        statusBar.add ( gitter );
+
+        //
+
+        final WebLabel usedMemory = new WebLabel ( "demo.statusbar.ram", DemoIcons.arrowRight16 );
+        usedMemory.setHorizontalTextPosition ( WebLabel.LEADING );
+        statusBar.addToEnd ( usedMemory );
 
         final WebMemoryBar memoryBar = new WebMemoryBar ();
         memoryBar.setPreferredWidth ( 150 );
         statusBar.addToEnd ( memoryBar );
-
-        final WebCanvas resizeCorner = new WebCanvas ( StyleId.canvasGripperSE );
-        new ComponentResizeBehavior ( resizeCorner, CompassDirection.southEast ).install ();
-        statusBar.addToEnd ( resizeCorner );
 
         add ( statusBar, BorderLayout.SOUTH );
 
@@ -292,13 +212,23 @@ public final class DemoApplication extends WebFrame
     }
 
     /**
+     * Initializes demo application frame.
+     */
+    private void setupFrame ()
+    {
+        setIconImages ( WebLookAndFeel.getImages () );
+        setDefaultCloseOperation ( WindowConstants.EXIT_ON_CLOSE );
+        setSize ( 1200, 800 );
+        setLocationRelativeTo ( null );
+    }
+
+    /**
      * Updates demo application title.
      */
     public void updateTitle ()
     {
-        final DocumentData doc = examplesPane != null ? examplesPane.getSelectedDocument () : null;
-        final String version = VersionManager.getLibraryVersion ().toString ();
-        setTitle ( version + ( doc != null ? " - " + LM.get ( doc.getTitle () ) : "" ) );
+        final DocumentData doc = contentPane != null ? contentPane.getSelectedDocument () : null;
+        setTitle ( VersionManager.getLibraryVersion ().toString () + ( doc != null ? " - " + LM.get ( doc.getTitle () ) : "" ) );
     }
 
     /**
@@ -308,7 +238,72 @@ public final class DemoApplication extends WebFrame
      */
     public void open ( final Example example )
     {
-        examplesPane.openDocument ( ExampleData.forExample ( example ) );
+        contentPane.openDocument ( ExampleData.forExample ( example ) );
+    }
+
+    /**
+     * Displays demo application.
+     */
+    public void display ()
+    {
+        SwingUtils.invokeLater ( new Runnable ()
+        {
+            @Override
+            public void run ()
+            {
+                initialize ();
+                setVisible ( true );
+                setExtendedState ( JFrame.MAXIMIZED_BOTH );
+            }
+        } );
+    }
+
+    /**
+     * Displays or hides magnifier.
+     */
+    public void switchMagnifier ()
+    {
+        // Switching magnifier state
+        magnifier.displayOrDispose ( getInstance () );
+
+        // Informing listeners
+        for ( final MagnifierListener listener : magnifierListeners )
+        {
+            listener.switched ( magnifier.isEnabled () );
+        }
+    }
+
+    /**
+     * Returns whether or not magnifier is enabled.
+     *
+     * @return true if magnifier is enabled, false otherwise
+     */
+    public boolean isMagnifierEnabled ()
+    {
+        return magnifier.isEnabled ();
+    }
+
+    /**
+     * Adds magnifier state change listener.
+     *
+     * @param listener magnifier state change listener
+     */
+    public void onMagnifierSwitch ( final MagnifierListener listener )
+    {
+        magnifierListeners.add ( listener );
+    }
+
+    /**
+     * Custom magnifier switch listener.
+     */
+    public static interface MagnifierListener
+    {
+        /**
+         * Informs about magnifier enabled state change.
+         *
+         * @param enabled whether or not magnifier is enabled
+         */
+        public void switched ( final boolean enabled );
     }
 
     /**
@@ -318,8 +313,8 @@ public final class DemoApplication extends WebFrame
      */
     public static void main ( final String[] args )
     {
-        CoreSwingUtils.enableEventQueueLogging ();
-        CoreSwingUtils.invokeLater ( new Runnable ()
+        SwingUtils.enableEventQueueLogging ();
+        SwingUtils.invokeLater ( new Runnable ()
         {
             @Override
             public void run ()
@@ -329,29 +324,26 @@ public final class DemoApplication extends WebFrame
                 SettingsManager.setDefaultSettingsGroup ( "WebLookAndFeelDemo" );
                 SettingsManager.setSaveOnChange ( true );
 
-                // Adding demo data aliases before styles using it are read
+                // Configurting availale languages
+                LanguageManager.setLanguages ( LanguageManager.ENGLISH, LanguageManager.RUSSIAN );
+
+                // Adding demo data aliases
                 XmlUtils.processAnnotations ( FeatureStateBackground.class );
 
                 // Installing Look and Feel
-                WebLookAndFeel.setForceSingleEventsThread ( true );
-                WebLookAndFeel.install ();
+                WebLookAndFeel.install ( DemoApplicationSkin.class );
 
-                // Saving skins for reference
-                skins = CollectionUtils.asList ( StyleManager.getSkin (), new DarkSkin () );
-
-                // Adding demo application skin extensions
-                // They contain all custom styles demo application uses
-                StyleManager.addExtensions ( new AdaptiveExtension (), new LightSkinExtension (), new DarkSkinExtension () );
-
-                // Configurting languages
-                LanguageManager.addDictionary ( new Dictionary ( DemoApplication.class, "language/demo-language.xml" ) );
-                LanguageManager.addLanguageListener ( new LanguageLocaleUpdater () );
+                // Loading demo dictionary
+                LanguageManager.addDictionary ( DemoApplication.class, "language/language.xml" );
 
                 // Initializing demo application managers
                 ExamplesManager.initialize ();
 
                 // Starting demo application
                 DemoApplication.getInstance ().display ();
+
+                // Interface inspector used for demo aplication testing
+                // InterfaceInspector.showPopOver ( DemoApplication.getInstance ().getRootPane () );
             }
         } );
     }

@@ -18,66 +18,111 @@
 package com.alee.painter.decoration.border;
 
 import com.alee.painter.decoration.IDecoration;
+import com.alee.utils.MergeUtils;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
 import javax.swing.*;
+import java.awt.*;
 
 /**
  * Abstract border providing some general method implementations.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <D> decoration type
  * @param <I> border type
  * @author Mikle Garin
  */
-public abstract class AbstractBorder<C extends JComponent, D extends IDecoration<C, D>, I extends AbstractBorder<C, D, I>>
-        implements IBorder<C, D, I>
+
+public abstract class AbstractBorder<E extends JComponent, D extends IDecoration<E, D>, I extends AbstractBorder<E, D, I>>
+        implements IBorder<E, D, I>
 {
     /**
-     * Border identifier.
+     * Default border ID.
+     */
+    private static final String defaultId = "border";
+
+    /**
+     * Default border color.
+     */
+    private static final Color defaultColor = new Color ( 210, 210, 210 );
+
+    /**
+     * Border ID.
      */
     @XStreamAsAttribute
     protected String id;
 
     /**
-     * Whether or not this border should overwrite previous one when merged.
-     */
-    @XStreamAsAttribute
-    protected Boolean overwrite;
-
-    /**
-     * Border opacity.
+     * Shade opacity.
      */
     @XStreamAsAttribute
     protected Float opacity;
 
+    /**
+     * Shade width.
+     */
+    @XStreamAsAttribute
+    protected Stroke stroke;
+
+    /**
+     * Shade color.
+     */
+    @XStreamAsAttribute
+    protected Color color;
+
     @Override
     public String getId ()
     {
-        return id != null ? id : "border";
-    }
-
-    @Override
-    public boolean isOverwrite ()
-    {
-        return overwrite != null && overwrite;
-    }
-
-    @Override
-    public void activate ( final C c, final D d )
-    {
-        // Do nothing by default
-    }
-
-    @Override
-    public void deactivate ( final C c, final D d )
-    {
-        // Do nothing by default
+        return id != null ? id : defaultId;
     }
 
     @Override
     public float getOpacity ()
     {
         return opacity != null ? opacity : 1f;
+    }
+
+    @Override
+    public Stroke getStroke ()
+    {
+        return stroke;
+    }
+
+    @Override
+    public float getWidth ()
+    {
+        final float t = getOpacity ();
+        final Stroke s = getStroke ();
+        return t > 0 ? s != null && s instanceof BasicStroke ? ( ( BasicStroke ) s ).getLineWidth () : 1 : 0;
+    }
+
+    @Override
+    public Color getColor ()
+    {
+        return color != null ? color : defaultColor;
+    }
+
+    @Override
+    public I merge ( final I border )
+    {
+        if ( border.opacity != null )
+        {
+            opacity = border.opacity;
+        }
+        if ( border.stroke != null )
+        {
+            stroke = border.stroke;
+        }
+        if ( border.color != null )
+        {
+            color = border.color;
+        }
+        return ( I ) this;
+    }
+
+    @Override
+    public I clone ()
+    {
+        return ( I ) MergeUtils.cloneByFieldsSafely ( this );
     }
 }

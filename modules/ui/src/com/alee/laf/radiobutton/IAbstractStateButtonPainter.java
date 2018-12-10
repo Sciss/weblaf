@@ -3,23 +3,23 @@ package com.alee.laf.radiobutton;
 import com.alee.laf.button.IAbstractButtonPainter;
 
 import javax.swing.*;
-import javax.swing.plaf.ButtonUI;
+import javax.swing.plaf.basic.BasicButtonUI;
 import java.awt.*;
 
 /**
- * Base interface for {@link JCheckBox}, {@link JRadioButton} and {@link com.alee.extended.checkbox.WebTristateCheckBox} component painters.
+ * Base interface for JCheckBox and JRadioButton component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IAbstractStateButtonPainter<C extends AbstractButton, U extends ButtonUI> extends IAbstractButtonPainter<C, U>
+public interface IAbstractStateButtonPainter<E extends AbstractButton, U extends BasicButtonUI> extends IAbstractButtonPainter<E, U>
 {
     /**
      * Returns icon bounds.
      *
      * @return icon bounds
      */
-    public Rectangle getIconBounds ();
+    public Rectangle getIconRect ();
 }

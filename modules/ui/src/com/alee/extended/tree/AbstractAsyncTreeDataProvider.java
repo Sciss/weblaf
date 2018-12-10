@@ -20,71 +20,66 @@ package com.alee.extended.tree;
 import com.alee.utils.compare.Filter;
 
 import java.util.Comparator;
-import java.util.List;
 
 /**
- * Abstract {@link AsyncTreeDataProvider} that can contain single comparator and filter for child nodes.
+ * Abstract data provider with implemented comparator and filter getters and setters.
  *
- * @param <N> node type
  * @author Mikle Garin
  */
-public abstract class AbstractAsyncTreeDataProvider<N extends AsyncUniqueNode> implements AsyncTreeDataProvider<N>
+
+public abstract class AbstractAsyncTreeDataProvider<E extends AsyncUniqueNode> implements AsyncTreeDataProvider<E>
 {
     /**
-     * {@link Comparator} for all child nodes.
-     * It is {@code transient} as it can only be set through code.
-     * Override {@link #getChildrenComparator(AsyncUniqueNode, List)} method to provide parent-related {@link Comparator}.
+     * Children comparator.
      */
-    protected transient Comparator<N> comparator = null;
+    protected Comparator<E> comparator = null;
 
     /**
-     * {@link Filter} for all child nodes.
-     * It is {@code transient} as it can only be set through code.
-     * Override {@link #getChildrenFilter(AsyncUniqueNode, List)} method to provide parent-related {@link Filter}.
+     * Children filter.
      */
-    protected transient Filter<N> filter = null;
+    protected Filter<E> filter = null;
 
     @Override
-    public Comparator<N> getChildrenComparator ( final N parent, final List<N> children )
+    public Comparator<E> getChildrenComparator ( final E node )
     {
         return comparator;
     }
 
     /**
-     * Sets {@link Comparator} for all child nodes.
+     * Sets children comparator for all nodes.
      *
-     * @param comparator {@link Comparator} for all child nodes
+     * @param comparator children comparator for all nodes
      */
-    public void setChildrenComparator ( final Comparator<N> comparator )
+    public void setChildrenComparator ( final Comparator<E> comparator )
     {
         this.comparator = comparator;
     }
 
     @Override
-    public Filter<N> getChildrenFilter ( final N parent, final List<N> children )
+    public Filter<E> getChildrenFilter ( final E node )
     {
         return filter;
     }
 
     /**
-     * Sets {@link Filter} for all child nodes.
+     * Sets children filter for all nodes.
      *
-     * @param filter {@link Filter} for all child nodes
+     * @param filter children filter for all nodes
      */
-    public void setChildrenFilter ( final Filter<N> filter )
+    public void setChildrenFilter ( final Filter<E> filter )
     {
         this.filter = filter;
     }
 
     /**
-     * Returns {@code false} by default to allow children load requests to pass through for any node.
+     * Returns false by default to allow children load requests.
      * It is recommended to override this behavior if you can easily determine whether node is leaf or not.
      *
-     * @param node {@link AsyncUniqueNode} to check
-     * @return {@code false}
+     * @param node node
+     * @return false
      */
     @Override
-    public boolean isLeaf ( final N node )
+    public boolean isLeaf ( final E node )
     {
         return false;
     }

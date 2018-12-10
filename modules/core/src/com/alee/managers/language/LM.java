@@ -17,162 +17,71 @@
 
 package com.alee.managers.language;
 
-import com.alee.api.jdk.Supplier;
-import com.alee.managers.language.data.Record;
-import com.alee.managers.language.data.Text;
-
-import java.util.Locale;
+import com.alee.managers.language.data.Value;
 
 /**
- * Bridge class providing quick and convenient access to specific {@link Language} provided by {@link #languageSupplier}.
- * To gain access to multiple languages simultaneously use separate {@link Language} instances.
+ * This is short-named reference class for some basic LanguageManager methods.
+ * It is added to reduce the code size of language values requests in cases of direct translations use.
  *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-LanguageManager">How to use LanguageManager</a>
- * @see LanguageManager
- * @see Language
  */
-public final class LM
+
+public class LM implements LanguageConstants
 {
     /**
-     * Empty language data.
-     * Exists for methods usage convenience.
-     */
-    public static final Object[] emptyData = new Object[ 0 ];
-
-    /**
-     * {@link Supplier} for universal {@link Language}.
-     * It can be replaced with any {@link Supplier} providing preferred {@link Language} instance.
-     */
-    private static Supplier<Language> languageSupplier = new Supplier<Language> ()
-    {
-        @Override
-        public Language get ()
-        {
-            return LanguageManager.getLanguage ();
-        }
-    };
-
-    /**
-     * Returns {@link Supplier} for universal {@link Language}.
+     * Returns translation for specified language key.
      *
-     * @return {@link Supplier} for universal {@link Language}
+     * @param key language key
+     * @return key translation
      */
-    public static Supplier<Language> getLanguageSupplier ()
+    public static String get ( final String key )
     {
-        return languageSupplier;
+        return LanguageManager.get ( key );
     }
 
     /**
-     * Sets {@link Supplier} for universal {@link Language}.
+     * Returns translation for specified language key and formatting data.
      *
-     * @param supplier {@link Supplier} for universal {@link Language}
-     */
-    public static void setLanguageSupplier ( final Supplier<Language> supplier )
-    {
-        languageSupplier = supplier;
-    }
-
-    /**
-     * Returns specific {@link Language} instance currently used by this bridge class.
-     *
-     * @return specific {@link Language} instance currently used by this bridge class
-     */
-    public static Language getLanguage ()
-    {
-        return languageSupplier.get ();
-    }
-
-    /**
-     * Returns {@link Locale} from {@link Language} instance currently used by this bridge class.
-     *
-     * @return {@link Locale} from {@link Language} instance currently used by this bridge class
-     */
-    public static Locale getLocale ()
-    {
-        return getLanguage ().getLocale ();
-    }
-
-    /**
-     * Returns text for the specified language key from this {@link Language}.
-     *
-     * @param key  language key to retrieve text for
-     * @param data language data
-     * @return text for the specified language key from this {@link Language}
+     * @param key  language key
+     * @param data formatting data
+     * @return key translation
      */
     public static String get ( final String key, final Object... data )
     {
-        return getLanguage ().get ( key, data );
+        return LanguageManager.get ( key, data );
     }
 
-    /**
-     * Returns text for the specified language key and state from this {@link Language}.
-     *
-     * @param key   language key to retrieve text for
-     * @param state {@link Text} state
-     * @param data  language data
-     * @return text for the specified language key and state from this {@link Language}
-     */
-    public static String getState ( final String key, final String state, final Object... data )
-    {
-        return getLanguage ().getState ( key, state, data );
-    }
 
     /**
-     * Returns mnemonic for the specified language key from this {@link Language}.
-     *
-     * @param key language key to retrieve mnemonic for
-     * @return mnemonic for the specified language key from this {@link Language}
-     */
-    public static int getMnemonic ( final String key )
-    {
-        return getLanguage ().getMnemonic ( key );
-    }
-
-    /**
-     * Returns mnemonic for the specified language key from this {@link Language}.
-     *
-     * @param key   language key to retrieve mnemonic for
-     * @param state {@link Text} state
-     * @return mnemonic for the specified language key from this {@link Language}
-     */
-    public static int getMnemonic ( final String key, final String state )
-    {
-        return getLanguage ().getMnemonic ( key, state );
-    }
-
-    /**
-     * Returns whether or not specified language key exists in default {@link Language}.
-     * This will basically check existance of at least single {@link Record} with the specified key in default {@link Language}.
+     * Returns whether specified language key exists or not.
      *
      * @param key language key to check
-     * @return {@code true} if specified language key exists in default {@link Language}, {@code false} otherwise
+     * @return whether specified language key exists or not
      */
     public static boolean contains ( final String key )
     {
-        return getLanguage ().contains ( key );
+        return LanguageManager.contains ( key );
     }
 
     /**
-     * Returns whether or not at least single {@link Text} exists for specified language key.
+     * Returns mnemonic for specified language key.
      *
-     * @param key language key to check
-     * @return {@code true} if at least single {@link Text} exists for specified language key, {@code false} otherwise
+     * @param key language key
+     * @return mnemonic
      */
-    public static boolean containsText ( final String key )
+    public static Character getMnemonic ( final String key )
     {
-        return getLanguage ().containsText ( key );
+        return LanguageManager.getMnemonic ( key );
     }
 
     /**
-     * Returns whether or not at least single {@link Text} exists for specified language key and state.
+     * Returns language value for specified language key.
      *
-     * @param key   language key to check
-     * @param state {@link Text} state
-     * @return {@code true} if at least single {@link Text} exists for specified language key and state, {@code false} otherwise
+     * @param key language key
+     * @return language value
      */
-    public static boolean containsText ( final String key, final String state )
+    public static Value getValue ( final String key )
     {
-        return getLanguage ().containsText ( key, state );
+        return LanguageManager.getValue ( key );
     }
 }

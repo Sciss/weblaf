@@ -23,19 +23,18 @@ import java.awt.*;
  * This interface provides a single method for requesting painted component shape.
  * This can be used by painters to provide their shape for various usage cases.
  *
- * @param <C> component type
+ * @param <E> component type
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
- * @see StyleManager
  */
-public interface PainterShapeProvider<C extends Component>
+
+public interface PainterShapeProvider<E extends Component>
 {
     /**
      * Returns painted component shape.
      *
      * @param component component to process
-     * @param bounds    bounds for painter view
+     * @param bounds    bounds for painter visual data
      * @return painted component shape
      */
-    public Shape provideShape ( C component, Rectangle bounds );
+    public Shape provideShape ( final E component, final Rectangle bounds );
 }

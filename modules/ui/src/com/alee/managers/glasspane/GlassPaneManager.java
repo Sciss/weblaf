@@ -17,69 +17,61 @@
 
 package com.alee.managers.glasspane;
 
-import com.alee.api.jdk.Function;
-import com.alee.utils.CoreSwingUtils;
-import com.alee.utils.swing.WeakComponentData;
+import com.alee.utils.SwingUtils;
 
 import javax.swing.*;
 import java.awt.*;
 
 /**
- * This manager provides an instance of {@link WebGlassPane} for specified {@link JRootPane} instance.
+ * This manager provides an instance of WebGlassPane for specified JRootPane instance.
  *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-GlassPaneManager">How to use GlassPaneManager</a>
- * @see WebGlassPane
+ * @see com.alee.managers.glasspane.WebGlassPane
  */
-public final class GlassPaneManager
+
+public class GlassPaneManager
 {
-    /**
-     * {@link WebGlassPane}s used within various windows.
-     */
-    private static final WeakComponentData<JComponent, WebGlassPane> glassPanes =
-            new WeakComponentData<JComponent, WebGlassPane> ( "GlassPaneManager.WebGlassPane", 3 );
+    public static final String WEB_GLASS_PANE_KEY = "web.glass.pane";
 
     /**
-     * Returns registered {@link WebGlassPane} for {@link JRootPane} under the specified component.
-     * If {@link WebGlassPane} is not yet registered for that {@link JRootPane} then it will be created.
-     * Might return null if no {@link WebGlassPane} could be registered for that {@link JRootPane}.
+     * Returns registered WebGlassPane for JRootPane under the specified component.
+     * If WebGlassPane is not yet registered for that JRootPane then it will be created.
+     * Might return null if no WebGlassPane could be registered for that JRootPane.
      *
      * @param component component to process
-     * @return registered {@link WebGlassPane} for {@link JRootPane} under the specified component or null if it cannot be registered
+     * @return registered WebGlassPane for JRootPane under the specified component or null if it cannot be registered
      */
     public static WebGlassPane getGlassPane ( final Component component )
     {
-        return getGlassPane ( CoreSwingUtils.getRootPane ( component ) );
+        return getGlassPane ( SwingUtils.getRootPane ( component ) );
     }
 
     /**
-     * Returns registered {@link WebGlassPane} for the specified {@link JRootPane}.
-     * If {@link WebGlassPane} is not yet registered for that {@link JRootPane} then it will be created.
-     * Might return null if no {@link WebGlassPane} could be registered for that {@link JRootPane}.
+     * Returns registered WebGlassPane for the specified JRootPane.
+     * If WebGlassPane is not yet registered for that JRootPane then it will be created.
+     * Might return null if no WebGlassPane could be registered for that JRootPane.
      *
-     * @param rootPane {@link JRootPane} to process
-     * @return registered {@link WebGlassPane} for {@link JRootPane} under the specified component or null if it cannot be registered
+     * @param rootPane JRootPane to process
+     * @return registered WebGlassPane for JRootPane under the specified component or null if it cannot be registered
      */
     public static WebGlassPane getGlassPane ( final JRootPane rootPane )
     {
         if ( rootPane != null )
         {
-            return glassPanes.get ( rootPane, new Function<JComponent, WebGlassPane> ()
+            WebGlassPane glassPane = ( WebGlassPane ) rootPane.getClientProperty ( WEB_GLASS_PANE_KEY );
+            if ( glassPane == null )
             {
-                @Override
-                public WebGlassPane apply ( final JComponent component )
-                {
-                    final WebGlassPane glassPane = new WebGlassPane ();
-                    rootPane.setGlassPane ( glassPane );
-                    glassPane.setVisible ( true );
-                    rootPane.invalidate ();
-                    return glassPane;
-                }
-            } );
+                glassPane = new WebGlassPane ();
+                rootPane.setGlassPane ( glassPane );
+                glassPane.setVisible ( true );
+                rootPane.invalidate ();
+                rootPane.putClientProperty ( WEB_GLASS_PANE_KEY, glassPane );
+            }
+            return glassPane;
         }
         else
         {
-            throw new GlassPaneException ( "JRootPane is not specified for WebGlassPane" );
+            return null;
         }
     }
 }

@@ -17,31 +17,26 @@
 
 package com.alee.laf.text;
 
-import com.alee.api.jdk.Consumer;
-import com.alee.api.jdk.Objects;
 import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
+import com.alee.utils.CompareUtils;
 import com.alee.utils.ReflectUtils;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
+import javax.swing.plaf.basic.BasicEditorPaneUI;
 import java.awt.*;
 
 /**
- * Custom UI for {@link JEditorPane} component.
- *
  * @author Mikle Garin
  * @author Alexandr Zernov
  */
-public class WebEditorPaneUI extends WEditorPaneUI implements ShapeSupport, MarginSupport, PaddingSupport
-{
-    /**
-     * Input prompt text.
-     */
-    protected String inputPrompt;
 
+public class WebEditorPaneUI extends BasicEditorPaneUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+{
     /**
      * Component painter.
      */
@@ -49,86 +44,106 @@ public class WebEditorPaneUI extends WEditorPaneUI implements ShapeSupport, Marg
     protected IEditorPanePainter painter;
 
     /**
-     * Runtime variables.
+     * Input prompt text.
      */
-    protected transient JEditorPane editorPane = null;
+    protected String inputPrompt;
 
     /**
-     * Returns an instance of the {@link WebEditorPaneUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Runtime variables.
+     */
+    protected JEditorPane editorPane = null;
+    protected Insets margin = null;
+    protected Insets padding = null;
+
+    /**
+     * Returns an instance of the WebEditorPaneUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebEditorPaneUI}
+     * @return instance of the WebEditorPaneUI
      */
+    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebEditorPaneUI ();
     }
 
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
+        super.installUI ( c );
+
         // Saving editor pane reference
         editorPane = ( JEditorPane ) c;
-
-        super.installUI ( c );
 
         // Applying skin
         StyleManager.installSkin ( editorPane );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( editorPane );
 
-        super.uninstallUI ( c );
-
         // Removing editor pane reference
         editorPane = null;
+
+        super.uninstallUI ( c );
     }
 
     @Override
-    public Shape getShape ()
+    public StyleId getStyleId ()
+    {
+        return StyleManager.getStyleId ( editorPane );
+    }
+
+    @Override
+    public StyleId setStyleId ( final StyleId id )
+    {
+        return StyleManager.setStyleId ( editorPane, id );
+    }
+
+    @Override
+    public Shape provideShape ()
     {
         return PainterSupport.getShape ( editorPane, painter );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return PainterSupport.isShapeDetectionEnabled ( editorPane, painter );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        PainterSupport.setShapeDetectionEnabled ( editorPane, painter, enabled );
-    }
-
-    @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( editorPane );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( editorPane, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( editorPane );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( editorPane, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -138,7 +153,7 @@ public class WebEditorPaneUI extends WEditorPaneUI implements ShapeSupport, Marg
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -149,36 +164,38 @@ public class WebEditorPaneUI extends WEditorPaneUI implements ShapeSupport, Marg
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( editorPane, new Consumer<IEditorPanePainter> ()
+        PainterSupport.setPainter ( editorPane, new DataRunnable<IEditorPanePainter> ()
         {
             @Override
-            public void accept ( final IEditorPanePainter newPainter )
+            public void run ( final IEditorPanePainter newPainter )
             {
                 WebEditorPaneUI.this.painter = newPainter;
             }
         }, this.painter, painter, IEditorPanePainter.class, AdaptiveEditorPanePainter.class );
     }
 
-    @Override
+    /**
+     * Returns input prompt text.
+     *
+     * @return input prompt text
+     */
     public String getInputPrompt ()
     {
         return inputPrompt;
     }
 
-    @Override
+    /**
+     * Sets input prompt text.
+     *
+     * @param text input prompt text
+     */
     public void setInputPrompt ( final String text )
     {
-        if ( Objects.notEquals ( text, this.inputPrompt ) )
+        if ( !CompareUtils.equals ( text, this.inputPrompt ) )
         {
             this.inputPrompt = text;
             editorPane.repaint ();
         }
-    }
-
-    @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
-    {
-        return PainterSupport.contains ( c, this, painter, x, y );
     }
 
     @Override
@@ -192,7 +209,7 @@ public class WebEditorPaneUI extends WEditorPaneUI implements ShapeSupport, Marg
 
             // Painting text component
             final JComponent c = getComponent ();
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
     }
 

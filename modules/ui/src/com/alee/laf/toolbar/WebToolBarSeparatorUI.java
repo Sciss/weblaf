@@ -21,20 +21,18 @@ import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.api.jdk.Consumer;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
+import javax.swing.plaf.basic.BasicSeparatorUI;
 import java.awt.*;
 
 /**
- * Custom UI for {@link JToolBar.Separator} component.
- *
- * @param <C> component type
  * @author Mikle Garin
  */
-public class WebToolBarSeparatorUI<C extends JToolBar.Separator> extends WToolBarSeparatorUI<C>
-        implements ShapeSupport, MarginSupport, PaddingSupport
+
+public class WebToolBarSeparatorUI extends BasicSeparatorUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -43,77 +41,102 @@ public class WebToolBarSeparatorUI<C extends JToolBar.Separator> extends WToolBa
     protected IToolBarSeparatorPainter painter;
 
     /**
-     * Returns an instance of the {@link WebToolBarSeparatorUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Runtime variables.
+     */
+    protected JSeparator separator = null;
+    protected Insets margin = null;
+    protected Insets padding = null;
+
+    /**
+     * Returns an instance of the WebSeparatorUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebToolBarSeparatorUI}
+     * @return instance of the WebSeparatorUI
      */
+    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebToolBarSeparatorUI ();
     }
 
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
-        // Installing UI
         super.installUI ( c );
+
+        // Saving separator to local variable
+        separator = ( JSeparator ) c;
 
         // Applying skin
         StyleManager.installSkin ( separator );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( separator );
 
+        // Cleaning up reference
+        separator = null;
+
         // Uninstalling UI
         super.uninstallUI ( c );
     }
 
     @Override
-    public Shape getShape ()
+    public StyleId getStyleId ()
+    {
+        return StyleManager.getStyleId ( separator );
+    }
+
+    @Override
+    public StyleId setStyleId ( final StyleId id )
+    {
+        return StyleManager.setStyleId ( separator, id );
+    }
+
+    @Override
+    public Shape provideShape ()
     {
         return PainterSupport.getShape ( separator, painter );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return PainterSupport.isShapeDetectionEnabled ( separator, painter );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        PainterSupport.setShapeDetectionEnabled ( separator, painter, enabled );
-    }
-
-    @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( separator );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( separator, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( separator );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( separator, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -123,7 +146,7 @@ public class WebToolBarSeparatorUI<C extends JToolBar.Separator> extends WToolBa
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -134,10 +157,10 @@ public class WebToolBarSeparatorUI<C extends JToolBar.Separator> extends WToolBa
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( separator, new Consumer<IToolBarSeparatorPainter> ()
+        PainterSupport.setPainter ( separator, new DataRunnable<IToolBarSeparatorPainter> ()
         {
             @Override
-            public void accept ( final IToolBarSeparatorPainter newPainter )
+            public void run ( final IToolBarSeparatorPainter newPainter )
             {
                 WebToolBarSeparatorUI.this.painter = newPainter;
             }
@@ -145,29 +168,11 @@ public class WebToolBarSeparatorUI<C extends JToolBar.Separator> extends WToolBa
     }
 
     @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
-    {
-        return PainterSupport.contains ( c, this, painter, x, y );
-    }
-
-    @Override
-    public int getBaseline ( final JComponent c, final int width, final int height )
-    {
-        return PainterSupport.getBaseline ( c, this, painter, width, height );
-    }
-
-    @Override
-    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
-    {
-        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
-    }
-
-    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
     }
 
@@ -175,20 +180,5 @@ public class WebToolBarSeparatorUI<C extends JToolBar.Separator> extends WToolBa
     public Dimension getPreferredSize ( final JComponent c )
     {
         return PainterSupport.getPreferredSize ( c, painter );
-    }
-
-    @Override
-    public Dimension getMaximumSize ( final JComponent c )
-    {
-        final Dimension ps = getPreferredSize ( c );
-        if ( separator.getOrientation () == SwingConstants.VERTICAL )
-        {
-            ps.height = Short.MAX_VALUE;
-        }
-        else
-        {
-            ps.width = Short.MAX_VALUE;
-        }
-        return ps;
     }
 }

@@ -19,7 +19,8 @@ package com.alee.extended.colorchooser;
 
 import com.alee.laf.colorchooser.HSBColor;
 import com.alee.laf.panel.WebPanel;
-import com.alee.managers.language.*;
+import com.alee.managers.language.LanguageAdapter;
+import com.alee.managers.language.LanguageManager;
 import com.alee.utils.CollectionUtils;
 import com.alee.utils.LafUtils;
 import com.alee.utils.SwingUtils;
@@ -69,13 +70,13 @@ public class DoubleColorField extends WebPanel
             }
         } );
 
-        addLanguageListener ( new LanguageListener ()
+        LanguageManager.addLanguageListener ( new LanguageAdapter ()
         {
             @Override
-            public void languageChanged ( final Language oldLanguage, final Language newLanguage )
+            public void languageUpdated ()
             {
-                revalidate ();
                 repaint ();
+                revalidate ();
             }
         } );
     }
@@ -98,7 +99,7 @@ public class DoubleColorField extends WebPanel
         g2d.setPaint ( newColor );
         g2d.fillRect ( 2, 2, getWidth () - 4, getHeight () / 2 - 2 );
 
-        final String newText = LM.get ( "weblaf.colorchooser.color.new" );
+        final String newText = LanguageManager.get ( "weblaf.colorchooser.color.new" );
         final Point nts = LafUtils.getTextCenterShift ( fm, newText );
         g2d.setPaint ( newHSBColor.getBrightness () >= 0.7f && newHSBColor.getSaturation () < 0.7f ? Color.BLACK : Color.WHITE );
         g2d.drawString ( newText, getWidth () / 2 + nts.x, 2 + ( getHeight () - 4 ) / 4 + nts.y );
@@ -106,7 +107,7 @@ public class DoubleColorField extends WebPanel
         g2d.setPaint ( oldColor );
         g2d.fillRect ( 2, getHeight () / 2, getWidth () - 4, getHeight () - getHeight () / 2 - 2 );
 
-        final String currentText = LM.get ( "weblaf.colorchooser.color.current" );
+        final String currentText = LanguageManager.get ( "weblaf.colorchooser.color.current" );
         final Point cts = LafUtils.getTextCenterShift ( fm, currentText );
         g2d.setPaint ( oldHSBColor.getBrightness () >= 0.7f && oldHSBColor.getSaturation () < 0.7f ? Color.BLACK : Color.WHITE );
         g2d.drawString ( currentText, getWidth () / 2 + cts.x, 2 + ( getHeight () - 4 ) * 3 / 4 + cts.y );

@@ -6,21 +6,19 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link ToolBarSeparatorPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WToolBarSeparatorUI}.
+ * Simple SeparatorPainter adapter class.
+ * It is used to install simple non-specific painters into WebSeparatorUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveToolBarSeparatorPainter<C extends JToolBar.Separator, U extends WToolBarSeparatorUI>
-        extends AdaptivePainter<C, U> implements IToolBarSeparatorPainter<C, U>
+public final class AdaptiveToolBarSeparatorPainter<E extends JToolBar.Separator, U extends WebToolBarSeparatorUI>
+        extends AdaptivePainter<E, U> implements IToolBarSeparatorPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveToolBarSeparatorPainter} for the specified painter.
+     * Constructs new AdaptiveToolBarSeparatorPainter for the specified painter.
      *
-     * @param painter {@link Painter} to adapt
+     * @param painter painter to adapt
      */
     public AdaptiveToolBarSeparatorPainter ( final Painter painter )
     {

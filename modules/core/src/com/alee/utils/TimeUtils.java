@@ -17,7 +17,7 @@
 
 package com.alee.utils;
 
-import org.slf4j.LoggerFactory;
+import com.alee.managers.log.Log;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -28,46 +28,28 @@ import java.util.Date;
  *
  * @author Mikle Garin
  */
+
 public final class TimeUtils
 {
     /**
-     * Constants for time calculations.
-     */
-    public static final long msInWeek = 604800000;
-    public static final long msInDay = 86400000;
-    public static final long msInHour = 3600000;
-    public static final long msInMinute = 60000;
-    public static final long msInSecond = 1000;
-    public static final long nsInSecond = 1000000000;
-    public static final long nsInMillisecond = 1000000;
-
-    /**
      * Pinned time in milliseconds.
      */
-    private static volatile Long pinnedTime = null;
+    private static Long pinnedTime = null;
 
     /**
      * Last measured time in milliseconds.
      */
-    private static volatile Long lastTime = null;
+    private static Long lastTime = null;
 
     /**
      * Pinned nano time in nanoseconds.
      */
-    private static volatile Long pinnedNanoTime = null;
+    private static Long pinnedNanoTime = null;
 
     /**
      * Last measured time in nanoseconds.
      */
-    private static volatile Long lastNanoTime = null;
-
-    /**
-     * Private constructor to avoid instantiation.
-     */
-    private TimeUtils ()
-    {
-        throw new UtilityException ( "Utility classes are not meant to be instantiated" );
-    }
+    private static Long lastNanoTime = null;
 
     /**
      * Returns last pinned time.
@@ -171,13 +153,13 @@ public final class TimeUtils
     {
         if ( pinnedTime == null )
         {
-            LoggerFactory.getLogger ( TimeUtils.class ).info ( prefix + "0" );
+            Log.info ( TimeUtils.class, prefix + "0" );
             pinTime ();
         }
         else
         {
             final long time = currentTime ();
-            LoggerFactory.getLogger ( TimeUtils.class ).info ( prefix + ( total ? time - pinnedTime : time - lastTime ) );
+            Log.info ( TimeUtils.class, prefix + ( total ? time - pinnedTime : time - lastTime ) );
             lastTime = time;
         }
     }
@@ -293,13 +275,13 @@ public final class TimeUtils
     {
         if ( pinnedNanoTime == null )
         {
-            LoggerFactory.getLogger ( TimeUtils.class ).info ( prefix + "0" );
+            Log.info ( TimeUtils.class, prefix + "0" );
             pinNanoTime ();
         }
         else
         {
             final long time = currentNanoTime ();
-            LoggerFactory.getLogger ( TimeUtils.class ).info ( prefix + ( total ? time - pinnedNanoTime : time - lastNanoTime ) );
+            Log.info ( TimeUtils.class, prefix + ( total ? time - pinnedNanoTime : time - lastNanoTime ) );
             lastNanoTime = time;
         }
     }

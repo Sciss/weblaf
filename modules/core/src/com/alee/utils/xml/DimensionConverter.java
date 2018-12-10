@@ -17,13 +17,14 @@
 
 package com.alee.utils.xml;
 
+import com.alee.managers.log.Log;
 import com.thoughtworks.xstream.converters.basic.AbstractSingleValueConverter;
 
 import java.awt.*;
 import java.util.StringTokenizer;
 
 /**
- * Custom XStream converter for {@link Dimension}.
+ * Custom {@link java.awt.Dimension} object converter.
  *
  * @author Mikle Garin
  */
@@ -42,26 +43,15 @@ public class DimensionConverter extends AbstractSingleValueConverter
     }
 
     @Override
-    public String toString ( final Object object )
-    {
-        return dimensionToString ( ( Dimension ) object );
-    }
-
-    @Override
     public Object fromString ( final String dimension )
     {
         return dimensionFromString ( dimension );
     }
 
-    /**
-     * Returns dimension converted into string.
-     *
-     * @param dimension dimension to convert
-     * @return dimension converted into string
-     */
-    public static String dimensionToString ( final Dimension dimension )
+    @Override
+    public String toString ( final Object object )
     {
-        return dimension.width + SEPARATOR + dimension.height;
+        return dimensionToString ( ( Dimension ) object );
     }
 
     /**
@@ -87,9 +77,21 @@ public class DimensionConverter extends AbstractSingleValueConverter
                 return new Dimension ( width, width );
             }
         }
-        catch ( final Exception e )
+        catch ( final Throwable e )
         {
-            throw new XmlException ( "Unable to parse Dimension: " + dimension, e );
+            Log.get ().error ( "Unable to parse Dimension: " + dimension, e );
+            return new Dimension ( 0, 0 );
         }
+    }
+
+    /**
+     * Returns dimension converted into string.
+     *
+     * @param dimension dimension to convert
+     * @return dimension converted into string
+     */
+    public static String dimensionToString ( final Dimension dimension )
+    {
+        return dimension.width + SEPARATOR + dimension.height;
     }
 }

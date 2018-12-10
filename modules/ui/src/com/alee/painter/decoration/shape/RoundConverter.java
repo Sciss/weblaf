@@ -17,17 +17,18 @@
 
 package com.alee.painter.decoration.shape;
 
-import com.alee.utils.xml.XmlException;
+import com.alee.managers.log.Log;
 import com.thoughtworks.xstream.converters.basic.AbstractSingleValueConverter;
 
 import java.util.StringTokenizer;
 
 /**
- * Custom XStream converter for {@link Round}.
+ * Custom {@link com.alee.painter.decoration.shape.Round} object converter.
  *
  * @author Mikle Garin
  */
-public final class RoundConverter extends AbstractSingleValueConverter
+
+public class RoundConverter extends AbstractSingleValueConverter
 {
     /**
      * Values separator.
@@ -41,54 +42,28 @@ public final class RoundConverter extends AbstractSingleValueConverter
     }
 
     @Override
+    public Object fromString ( final String insets )
+    {
+        return roundFromString ( insets );
+    }
+
+    @Override
     public String toString ( final Object object )
     {
         return roundToString ( ( Round ) object );
     }
 
-    @Override
-    public Object fromString ( final String round )
-    {
-        return roundFromString ( round );
-    }
-
     /**
-     * Returns {@link Round} converted into string.
+     * Returns insets read from string.
      *
-     * @param round {@link Round} to convert
-     * @return {@link Round} converted into string
+     * @param insets insets string
+     * @return insets read from string
      */
-    public static String roundToString ( final Round round )
-    {
-        if ( round.topLeft == round.topRight && round.bottomLeft == round.bottomRight && round.topLeft == round.bottomLeft )
-        {
-            return Integer.toString ( round.topLeft );
-        }
-        else if ( round.topLeft == round.bottomRight && round.topRight == round.bottomLeft )
-        {
-            return round.topLeft + separator + round.topRight;
-        }
-        else if ( round.topRight == round.bottomLeft )
-        {
-            return round.topLeft + separator + round.topRight + separator + round.bottomRight;
-        }
-        else
-        {
-            return round.topLeft + separator + round.topRight + separator + round.bottomRight + separator + round.bottomLeft;
-        }
-    }
-
-    /**
-     * Returns {@link Round} read from string.
-     *
-     * @param round {@link Round} string
-     * @return {@link Round} read from string
-     */
-    public static Round roundFromString ( final String round )
+    public static Round roundFromString ( final String insets )
     {
         try
         {
-            final StringTokenizer tokenizer = new StringTokenizer ( round, separator, false );
+            final StringTokenizer tokenizer = new StringTokenizer ( insets, separator, false );
             if ( tokenizer.hasMoreTokens () )
             {
                 final int topLeft = Integer.parseInt ( tokenizer.nextToken ().trim () );
@@ -123,9 +98,36 @@ public final class RoundConverter extends AbstractSingleValueConverter
                 return new Round ();
             }
         }
-        catch ( final Exception e )
+        catch ( final Throwable e )
         {
-            throw new XmlException ( "Unable to parse Round: " + round, e );
+            Log.get ().error ( "Unable to parse Round: " + insets, e );
+            return new Round ();
+        }
+    }
+
+    /**
+     * Returns insets converted into string.
+     *
+     * @param round insets to convert
+     * @return insets converted into string
+     */
+    public static String roundToString ( final Round round )
+    {
+        if ( round.topLeft == round.topRight && round.bottomLeft == round.bottomRight && round.topLeft == round.bottomLeft )
+        {
+            return Integer.toString ( round.topLeft );
+        }
+        else if ( round.topLeft == round.bottomRight && round.topRight == round.bottomLeft )
+        {
+            return round.topLeft + separator + round.topRight;
+        }
+        else if ( round.topRight == round.bottomLeft )
+        {
+            return round.topLeft + separator + round.topRight + separator + round.bottomRight;
+        }
+        else
+        {
+            return round.topLeft + separator + round.topRight + separator + round.bottomRight + separator + round.bottomLeft;
         }
     }
 }

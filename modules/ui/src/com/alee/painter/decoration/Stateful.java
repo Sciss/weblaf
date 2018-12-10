@@ -24,7 +24,6 @@ import java.util.List;
  * It is used by {@link AbstractDecorationPainter} which handles basic states.
  *
  * @author Mikle Garin
- * @see AbstractDecorationPainter#getDecorationStates()
  * @see AbstractDecorationPainter#collectDecorationStates()
  */
 

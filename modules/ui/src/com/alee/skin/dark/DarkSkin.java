@@ -17,7 +17,7 @@
 
 package com.alee.skin.dark;
 
-import com.alee.managers.style.XmlSkin;
+import com.alee.managers.style.CustomSkin;
 
 /**
  * Dark WebLaF skin.
@@ -25,13 +25,13 @@ import com.alee.managers.style.XmlSkin;
  * @author Mikle Garin
  */
 
-public class DarkSkin extends XmlSkin
+public class DarkSkin extends CustomSkin
 {
     /**
      * Constructs skin.
      */
     public DarkSkin ()
     {
-        super ( DarkSkin.class, "resources/skin.xml" );
+        super ( "resources/skin.xml" );
     }
 }

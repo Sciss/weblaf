@@ -17,17 +17,16 @@
 
 package com.alee.extended.menu;
 
-import com.alee.extended.window.WebPopup;
-import com.alee.laf.window.WebWindow;
 import com.alee.managers.style.StyleId;
+import com.alee.laf.rootpane.WebWindow;
+import com.alee.managers.focus.GlobalFocusListener;
 import com.alee.utils.GeometryUtils;
+import com.alee.extended.window.WebPopup;
+import com.alee.utils.swing.WindowFollowBehavior;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -81,10 +80,25 @@ public class WebDynamicMenu extends WebPopup
     protected List<WebDynamicMenuItem> items = new ArrayList<WebDynamicMenuItem> ();
 
     /**
+     * Invoker window follow adapter.
+     */
+    protected WindowFollowBehavior followAdapter;
+
+    /**
      * Index of menu item that caused menu to close.
      * This might affect the hiding animation.
      */
     protected int hidingCause = -1;
+
+    /**
+     * Custom global mouse listener that closes menu.
+     */
+    protected AWTEventListener mouseListener;
+
+    /**
+     * Custom global focus listener that closes menu.
+     */
+    protected GlobalFocusListener focusListener;
 
     /**
      * Constructs new dynamic menu.
@@ -95,7 +109,7 @@ public class WebDynamicMenu extends WebPopup
 
         // Popup settings
         setAnimate ( true );
-        setFadeStepSize ( 0.04f );
+        setStepProgress ( 0.04f );
         setWindowOpaque ( false );
         setWindowOpacity ( 0f );
         setFollowInvoker ( true );
@@ -273,9 +287,12 @@ public class WebDynamicMenu extends WebPopup
      */
     public void showMenu ( final Component invoker, final int x, final int y )
     {
-        // Displaying menu
-        final Point displayPoint = getActualLayout ().getDisplayPoint ( this, x, y );
-        super.showPopup ( invoker, displayPoint.x, displayPoint.y );
+        synchronized ( sync )
+        {
+            // Displaying menu
+            final Point displayPoint = getActualLayout ().getDisplayPoint ( this, x, y );
+            super.showPopup ( invoker, displayPoint.x, displayPoint.y );
+        }
     }
 
     @Override
@@ -316,7 +333,7 @@ public class WebDynamicMenu extends WebPopup
     @Override
     protected void hideAnimationStepPerformed ()
     {
-        if ( visibilityProgress > 0f )
+        if ( displayProgress > 0f )
         {
             revalidate ();
         }
@@ -324,6 +341,7 @@ public class WebDynamicMenu extends WebPopup
         {
             hidingCause = -1;
             revalidate ();
+            fullyHidden ();
         }
     }
 

@@ -7,14 +7,11 @@ import javax.swing.*;
 /**
  * Base interface for JColorChooser component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IColorChooserPainter<C extends JColorChooser, U extends WColorChooserUI> extends SpecificPainter<C, U>
+public interface IColorChooserPainter<E extends JColorChooser, U extends WebColorChooserUI> extends SpecificPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

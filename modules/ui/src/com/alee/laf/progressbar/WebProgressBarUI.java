@@ -17,34 +17,25 @@
 
 package com.alee.laf.progressbar;
 
-import com.alee.api.jdk.Consumer;
-import com.alee.api.jdk.Objects;
-import com.alee.laf.WebLookAndFeel;
 import com.alee.managers.style.*;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.plaf.ComponentUI;
+import javax.swing.plaf.basic.BasicProgressBarUI;
 import java.awt.*;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 
 /**
- * Custom UI for {@link JProgressBar} component.
+ * Custom UI extending BasicProgressBarUI.
  *
- * Basic UI usage have been removed due to:
- * 1. Multiple private things which do not work properly (like progress update on state change)
- * 2. Pointless animator which is not useful as we use our own ones
- * 3. Unnecessary settings initialization
- *
- * @param <C> component type
  * @author Mikle Garin
  */
-public class WebProgressBarUI<C extends JProgressBar> extends WProgressBarUI<C> implements ShapeSupport, MarginSupport, PaddingSupport
+
+public class WebProgressBarUI extends BasicProgressBarUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -55,104 +46,98 @@ public class WebProgressBarUI<C extends JProgressBar> extends WProgressBarUI<C> 
     /**
      * Runtime variables.
      */
-    protected transient EventsHandler eventsHandler;
+    protected Insets margin = null;
+    protected Insets padding = null;
 
     /**
-     * Returns an instance of the {@link WebProgressBarUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Returns an instance of the WebProgressBarUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebProgressBarUI}
+     * @return instance of the WebProgressBarUI
      */
+    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebProgressBarUI ();
     }
 
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
-        // Installing UI
         super.installUI ( c );
+
+        // Saving button reference
+        progressBar = ( JProgressBar ) c;
 
         // Applying skin
         StyleManager.installSkin ( progressBar );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( progressBar );
 
-        // Uninstalling UI
+        // Removing button reference
+        progressBar = null;
+
         super.uninstallUI ( c );
     }
 
     @Override
-    protected void installListeners ()
+    public StyleId getStyleId ()
     {
-        // Installing default listeners
-        super.installListeners ();
-
-        // Installing custom listeners
-        eventsHandler = new EventsHandler ();
-        progressBar.addChangeListener ( eventsHandler );
-        progressBar.addPropertyChangeListener ( eventsHandler );
+        return StyleManager.getStyleId ( progressBar );
     }
 
     @Override
-    protected void uninstallListeners ()
+    public StyleId setStyleId ( final StyleId id )
     {
-        // Uninstalling custom listeners
-        progressBar.removeChangeListener ( eventsHandler );
-        progressBar.removePropertyChangeListener ( eventsHandler );
-        eventsHandler = null;
-
-        // Uninstalling default listeners
-        super.uninstallListeners ();
+        return StyleManager.setStyleId ( progressBar, id );
     }
 
     @Override
-    public Shape getShape ()
+    public Shape provideShape ()
     {
         return PainterSupport.getShape ( progressBar, painter );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return PainterSupport.isShapeDetectionEnabled ( progressBar, painter );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        PainterSupport.setShapeDetectionEnabled ( progressBar, painter, enabled );
-    }
-
-    @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( progressBar );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( progressBar, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( progressBar );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( progressBar, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -162,7 +147,7 @@ public class WebProgressBarUI<C extends JProgressBar> extends WProgressBarUI<C> 
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -173,40 +158,28 @@ public class WebProgressBarUI<C extends JProgressBar> extends WProgressBarUI<C> 
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( progressBar, new Consumer<IProgressBarPainter> ()
+        PainterSupport.setPainter ( progressBar, new DataRunnable<IProgressBarPainter> ()
         {
             @Override
-            public void accept ( final IProgressBarPainter newPainter )
+            public void run ( final IProgressBarPainter newPainter )
             {
                 WebProgressBarUI.this.painter = newPainter;
             }
         }, this.painter, painter, IProgressBarPainter.class, AdaptiveProgressBarPainter.class );
     }
 
-    @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
-    {
-        return PainterSupport.contains ( c, this, painter, x, y );
-    }
-
-    @Override
-    public int getBaseline ( final JComponent c, final int width, final int height )
-    {
-        return PainterSupport.getBaseline ( c, this, painter, width, height );
-    }
-
-    @Override
-    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
-    {
-        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
-    }
-
+    /**
+     * Paints button.
+     *
+     * @param g graphics
+     * @param c component
+     */
     @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
     }
 
@@ -214,27 +187,5 @@ public class WebProgressBarUI<C extends JProgressBar> extends WProgressBarUI<C> 
     public Dimension getPreferredSize ( final JComponent c )
     {
         return PainterSupport.getPreferredSize ( c, painter );
-    }
-
-    /**
-     * Events handler replacing {@link javax.swing.plaf.basic.BasicProgressBarUI.Handler} one.
-     */
-    protected class EventsHandler implements ChangeListener, PropertyChangeListener
-    {
-        @Override
-        public void stateChanged ( final ChangeEvent e )
-        {
-            progressBar.repaint ();
-        }
-
-        @Override
-        public void propertyChange ( final PropertyChangeEvent e )
-        {
-            final String propertyName = e.getPropertyName ();
-            if ( Objects.equals ( propertyName, WebLookAndFeel.INDETERMINATE_PROPERTY ) )
-            {
-                progressBar.repaint ();
-            }
-        }
     }
 }

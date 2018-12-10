@@ -17,6 +17,8 @@
 
 package com.alee.utils.swing;
 
+import com.alee.api.IconSupport;
+
 import javax.swing.*;
 
 /**
@@ -25,12 +27,8 @@ import javax.swing.*;
  * @author Mikle Garin
  */
 
-public enum LoadIconType
+public enum LoadIconType implements IconSupport
 {
-    /**
-     * todo 1. Replace icons with {@link com.alee.managers.icon.IconManager} usage
-     */
-
     /**
      * Circle loader.
      */
@@ -69,13 +67,9 @@ public enum LoadIconType
     /**
      * Cached load icon.
      */
-    private transient Icon icon;
+    private Icon icon;
 
-    /**
-     * Returns {@link Icon} for this {@link LoadIconType}.
-     *
-     * @return {@link Icon} for this {@link LoadIconType}
-     */
+    @Override
     public Icon getIcon ()
     {
         if ( icon == null )

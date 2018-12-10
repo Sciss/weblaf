@@ -21,13 +21,9 @@ import com.alee.extended.layout.StackLayout;
 import com.alee.extended.transition.effects.TransitionEffect;
 import com.alee.laf.panel.WebPanel;
 import com.alee.utils.CollectionUtils;
-import com.alee.utils.CoreSwingUtils;
 import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.WebTimer;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.image.BufferedImage;
@@ -128,7 +124,7 @@ public class ComponentTransition extends WebPanel
 
     public void performTransition ( final Component content )
     {
-        CoreSwingUtils.invokeLater ( new Runnable ()
+        SwingUtils.invokeLater ( new Runnable ()
         {
             @Override
             public void run ()
@@ -144,10 +140,10 @@ public class ComponentTransition extends WebPanel
 
     public void delayTransition ( final long delay, final Component content )
     {
-        WebTimer.delay ( "delayTransition", delay, true, new ActionListener ()
+        SwingUtils.delayInvokeLater ( delay, new Runnable ()
         {
             @Override
-            public void actionPerformed ( final ActionEvent e )
+            public void run ()
             {
                 performTransitionImpl ( content );
             }

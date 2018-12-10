@@ -18,36 +18,48 @@
 package com.alee.painter.decoration.shape;
 
 import com.alee.api.Identifiable;
-import com.alee.api.merge.Overwriting;
+import com.alee.api.Mergeable;
 import com.alee.painter.decoration.IDecoration;
-import com.alee.painter.decoration.IDecoratonElement;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.Serializable;
 
 /**
- * Interface for providing custom element shape.
+ * Customizable component shape interface.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <D> decoration type
  * @param <I> shape type
  * @author Mikle Garin
  */
-public interface IShape<C extends JComponent, D extends IDecoration<C, D>, I extends IShape<C, D, I>>
-        extends IDecoratonElement<C, D, I>, Serializable, Cloneable, Overwriting, Identifiable
+
+public interface IShape<E extends JComponent, D extends IDecoration<E, D>, I extends IShape<E, D, I>>
+        extends Serializable, Cloneable, Mergeable<I>, Identifiable
 {
+    /**
+     * todo 1. Method `isGroupAvailable` to check whether or not this shape can be grouped
+     */
+
+    /**
+     * Returns shape borders size.
+     *
+     * @param c painted component
+     * @param d painted decoration state
+     * @return shape borders size
+     */
+    public Insets getBorderInsets ( E c, D d );
+
     /**
      * Returns whether shape is visible within component bounds.
      * This method is required to optimize painting operations.
      *
-     * @param type   checked shape type
-     * @param bounds painting bounds
-     * @param c      painted component
-     * @param d      painted decoration state
+     * @param type checked shape type
+     * @param c    painted component
+     * @param d    painted decoration state
      * @return true if shape is visible within component bounds, false otherwise
      */
-    public boolean isVisible ( ShapeType type, Rectangle bounds, C c, D d );
+    public boolean isVisible ( ShapeType type, E c, D d );
 
     /**
      * Returns shape provided for shade painting.
@@ -59,7 +71,7 @@ public interface IShape<C extends JComponent, D extends IDecoration<C, D>, I ext
      * @param d      painted decoration state
      * @return component shape of the specified type
      */
-    public Shape getShape ( ShapeType type, Rectangle bounds, C c, D d );
+    public Shape getShape ( ShapeType type, Rectangle bounds, E c, D d );
 
     /**
      * Returns exclusive shape settings used to cache the shape itself.
@@ -71,20 +83,20 @@ public interface IShape<C extends JComponent, D extends IDecoration<C, D>, I ext
      * @param d      painted decoration state
      * @return shape settings used to cache the shape itself
      */
-    public Object[] getShapeSettings ( Rectangle bounds, C c, D d );
+    public Object[] getShapeSettings ( final Rectangle bounds, final E c, final D d );
 
     /**
      * Returns shape stretch information.
      * If this method returns something that is not {@code null} shape is stretchable horizontally and/or vertically.
      * That information might be extremely useful for painting optimization, but it is not necessary to implement this method.
-     *
-     * As an example - WebLaF uses this information to optimize (reduce amount of) shadow images generation.
-     * Since generating even a small shadow requires a good chunk of memory and processing time it is necessary.
+     * <p>
+     * As an example - WebLaF uses this information to optimize (reduce amount of) shade images generation.
+     * Since generating even a small shade requires a good chunk of memory and processing time it is necessary.
      *
      * @param bounds painting bounds
      * @param c      painted component
      * @param d      painted decoration state
      * @return shape stretch information
      */
-    public StretchInfo getStretchInfo ( Rectangle bounds, C c, D d );
+    public StretchInfo getStretchInfo ( Rectangle bounds, E c, D d );
 }

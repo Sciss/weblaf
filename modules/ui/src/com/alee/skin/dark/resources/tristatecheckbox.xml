@@ -1,23 +1,14 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.extended.checkbox.WebTristateCheckBox -->
 
     <!-- Tristate checkbox -->
     <style type="tristatecheckbox">
+        <component>
+            <foreground>255,255,255,240</foreground>
+        </component>
         <painter>
-            <decorations>
-                <decoration>
-                    <ButtonLayout>
-                        <SimpleButtonIcon constraints="icon" />
-                        <ButtonText constraints="text" color="245,245,245" />
-                    </ButtonLayout>
-                </decoration>
-                <decoration states="disabled">
-                    <ButtonLayout>
-                        <ButtonText color="180,180,180" />
-                    </ButtonLayout>
-                </decoration>
-            </decorations>
+            <selectedForeground>255,255,255,240</selectedForeground>
 
             <!-- Check state painter -->
             <checkStatePainter>
@@ -43,7 +34,10 @@
                     <decoration states="disabled">
                         <WebShadow type="outer" opacity="0" />
                         <LineBorder color="68,72,74" />
-                        <ColorBackground color="80,80,80" />
+                        <GradientBackground type="radial" from="0.5,0.5" to="2,0.5">
+                            <color>111,115,117</color>
+                            <color>77,81,83</color>
+                        </GradientBackground>
                     </decoration>
                     <decoration states="disabled,checked">
                         <CheckIcon bounds="margin" color="130,130,130" />
@@ -54,43 +48,6 @@
                 </decorations>
             </checkStatePainter>
 
-        </painter>
-    </style>
-
-    <!-- Tristate checkbox supporting styled text -->
-    <style type="tristatecheckbox" id="styled">
-        <painter>
-            <decorations>
-                <decoration>
-                    <ButtonLayout>
-                        <StyledButtonText constraints="text" color="245,245,245" />
-                    </ButtonLayout>
-                </decoration>
-                <decoration states="disabled">
-                    <ButtonLayout>
-                        <StyledButtonText color="180,180,180" ignoreStyleColors="true" />
-                    </ButtonLayout>
-                </decoration>
-            </decorations>
-        </painter>
-    </style>
-
-    <!-- Link-like tristate checkbox -->
-    <style type="tristatecheckbox" id="link" extends="styled">
-        <painter>
-            <decorations>
-                <decoration cursor="hand" />
-                <decoration states="hover">
-                    <ButtonLayout>
-                        <StyledButtonText globalStyle="u" />
-                    </ButtonLayout>
-                </decoration>
-                <decoration states="disabled">
-                    <ButtonLayout>
-                        <StyledButtonText globalStyle="" />
-                    </ButtonLayout>
-                </decoration>
-            </decorations>
         </painter>
     </style>
 

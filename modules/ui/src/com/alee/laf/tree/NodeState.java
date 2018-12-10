@@ -17,6 +17,7 @@
 
 package com.alee.laf.tree;
 
+import com.alee.utils.MergeUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
@@ -27,8 +28,9 @@ import java.io.Serializable;
  *
  * @author Mikle Garin
  */
+
 @XStreamAlias ( "NodeState" )
-public class NodeState implements Cloneable, Serializable
+public class NodeState implements Serializable, Cloneable
 {
     /**
      * Whether node is expanded or not.
@@ -43,21 +45,24 @@ public class NodeState implements Cloneable, Serializable
     protected boolean selected;
 
     /**
-     * Constructs new {@link NodeState} with default state.
+     * Constructs empty node state.
      */
     public NodeState ()
     {
-        this ( false, false );
+        super ();
+        this.expanded = false;
+        this.selected = false;
     }
 
     /**
-     * Constructs new {@link NodeState} with the specified expansion and selection states.
+     * Constructs node state with the specified expansion and selection states.
      *
      * @param expanded expansion state
      * @param selected selection state
      */
     public NodeState ( final boolean expanded, final boolean selected )
     {
+        super ();
         this.expanded = expanded;
         this.selected = selected;
     }
@@ -100,5 +105,16 @@ public class NodeState implements Cloneable, Serializable
     public void setSelected ( final boolean selected )
     {
         this.selected = selected;
+    }
+
+    /**
+     * Returns cloned node state.
+     *
+     * @return cloned node state
+     */
+    @Override
+    protected NodeState clone ()
+    {
+        return MergeUtils.cloneByFieldsSafely ( this );
     }
 }

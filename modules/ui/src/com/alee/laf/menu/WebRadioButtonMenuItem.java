@@ -17,57 +17,56 @@
 
 package com.alee.laf.menu;
 
-import com.alee.managers.hotkey.HotkeyData;
-import com.alee.managers.language.*;
-import com.alee.managers.language.updaters.LanguageUpdater;
-import com.alee.managers.settings.Configuration;
-import com.alee.managers.settings.SettingsMethods;
-import com.alee.managers.settings.SettingsProcessor;
-import com.alee.managers.settings.UISettingsManager;
-import com.alee.managers.style.*;
 import com.alee.painter.Paintable;
 import com.alee.painter.Painter;
+import com.alee.laf.WebLookAndFeel;
+import com.alee.managers.hotkey.HotkeyData;
+import com.alee.managers.language.LanguageManager;
+import com.alee.managers.language.LanguageMethods;
+import com.alee.managers.language.updaters.LanguageUpdater;
+import com.alee.managers.log.Log;
+import com.alee.managers.settings.DefaultValue;
+import com.alee.managers.settings.SettingsManager;
+import com.alee.managers.settings.SettingsMethods;
+import com.alee.managers.settings.SettingsProcessor;
+import com.alee.managers.style.*;
+import com.alee.managers.style.Skin;
+import com.alee.managers.style.StyleListener;
+import com.alee.managers.style.Skinnable;
+import com.alee.utils.ReflectUtils;
 import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.extensions.FontMethods;
-import com.alee.utils.swing.extensions.FontMethodsImpl;
-import com.alee.utils.swing.extensions.SizeMethods;
-import com.alee.utils.swing.extensions.SizeMethodsImpl;
+import com.alee.utils.swing.FontMethods;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.Map;
 
 /**
- * {@link JRadioButtonMenuItem} extension class.
- * It contains various useful methods to simplify core component usage.
- *
- * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
- * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
+ * This JRadioButtonMenuItem extension class provides a direct access to WebRadioButtonMenuItemUI methods.
  *
  * @author Mikle Garin
- * @see JRadioButtonMenuItem
- * @see WebRadioButtonMenuItemUI
- * @see RadioButtonMenuItemPainter
  */
-public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styleable, Paintable, ShapeMethods, MarginMethods,
-        PaddingMethods, LanguageMethods, LanguageEventMethods, SettingsMethods, FontMethods<WebRadioButtonMenuItem>,
-        SizeMethods<WebRadioButtonMenuItem>
+
+public class WebRadioButtonMenuItem extends JRadioButtonMenuItem
+        implements Styleable, Skinnable, Paintable, ShapeProvider, MarginSupport, PaddingSupport, LanguageMethods, SettingsMethods,
+        FontMethods<WebRadioButtonMenuItem>
 {
     /**
      * Constructs new radiobutton menu item.
      */
     public WebRadioButtonMenuItem ()
     {
-        this ( StyleId.auto );
+        super ();
     }
 
     /**
      * Constructs new radiobutton menu item using the specified settings.
      *
-     * @param action menu item action
+     * @param a menu item action
      */
-    public WebRadioButtonMenuItem ( final Action action )
+    public WebRadioButtonMenuItem ( final Action a )
     {
-        this ( StyleId.auto, action );
+        super ( a );
     }
 
     /**
@@ -77,7 +76,7 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final Icon icon )
     {
-        this ( StyleId.auto, icon );
+        super ( icon );
     }
 
     /**
@@ -88,7 +87,7 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final Icon icon, final boolean selected )
     {
-        this ( StyleId.auto, icon, selected );
+        super ( icon, selected );
     }
 
     /**
@@ -98,7 +97,7 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final String text )
     {
-        this ( StyleId.auto, text );
+        super ( text );
     }
 
     /**
@@ -109,7 +108,8 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final String text, final KeyStroke accelerator )
     {
-        this ( StyleId.auto, text, accelerator );
+        super ( text );
+        setAccelerator ( accelerator );
     }
 
     /**
@@ -120,7 +120,8 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final String text, final HotkeyData accelerator )
     {
-        this ( StyleId.auto, text, accelerator );
+        super ( text );
+        setAccelerator ( accelerator );
     }
 
     /**
@@ -131,7 +132,7 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final String text, final Icon icon )
     {
-        this ( StyleId.auto, text, icon );
+        super ( text, icon );
     }
 
     /**
@@ -143,7 +144,7 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final String text, final Icon icon, final boolean selected )
     {
-        this ( StyleId.auto, text, icon, selected );
+        super ( text, icon, selected );
     }
 
     /**
@@ -154,7 +155,7 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final String text, final boolean selected )
     {
-        this ( StyleId.auto, text, selected );
+        super ( text, selected );
     }
 
     /**
@@ -166,7 +167,8 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final String text, final Icon icon, final KeyStroke accelerator )
     {
-        this ( StyleId.auto, text, icon, accelerator );
+        super ( text, icon );
+        setAccelerator ( accelerator );
     }
 
     /**
@@ -174,12 +176,13 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      *
      * @param text        menu item text
      * @param icon        menu item icon
-     * @param selected    whether this checkbox item is selected or not
+     * @param b           whether this checkbox item is selected or not
      * @param accelerator menu item accelerator
      */
-    public WebRadioButtonMenuItem ( final String text, final Icon icon, final boolean selected, final KeyStroke accelerator )
+    public WebRadioButtonMenuItem ( final String text, final Icon icon, final boolean b, final KeyStroke accelerator )
     {
-        this ( StyleId.auto, text, icon, selected, accelerator );
+        super ( text, icon, b );
+        setAccelerator ( accelerator );
     }
 
     /**
@@ -191,7 +194,8 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final String text, final Icon icon, final HotkeyData accelerator )
     {
-        this ( StyleId.auto, text, icon, accelerator );
+        super ( text, icon );
+        setAccelerator ( accelerator );
     }
 
     /**
@@ -199,24 +203,13 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      *
      * @param text        menu item text
      * @param icon        menu item icon
-     * @param selected    whether this checkbox item is selected or not
+     * @param b           whether this checkbox item is selected or not
      * @param accelerator menu item accelerator
      */
-    public WebRadioButtonMenuItem ( final String text, final Icon icon, final boolean selected, final HotkeyData accelerator )
+    public WebRadioButtonMenuItem ( final String text, final Icon icon, final boolean b, final HotkeyData accelerator )
     {
-        this ( StyleId.auto, text, icon, selected, accelerator );
-    }
-
-    /**
-     * Constructs new radiobutton menu item using the specified settings.
-     *
-     * @param id     style ID
-     * @param action menu item action
-     */
-    public WebRadioButtonMenuItem ( final StyleId id, final Action action )
-    {
-        this ( id, null, null, false, ( KeyStroke ) null );
-        setAction ( action );
+        super ( text, icon, b );
+        setAccelerator ( accelerator );
     }
 
     /**
@@ -226,7 +219,20 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final StyleId id )
     {
-        this ( id, null, null, false, ( KeyStroke ) null );
+        super ();
+        setStyleId ( id );
+    }
+
+    /**
+     * Constructs new radiobutton menu item using the specified settings.
+     *
+     * @param id style ID
+     * @param a  menu item action
+     */
+    public WebRadioButtonMenuItem ( final StyleId id, final Action a )
+    {
+        super ( a );
+        setStyleId ( id );
     }
 
     /**
@@ -237,7 +243,8 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final StyleId id, final Icon icon )
     {
-        this ( id, null, icon, false, ( KeyStroke ) null );
+        super ( icon );
+        setStyleId ( id );
     }
 
     /**
@@ -249,7 +256,8 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final StyleId id, final Icon icon, final boolean selected )
     {
-        this ( id, null, icon, selected, ( KeyStroke ) null );
+        super ( icon, selected );
+        setStyleId ( id );
     }
 
     /**
@@ -260,7 +268,8 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final StyleId id, final String text )
     {
-        this ( id, text, null, false, ( KeyStroke ) null );
+        super ( text );
+        setStyleId ( id );
     }
 
     /**
@@ -272,7 +281,9 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final StyleId id, final String text, final KeyStroke accelerator )
     {
-        this ( id, text, null, false, accelerator );
+        super ( text );
+        setAccelerator ( accelerator );
+        setStyleId ( id );
     }
 
     /**
@@ -284,7 +295,9 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final StyleId id, final String text, final HotkeyData accelerator )
     {
-        this ( id, text, null, false, accelerator );
+        super ( text );
+        setAccelerator ( accelerator );
+        setStyleId ( id );
     }
 
     /**
@@ -296,7 +309,8 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final StyleId id, final String text, final Icon icon )
     {
-        this ( id, text, icon, false, ( KeyStroke ) null );
+        super ( text, icon );
+        setStyleId ( id );
     }
 
     /**
@@ -309,7 +323,8 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final StyleId id, final String text, final Icon icon, final boolean selected )
     {
-        this ( id, text, icon, selected, ( KeyStroke ) null );
+        super ( text, icon, selected );
+        setStyleId ( id );
     }
 
     /**
@@ -321,7 +336,8 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final StyleId id, final String text, final boolean selected )
     {
-        this ( id, text, null, selected, ( KeyStroke ) null );
+        super ( text, selected );
+        setStyleId ( id );
     }
 
     /**
@@ -334,7 +350,25 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final StyleId id, final String text, final Icon icon, final KeyStroke accelerator )
     {
-        this ( id, text, icon, false, accelerator );
+        super ( text, icon );
+        setAccelerator ( accelerator );
+        setStyleId ( id );
+    }
+
+    /**
+     * Constructs new radiobutton menu item using the specified settings.
+     *
+     * @param id          style ID
+     * @param text        menu item text
+     * @param icon        menu item icon
+     * @param b           whether this checkbox item is selected or not
+     * @param accelerator menu item accelerator
+     */
+    public WebRadioButtonMenuItem ( final StyleId id, final String text, final Icon icon, final boolean b, final KeyStroke accelerator )
+    {
+        super ( text, icon, b );
+        setAccelerator ( accelerator );
+        setStyleId ( id );
     }
 
     /**
@@ -347,80 +381,47 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
      */
     public WebRadioButtonMenuItem ( final StyleId id, final String text, final Icon icon, final HotkeyData accelerator )
     {
-        this ( id, text, icon, false, accelerator );
-    }
-
-    /**
-     * Constructs new radiobutton menu item using the specified settings.
-     *
-     * @param id          style ID
-     * @param text        menu item text
-     * @param icon        menu item icon
-     * @param selected    whether this checkbox item is selected or not
-     * @param accelerator menu item accelerator
-     */
-    public WebRadioButtonMenuItem ( final StyleId id, final String text, final Icon icon, final boolean selected,
-                                    final HotkeyData accelerator )
-    {
-        this ( id, text, icon, selected, SwingUtils.getAccelerator ( accelerator ) );
-    }
-
-    /**
-     * Constructs new radiobutton menu item using the specified settings.
-     *
-     * @param id          style ID
-     * @param text        menu item text
-     * @param icon        menu item icon
-     * @param selected    whether this checkbox item is selected or not
-     * @param accelerator menu item accelerator
-     */
-    public WebRadioButtonMenuItem ( final StyleId id, final String text, final Icon icon, final boolean selected,
-                                    final KeyStroke accelerator )
-    {
-        super ( text, icon, selected );
+        super ( text, icon );
         setAccelerator ( accelerator );
         setStyleId ( id );
     }
 
-    @Override
-    protected void init ( final String text, final Icon icon )
+    /**
+     * Constructs new radiobutton menu item using the specified settings.
+     *
+     * @param id          style ID
+     * @param text        menu item text
+     * @param icon        menu item icon
+     * @param b           whether this checkbox item is selected or not
+     * @param accelerator menu item accelerator
+     */
+    public WebRadioButtonMenuItem ( final StyleId id, final String text, final Icon icon, final boolean b, final HotkeyData accelerator )
     {
-        super.init ( UILanguageManager.getInitialText ( text ), icon );
-        UILanguageManager.registerInitialLanguage ( this, text );
+        super ( text, icon, b );
+        setAccelerator ( accelerator );
+        setStyleId ( id );
     }
 
     /**
      * Sets the key combination which invokes the menu item's action listeners without navigating the menu hierarchy.
      *
-     * @param accelerator hotkey data
+     * @param hotkey hotkey data
      */
-    public void setAccelerator ( final HotkeyData accelerator )
+    public void setAccelerator ( final HotkeyData hotkey )
     {
-        setAccelerator ( SwingUtils.getAccelerator ( accelerator ) );
-    }
-
-    @Override
-    public StyleId getDefaultStyleId ()
-    {
-        return StyleId.radiobuttonmenuitem;
+        SwingUtils.setAccelerator ( this, hotkey );
     }
 
     @Override
     public StyleId getStyleId ()
     {
-        return StyleManager.getStyleId ( this );
+        return getWebUI ().getStyleId ();
     }
 
     @Override
     public StyleId setStyleId ( final StyleId id )
     {
-        return StyleManager.setStyleId ( this, id );
-    }
-
-    @Override
-    public StyleId resetStyleId ()
-    {
-        return StyleManager.resetStyleId ( this );
+        return getWebUI ().setStyleId ( id );
     }
 
     @Override
@@ -442,9 +443,9 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
     }
 
     @Override
-    public Skin resetSkin ()
+    public Skin restoreSkin ()
     {
-        return StyleManager.resetSkin ( this );
+        return StyleManager.restoreSkin ( this );
     }
 
     @Override
@@ -460,9 +461,21 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
     }
 
     @Override
+    public Map<String, Painter> getCustomPainters ()
+    {
+        return StyleManager.getCustomPainters ( this );
+    }
+
+    @Override
     public Painter getCustomPainter ()
     {
         return StyleManager.getCustomPainter ( this );
+    }
+
+    @Override
+    public Painter getCustomPainter ( final String id )
+    {
+        return StyleManager.getCustomPainter ( this, id );
     }
 
     @Override
@@ -472,419 +485,368 @@ public class WebRadioButtonMenuItem extends JRadioButtonMenuItem implements Styl
     }
 
     @Override
-    public boolean resetCustomPainter ()
+    public Painter setCustomPainter ( final String id, final Painter painter )
     {
-        return StyleManager.resetCustomPainter ( this );
+        return StyleManager.setCustomPainter ( this, id, painter );
     }
 
     @Override
-    public Shape getShape ()
+    public boolean restoreDefaultPainters ()
     {
-        return ShapeMethodsImpl.getShape ( this );
+        return StyleManager.restoreDefaultPainters ( this );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
+    public Shape provideShape ()
     {
-        return ShapeMethodsImpl.isShapeDetectionEnabled ( this );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        ShapeMethodsImpl.setShapeDetectionEnabled ( this, enabled );
+        return getWebUI ().provideShape ();
     }
 
     @Override
     public Insets getMargin ()
     {
-        return MarginMethodsImpl.getMargin ( this );
+        return getWebUI ().getMargin ();
     }
 
-    @Override
+    /**
+     * Sets new margin.
+     *
+     * @param margin new margin
+     */
     public void setMargin ( final int margin )
     {
-        MarginMethodsImpl.setMargin ( this, margin );
+        setMargin ( margin, margin, margin, margin );
     }
 
-    @Override
+    /**
+     * Sets new margin.
+     *
+     * @param top    new top margin
+     * @param left   new left margin
+     * @param bottom new bottom margin
+     * @param right  new right margin
+     */
     public void setMargin ( final int top, final int left, final int bottom, final int right )
     {
-        MarginMethodsImpl.setMargin ( this, top, left, bottom, right );
+        setMargin ( new Insets ( top, left, bottom, right ) );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        MarginMethodsImpl.setMargin ( this, margin );
+        getWebUI ().setMargin ( margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PaddingMethodsImpl.getPadding ( this );
+        return getWebUI ().getPadding ();
     }
 
-    @Override
+    /**
+     * Sets new padding.
+     *
+     * @param padding new padding
+     */
     public void setPadding ( final int padding )
     {
-        PaddingMethodsImpl.setPadding ( this, padding );
+        setPadding ( padding, padding, padding, padding );
     }
 
-    @Override
+    /**
+     * Sets new padding.
+     *
+     * @param top    new top padding
+     * @param left   new left padding
+     * @param bottom new bottom padding
+     * @param right  new right padding
+     */
     public void setPadding ( final int top, final int left, final int bottom, final int right )
     {
-        PaddingMethodsImpl.setPadding ( this, top, left, bottom, right );
+        setPadding ( new Insets ( top, left, bottom, right ) );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PaddingMethodsImpl.setPadding ( this, padding );
+        getWebUI ().setPadding ( padding );
     }
 
-    @Override
-    public String getLanguage ()
+    /**
+     * Returns Web-UI applied to this class.
+     *
+     * @return Web-UI applied to this class
+     */
+    public WebRadioButtonMenuItemUI getWebUI ()
     {
-        return UILanguageManager.getComponentKey ( this );
+        return ( WebRadioButtonMenuItemUI ) getUI ();
+    }
+
+    /**
+     * Installs a Web-UI into this component.
+     */
+    @Override
+    public void updateUI ()
+    {
+        if ( getUI () == null || !( getUI () instanceof WebRadioButtonMenuItemUI ) )
+        {
+            try
+            {
+                setUI ( ( WebRadioButtonMenuItemUI ) ReflectUtils.createInstance ( WebLookAndFeel.radioButtonMenuItemUI ) );
+            }
+            catch ( final Throwable e )
+            {
+                Log.error ( this, e );
+                setUI ( new WebRadioButtonMenuItemUI () );
+            }
+        }
+        else
+        {
+            setUI ( getUI () );
+        }
     }
 
     @Override
     public void setLanguage ( final String key, final Object... data )
     {
-        UILanguageManager.registerComponent ( this, key, data );
+        LanguageManager.registerComponent ( this, key, data );
     }
 
     @Override
     public void updateLanguage ( final Object... data )
     {
-        UILanguageManager.updateComponent ( this, data );
+        LanguageManager.updateComponent ( this, data );
     }
 
     @Override
     public void updateLanguage ( final String key, final Object... data )
     {
-        UILanguageManager.updateComponent ( this, key, data );
+        LanguageManager.updateComponent ( this, key, data );
     }
 
     @Override
     public void removeLanguage ()
     {
-        UILanguageManager.unregisterComponent ( this );
+        LanguageManager.unregisterComponent ( this );
     }
 
     @Override
     public boolean isLanguageSet ()
     {
-        return UILanguageManager.isRegisteredComponent ( this );
+        return LanguageManager.isRegisteredComponent ( this );
     }
 
     @Override
     public void setLanguageUpdater ( final LanguageUpdater updater )
     {
-        UILanguageManager.registerLanguageUpdater ( this, updater );
+        LanguageManager.registerLanguageUpdater ( this, updater );
     }
 
     @Override
     public void removeLanguageUpdater ()
     {
-        UILanguageManager.unregisterLanguageUpdater ( this );
+        LanguageManager.unregisterLanguageUpdater ( this );
     }
 
     @Override
-    public void addLanguageListener ( final LanguageListener listener )
+    public void registerSettings ( final String key )
     {
-        UILanguageManager.addLanguageListener ( getRootPane (), listener );
+        SettingsManager.registerComponent ( this, key );
     }
 
     @Override
-    public void removeLanguageListener ( final LanguageListener listener )
+    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass )
     {
-        UILanguageManager.removeLanguageListener ( getRootPane (), listener );
+        SettingsManager.registerComponent ( this, key, defaultValueClass );
     }
 
     @Override
-    public void removeLanguageListeners ()
+    public void registerSettings ( final String key, final Object defaultValue )
     {
-        UILanguageManager.removeLanguageListeners ( getRootPane () );
+        SettingsManager.registerComponent ( this, key, defaultValue );
     }
 
     @Override
-    public void addDictionaryListener ( final DictionaryListener listener )
+    public void registerSettings ( final String group, final String key )
     {
-        UILanguageManager.addDictionaryListener ( getRootPane (), listener );
+        SettingsManager.registerComponent ( this, group, key );
     }
 
     @Override
-    public void removeDictionaryListener ( final DictionaryListener listener )
+    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass )
     {
-        UILanguageManager.removeDictionaryListener ( getRootPane (), listener );
+        SettingsManager.registerComponent ( this, group, key, defaultValueClass );
     }
 
     @Override
-    public void removeDictionaryListeners ()
+    public void registerSettings ( final String group, final String key, final Object defaultValue )
     {
-        UILanguageManager.removeDictionaryListeners ( getRootPane () );
+        SettingsManager.registerComponent ( this, group, key, defaultValue );
     }
 
     @Override
-    public void registerSettings ( final Configuration configuration )
+    public void registerSettings ( final String key, final boolean loadInitialSettings, final boolean applySettingsChanges )
     {
-        UISettingsManager.registerComponent ( this, configuration );
+        SettingsManager.registerComponent ( this, key, loadInitialSettings, applySettingsChanges );
     }
 
     @Override
-    public void registerSettings ( final SettingsProcessor processor )
+    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass,
+                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
     {
-        UISettingsManager.registerComponent ( this, processor );
+        SettingsManager.registerComponent ( this, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final String key, final Object defaultValue, final boolean loadInitialSettings,
+                                   final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, key, defaultValue, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass,
+                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final String group, final String key, final Object defaultValue, final boolean loadInitialSettings,
+                                   final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValue, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final SettingsProcessor settingsProcessor )
+    {
+        SettingsManager.registerComponent ( this, settingsProcessor );
     }
 
     @Override
     public void unregisterSettings ()
     {
-        UISettingsManager.unregisterComponent ( this );
+        SettingsManager.unregisterComponent ( this );
     }
 
     @Override
     public void loadSettings ()
     {
-        UISettingsManager.loadSettings ( this );
+        SettingsManager.loadComponentSettings ( this );
     }
 
     @Override
     public void saveSettings ()
     {
-        UISettingsManager.saveSettings ( this );
+        SettingsManager.saveComponentSettings ( this );
     }
 
     @Override
     public WebRadioButtonMenuItem setPlainFont ()
     {
-        return FontMethodsImpl.setPlainFont ( this );
+        return SwingUtils.setPlainFont ( this );
     }
 
     @Override
     public WebRadioButtonMenuItem setPlainFont ( final boolean apply )
     {
-        return FontMethodsImpl.setPlainFont ( this, apply );
+        return SwingUtils.setPlainFont ( this, apply );
     }
 
     @Override
     public boolean isPlainFont ()
     {
-        return FontMethodsImpl.isPlainFont ( this );
+        return SwingUtils.isPlainFont ( this );
     }
 
     @Override
     public WebRadioButtonMenuItem setBoldFont ()
     {
-        return FontMethodsImpl.setBoldFont ( this );
+        return SwingUtils.setBoldFont ( this );
     }
 
     @Override
     public WebRadioButtonMenuItem setBoldFont ( final boolean apply )
     {
-        return FontMethodsImpl.setBoldFont ( this, apply );
+        return SwingUtils.setBoldFont ( this, apply );
     }
 
     @Override
     public boolean isBoldFont ()
     {
-        return FontMethodsImpl.isBoldFont ( this );
+        return SwingUtils.isBoldFont ( this );
     }
 
     @Override
     public WebRadioButtonMenuItem setItalicFont ()
     {
-        return FontMethodsImpl.setItalicFont ( this );
+        return SwingUtils.setItalicFont ( this );
     }
 
     @Override
     public WebRadioButtonMenuItem setItalicFont ( final boolean apply )
     {
-        return FontMethodsImpl.setItalicFont ( this, apply );
+        return SwingUtils.setItalicFont ( this, apply );
     }
 
     @Override
     public boolean isItalicFont ()
     {
-        return FontMethodsImpl.isItalicFont ( this );
+        return SwingUtils.isItalicFont ( this );
     }
 
     @Override
     public WebRadioButtonMenuItem setFontStyle ( final boolean bold, final boolean italic )
     {
-        return FontMethodsImpl.setFontStyle ( this, bold, italic );
+        return SwingUtils.setFontStyle ( this, bold, italic );
     }
 
     @Override
     public WebRadioButtonMenuItem setFontStyle ( final int style )
     {
-        return FontMethodsImpl.setFontStyle ( this, style );
+        return SwingUtils.setFontStyle ( this, style );
     }
 
     @Override
     public WebRadioButtonMenuItem setFontSize ( final int fontSize )
     {
-        return FontMethodsImpl.setFontSize ( this, fontSize );
+        return SwingUtils.setFontSize ( this, fontSize );
     }
 
     @Override
     public WebRadioButtonMenuItem changeFontSize ( final int change )
     {
-        return FontMethodsImpl.changeFontSize ( this, change );
+        return SwingUtils.changeFontSize ( this, change );
     }
 
     @Override
     public int getFontSize ()
     {
-        return FontMethodsImpl.getFontSize ( this );
+        return SwingUtils.getFontSize ( this );
     }
 
     @Override
     public WebRadioButtonMenuItem setFontSizeAndStyle ( final int fontSize, final boolean bold, final boolean italic )
     {
-        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, bold, italic );
+        return SwingUtils.setFontSizeAndStyle ( this, fontSize, bold, italic );
     }
 
     @Override
     public WebRadioButtonMenuItem setFontSizeAndStyle ( final int fontSize, final int style )
     {
-        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, style );
+        return SwingUtils.setFontSizeAndStyle ( this, fontSize, style );
     }
 
     @Override
     public WebRadioButtonMenuItem setFontName ( final String fontName )
     {
-        return FontMethodsImpl.setFontName ( this, fontName );
+        return SwingUtils.setFontName ( this, fontName );
     }
 
     @Override
     public String getFontName ()
     {
-        return FontMethodsImpl.getFontName ( this );
-    }
-
-    @Override
-    public int getPreferredWidth ()
-    {
-        return SizeMethodsImpl.getPreferredWidth ( this );
-    }
-
-    @Override
-    public WebRadioButtonMenuItem setPreferredWidth ( final int preferredWidth )
-    {
-        return SizeMethodsImpl.setPreferredWidth ( this, preferredWidth );
-    }
-
-    @Override
-    public int getPreferredHeight ()
-    {
-        return SizeMethodsImpl.getPreferredHeight ( this );
-    }
-
-    @Override
-    public WebRadioButtonMenuItem setPreferredHeight ( final int preferredHeight )
-    {
-        return SizeMethodsImpl.setPreferredHeight ( this, preferredHeight );
-    }
-
-    @Override
-    public int getMinimumWidth ()
-    {
-        return SizeMethodsImpl.getMinimumWidth ( this );
-    }
-
-    @Override
-    public WebRadioButtonMenuItem setMinimumWidth ( final int minimumWidth )
-    {
-        return SizeMethodsImpl.setMinimumWidth ( this, minimumWidth );
-    }
-
-    @Override
-    public int getMinimumHeight ()
-    {
-        return SizeMethodsImpl.getMinimumHeight ( this );
-    }
-
-    @Override
-    public WebRadioButtonMenuItem setMinimumHeight ( final int minimumHeight )
-    {
-        return SizeMethodsImpl.setMinimumHeight ( this, minimumHeight );
-    }
-
-    @Override
-    public int getMaximumWidth ()
-    {
-        return SizeMethodsImpl.getMaximumWidth ( this );
-    }
-
-    @Override
-    public WebRadioButtonMenuItem setMaximumWidth ( final int maximumWidth )
-    {
-        return SizeMethodsImpl.setMaximumWidth ( this, maximumWidth );
-    }
-
-    @Override
-    public int getMaximumHeight ()
-    {
-        return SizeMethodsImpl.getMaximumHeight ( this );
-    }
-
-    @Override
-    public WebRadioButtonMenuItem setMaximumHeight ( final int maximumHeight )
-    {
-        return SizeMethodsImpl.setMaximumHeight ( this, maximumHeight );
-    }
-
-    @Override
-    public Dimension getPreferredSize ()
-    {
-        return SizeMethodsImpl.getPreferredSize ( this, super.getPreferredSize () );
-    }
-
-    @Override
-    public Dimension getOriginalPreferredSize ()
-    {
-        return SizeMethodsImpl.getOriginalPreferredSize ( this, super.getPreferredSize () );
-    }
-
-    @Override
-    public WebRadioButtonMenuItem setPreferredSize ( final int width, final int height )
-    {
-        return SizeMethodsImpl.setPreferredSize ( this, width, height );
-    }
-
-    /**
-     * Returns the look and feel (LaF) object that renders this component.
-     *
-     * @return the {@link WebRadioButtonMenuItemUI} object that renders this component
-     */
-    @Override
-    public WebRadioButtonMenuItemUI getUI ()
-    {
-        return ( WebRadioButtonMenuItemUI ) super.getUI ();
-    }
-
-    /**
-     * Sets the LaF object that renders this component.
-     *
-     * @param ui {@link WebRadioButtonMenuItemUI}
-     */
-    public void setUI ( final WebRadioButtonMenuItemUI ui )
-    {
-        super.setUI ( ui );
-    }
-
-    @Override
-    public void updateUI ()
-    {
-        StyleManager.getDescriptor ( this ).updateUI ( this );
-    }
-
-    @Override
-    public String getUIClassID ()
-    {
-        return StyleManager.getDescriptor ( this ).getUIClassId ();
+        return SwingUtils.getFontName ( this );
     }
 }

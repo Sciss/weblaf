@@ -17,9 +17,7 @@
 
 package com.alee.demo.content.text.field;
 
-import com.alee.demo.api.example.*;
-import com.alee.demo.api.example.wiki.OracleWikiPage;
-import com.alee.demo.api.example.wiki.WikiPage;
+import com.alee.demo.api.*;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
@@ -29,7 +27,8 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-public class JTextFieldExample extends AbstractStylePreviewExample
+
+public class JTextFieldExample extends AbstractExample
 {
     @Override
     public String getId ()
@@ -50,19 +49,12 @@ public class JTextFieldExample extends AbstractStylePreviewExample
     }
 
     @Override
-    public WikiPage getWikiPage ()
-    {
-        return new OracleWikiPage ( "How to Use Text Fields", "textfield" );
-    }
-
-    @Override
     protected List<Preview> createPreviews ()
     {
-        return CollectionUtils.<Preview>asList (
-                new BasicField ( "basic", StyleId.textfield ),
-                new BasicField ( "transparent", StyleId.textfieldTransparent ),
-                new BasicField ( "nofocus", StyleId.textfieldNoFocus )
-        );
+        final BasicField e1 = new BasicField ( "basic", StyleId.textfield );
+        final BasicField e2 = new BasicField ( "undecorated", StyleId.textfieldUndecorated );
+        final BasicField e3 = new BasicField ( "nofocus", StyleId.textfieldNoFocus );
+        return CollectionUtils.<Preview>asList ( e1, e2, e3 );
     }
 
     /**
@@ -82,7 +74,7 @@ public class JTextFieldExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final JTextField textField = new JTextField ( "Sample text", 20 );
             textField.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );

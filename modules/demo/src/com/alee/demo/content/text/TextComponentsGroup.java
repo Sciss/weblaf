@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.text;
 
-import com.alee.demo.api.example.AbstractExampleGroup;
+import com.alee.demo.api.AbstractExampleGroup;
 import com.alee.demo.content.text.area.TextAreasGroup;
 import com.alee.demo.content.text.field.TextFieldsGroup;
 import com.alee.utils.CollectionUtils;
@@ -39,9 +39,6 @@ public class TextComponentsGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleGroupClasses ()
     {
-        return CollectionUtils.<Class>asList (
-                TextFieldsGroup.class,
-                TextAreasGroup.class
-        );
+        return CollectionUtils.<Class>asList ( TextFieldsGroup.class, TextAreasGroup.class );
     }
 }

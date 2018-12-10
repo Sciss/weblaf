@@ -17,23 +17,21 @@
 
 package com.alee.extended.tree;
 
-import javax.swing.tree.MutableTreeNode;
-import java.util.EventListener;
+import javax.swing.tree.DefaultMutableTreeNode;
 import java.util.List;
 
 /**
- * Special listener for {@link WebCheckBoxTree} check state changes.
+ * Special listener for WebCheckBoxTree check state changes.
  *
- * @param <N> {@link MutableTreeNode} type
  * @author Mikle Garin
  */
-public interface CheckStateChangeListener<N extends MutableTreeNode> extends EventListener
+
+public interface CheckStateChangeListener<E extends DefaultMutableTreeNode>
 {
     /**
-     * Informs about {@link CheckStateChange}s within {@link WebCheckBoxTree}.
+     * Informs about single or multiply check state changes.
      *
-     * @param tree         {@link WebCheckBoxTree}
-     * @param stateChanges {@link List} of {@link CheckStateChange}s
+     * @param stateChanges check state changes list
      */
-    public void checkStateChanged ( WebCheckBoxTree<N> tree, List<CheckStateChange<N>> stateChanges );
+    public void checkStateChanged ( List<CheckStateChange<E>> stateChanges );
 }

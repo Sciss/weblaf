@@ -17,7 +17,7 @@
 
 package com.alee.managers.language.data;
 
-import com.alee.managers.language.LanguageUtils;
+import com.alee.utils.CollectionUtils;
 import com.thoughtworks.xstream.converters.Converter;
 import com.thoughtworks.xstream.converters.MarshallingContext;
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
@@ -26,31 +26,24 @@ import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
- * Custom {@link Converter} for {@link Value} object.
- *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-LanguageManager">How to use LanguageManager</a>
- * @see com.alee.managers.language.LanguageManager
  */
-public final class ValueConverter implements Converter
+
+public class ValueConverter implements Converter
 {
-    /**
-     * Language attribute name.
-     */
+    // Attribute names
     private static final String LANGUAGE = "lang";
-
-    /**
-     * Single-text state attribute name.
-     */
-    private static final String STATE = "state";
-
-    /**
-     * Single-text mnemonic attribute name.
-     */
     private static final String MNEMONIC = "mnemonic";
+    private static final String HOTKEY = "hotkey";
+    private static final String STATE = "state";
+    private static final String TIP_TYPE = "type";
+    private static final String TIP_WAY = "way";
+    private static final String TIP_DELAY = "delay";
+
+    // Special key that is used to determine tooltips
+    public static final String TOOLTIP_KEY = "tooltip";
 
     @Override
     public boolean canConvert ( final Class type )
@@ -64,13 +57,28 @@ public final class ValueConverter implements Converter
         final Value value = ( Value ) source;
 
         // Adding language
-        final Locale locale = value.getLocale ();
-        writer.addAttribute ( LANGUAGE, LanguageUtils.toString ( locale ) );
-
-        // Adding either single or multiple values
-        if ( value.textsCount () == 1 )
+        if ( value.getLang () != null )
         {
-            final Text text = value.getTexts ().get ( 0 );
+            writer.addAttribute ( LANGUAGE, value.getLang () );
+        }
+
+        // Adding mnemonic
+        if ( value.getMnemonic () != null )
+        {
+            writer.addAttribute ( MNEMONIC, value.getMnemonic ().toString () );
+        }
+
+        // Adding hotkey
+        if ( value.getHotkey () != null )
+        {
+            writer.addAttribute ( HOTKEY, value.getHotkey () );
+        }
+
+        // Adding either single or multiply values
+        if ( value.getTexts () != null && value.getTexts ().size () == 1 &&
+                ( value.getTooltips () == null || value.getTooltips ().size () == 0 ) )
+        {
+            final Text text = value.getTextObject ( 0 );
 
             // Adding state attribute if needed
             if ( text.getState () != null )
@@ -78,19 +86,46 @@ public final class ValueConverter implements Converter
                 writer.addAttribute ( STATE, text.getState () );
             }
 
-            // Adding mnemonic if needed
-            if ( text.getMnemonic () != -1 )
-            {
-                writer.addAttribute ( MNEMONIC, Character.toString ( ( char ) text.getMnemonic () ) );
-            }
-
-            // Adding single text as value
+            // Adding value
             writer.setValue ( text.getText () );
         }
-        else if ( value.textsCount () > 0 )
+        else if ( value.getTooltips () != null && value.getTooltips ().size () == 1 &&
+                ( value.getTexts () == null || value.getTexts ().size () == 0 ) )
         {
-            // Adding multiple texts
+            final Tooltip tooltip = value.getTooltipObject ( 0 );
+
+            // Adding tooltip way attribute if needed
+            if ( TooltipConverter.shouldWriteDelay ( tooltip ) )
+            {
+                writer.addAttribute ( TIP_DELAY, tooltip.getDelay ().toString () );
+            }
+
+            // Adding tooltip way attribute if needed
+            if ( TooltipConverter.shouldWriteWay ( tooltip ) )
+            {
+                writer.addAttribute ( TIP_WAY, tooltip.getWay ().toString () );
+            }
+
+            // Adding tooltip type attribute if needed
+            if ( TooltipConverter.shouldWriteType ( tooltip ) )
+            {
+                writer.addAttribute ( TIP_TYPE, tooltip.getType ().toString () );
+            }
+
+            // Adding type attribute to define that this will be a tooltip
+            writer.addAttribute ( STATE, TOOLTIP_KEY );
+
+            // Adding value
+            writer.setValue ( tooltip.getText () );
+        }
+        else if ( value.getTexts () != null && value.getTexts ().size () > 0 ||
+                value.getTooltips () != null && value.getTooltips ().size () > 0 )
+        {
+            // Adding values
             context.convertAnother ( value.getTexts () );
+
+            // Adding tooltips
+            context.convertAnother ( value.getTooltips () );
         }
         else
         {
@@ -105,34 +140,59 @@ public final class ValueConverter implements Converter
         final Value value = new Value ();
 
         // Reading language
-        final String locale = reader.getAttribute ( LANGUAGE );
-        value.setLocale ( LanguageUtils.fromString ( locale ) );
+        value.setLang ( reader.getAttribute ( LANGUAGE ) );
+
+        // Reading mnemonic
+        final String mnemonicValue = reader.getAttribute ( MNEMONIC );
+        value.setMnemonic ( mnemonicValue != null ? mnemonicValue.charAt ( 0 ) : null );
+
+        // Reading hotkey
+        value.setHotkey ( reader.getAttribute ( HOTKEY ) );
 
         // Reading possible single-value case attributes
         final String state = reader.getAttribute ( STATE );
-        final String character = reader.getAttribute ( MNEMONIC );
-        final int mnemonic = character != null ? character.charAt ( 0 ) : -1;
+        final TooltipType tipType = TooltipConverter.parseType ( reader.getAttribute ( TIP_TYPE ) );
+        final TooltipWay tipWay = TooltipConverter.parseWay ( reader.getAttribute ( TIP_WAY ) );
+        final Integer tipDelay = TooltipConverter.parseDelay ( reader.getAttribute ( TIP_DELAY ) );
 
         // Reading texts and tooltips
         final String text = reader.getValue ();
         final List<Text> texts = new ArrayList<Text> ();
+        final List<Tooltip> tooltips = new ArrayList<Tooltip> ();
         while ( reader.hasMoreChildren () )
         {
             reader.moveDown ();
-            texts.add ( ( Text ) context.convertAnother ( value, Text.class ) );
+            if ( reader.getNodeName ().equals ( "text" ) )
+            {
+                texts.add ( ( Text ) context.convertAnother ( value, Text.class ) );
+            }
+            else if ( reader.getNodeName ().equals ( "tooltip" ) )
+            {
+                tooltips.add ( ( Tooltip ) context.convertAnother ( value, Tooltip.class ) );
+            }
             reader.moveUp ();
         }
 
         // Determining what should we save
-        if ( texts.size () == 0 )
+        if ( texts.size () == 0 && tooltips.size () == 0 )
         {
-            // Saving single text
-            value.addText ( new Text ( text, state, mnemonic ) );
+            // Saving either single text or tooltip
+            if ( state != null && state.equals ( TOOLTIP_KEY ) )
+            {
+                value.setTooltips ( CollectionUtils.asList ( new Tooltip ( tipType, tipWay, tipDelay, text ) ) );
+                value.setTexts ( null );
+            }
+            else
+            {
+                value.setTexts ( CollectionUtils.asList ( new Text ( text, state ) ) );
+                value.setTooltips ( null );
+            }
         }
         else
         {
-            // Saving multiple texts
-            value.setTexts ( texts );
+            // Saving multiply texts and tooltips
+            value.setTexts ( texts.size () > 0 ? texts : null );
+            value.setTooltips ( tooltips.size () > 0 ? tooltips : null );
         }
 
         return value;

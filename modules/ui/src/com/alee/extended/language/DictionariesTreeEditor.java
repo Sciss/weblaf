@@ -19,16 +19,12 @@ package com.alee.extended.language;
 
 import com.alee.laf.text.WebTextField;
 import com.alee.laf.tree.WebTreeCellEditor;
-import com.alee.managers.language.data.Dictionary;
-import com.alee.managers.language.data.Record;
-import com.alee.managers.language.data.Text;
-import com.alee.managers.language.data.Value;
+import com.alee.managers.language.data.*;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.util.EventObject;
-import java.util.Locale;
 
 /**
  * Language dictionaries tree cell editor.
@@ -88,13 +84,15 @@ public class DictionariesTreeEditor extends WebTreeCellEditor
         }
         else if ( val instanceof Value )
         {
-            // todo Add country editing
-            editor.setText ( ( ( Value ) val ).getLocale ().getLanguage () );
+            editor.setText ( ( ( Value ) val ).getLang () );
         }
         else if ( val instanceof Text )
         {
-            // todo Add mnemonic editor
             editor.setText ( ( ( Text ) val ).getText () );
+        }
+        else if ( val instanceof Tooltip )
+        {
+            editor.setText ( ( ( Tooltip ) val ).getText () );
         }
 
         return editor;
@@ -120,13 +118,15 @@ public class DictionariesTreeEditor extends WebTreeCellEditor
         }
         else if ( val instanceof Value )
         {
-            // todo Add country editing
-            ( ( Value ) val ).setLocale ( new Locale ( editorValue ) );
+            ( ( Value ) val ).setLang ( editorValue );
         }
         else if ( val instanceof Text )
         {
-            // todo Add mnemonic editor
             ( ( Text ) val ).setText ( editorValue );
+        }
+        else if ( val instanceof Tooltip )
+        {
+            ( ( Tooltip ) val ).setText ( editorValue );
         }
         return val;
     }
@@ -142,7 +142,7 @@ public class DictionariesTreeEditor extends WebTreeCellEditor
     {
         final Object value = tree.getSelectedValue ();
         return value != null &&
-                ( value instanceof Dictionary || value instanceof Record || value instanceof Value || value instanceof Text ) &&
-                super.isCellEditable ( event );
+                ( value instanceof Dictionary || value instanceof Record || value instanceof Value || value instanceof Text ||
+                        value instanceof Tooltip ) && super.isCellEditable ( event );
     }
 }

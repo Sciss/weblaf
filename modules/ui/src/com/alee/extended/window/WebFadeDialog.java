@@ -17,10 +17,9 @@
 
 package com.alee.extended.window;
 
-import com.alee.laf.window.WebDialog;
-import com.alee.utils.CoreSwingUtils;
+import com.alee.global.StyleConstants;
+import com.alee.laf.rootpane.WebDialog;
 import com.alee.utils.MathUtils;
-import com.alee.utils.SwingUtils;
 import com.alee.utils.swing.WebTimer;
 
 import java.awt.*;
@@ -43,7 +42,7 @@ public class WebFadeDialog extends WebDialog implements ActionListener, WindowFo
     {
         super ();
 
-        updater = new WebTimer ( "WebFadeDialog.updater", SwingUtils.frameRateDelay ( 48 ), this );
+        updater = new WebTimer ( "WebFadeDialog.updater", StyleConstants.fps48, this );
         addWindowFocusListener ( this );
         addWindowListener ( this );
     }
@@ -143,7 +142,7 @@ public class WebFadeDialog extends WebDialog implements ActionListener, WindowFo
         final float newOpacity;
         if ( !WebFadeDialog.this.isActive () )
         {
-            final Point mp = CoreSwingUtils.getMouseLocation ();
+            final Point mp = MouseInfo.getPointerInfo ().getLocation ();
             final Rectangle bounds = WebFadeDialog.this.getBounds ();
             if ( bounds.contains ( mp ) )
             {

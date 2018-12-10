@@ -5,16 +5,13 @@ import com.alee.painter.SpecificPainter;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JProgressBar} component painters.
+ * Base interface for JProgressBar component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IProgressBarPainter<C extends JProgressBar, U extends WProgressBarUI> extends SpecificPainter<C, U>
+public interface IProgressBarPainter<E extends JProgressBar, U extends WebProgressBarUI> extends SpecificPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

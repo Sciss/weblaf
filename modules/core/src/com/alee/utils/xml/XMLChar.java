@@ -100,7 +100,7 @@ import java.util.Arrays;
  * @version $Id: XMLChar.java,v 1.14 2004/02/03 20:34:27 mrglavas Exp $
  */
 
-public final class XMLChar
+public class XMLChar
 {
     //
     // Constants

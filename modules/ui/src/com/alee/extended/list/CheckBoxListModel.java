@@ -27,17 +27,62 @@ import java.util.List;
  * This class overrides a few default model methods to avoid casting to checkbox cell data object.
  * There are also methods to add new elements and change/retrieve checkbox selection state.
  *
- * @param <T> data type
  * @author Mikle Garin
  */
-public class CheckBoxListModel<T> extends WebListModel<CheckBoxCellData<T>>
+
+public class CheckBoxListModel extends WebListModel<CheckBoxCellData>
 {
     /**
-     * Constructs new {@link CheckBoxListModel}.
+     * Constructs checkbox list model.
      */
     public CheckBoxListModel ()
     {
         super ();
+    }
+
+
+    /**
+     * Adds new checkbox cell data with a specified user object into list model.
+     *
+     * @param userObject user object
+     */
+    public void addCheckBoxElement ( final Object userObject )
+    {
+        addElement ( new CheckBoxCellData ( userObject ) );
+    }
+
+    /**
+     * Adds new checkbox cell data with a specified user object and checkbox selection state into list model.
+     *
+     * @param userObject user object
+     * @param selected   whether checkbox selected or not
+     */
+    public void addCheckBoxElement ( final Object userObject, final boolean selected )
+    {
+        addElement ( new CheckBoxCellData ( userObject, selected ) );
+    }
+
+    /**
+     * Adds new checkbox cell data with a specified user object into list model at the specified index.
+     *
+     * @param index      new cell index
+     * @param userObject user object
+     */
+    public void addCheckBoxElementAt ( final int index, final Object userObject )
+    {
+        add ( index, new CheckBoxCellData ( userObject ) );
+    }
+
+    /**
+     * Adds new checkbox cell data with a specified user object and checkbox selection state into list model at the specified index.
+     *
+     * @param index      new cell index
+     * @param userObject user object
+     * @param selected   whether checkbox selected or not
+     */
+    public void addCheckBoxElementAt ( final int index, final Object userObject, final boolean selected )
+    {
+        add ( index, new CheckBoxCellData ( userObject, selected ) );
     }
 
     /**
@@ -56,12 +101,12 @@ public class CheckBoxListModel<T> extends WebListModel<CheckBoxCellData<T>>
      *
      * @return list of values from checked cells
      */
-    public List<T> getCheckedValues ()
+    public List<Object> getCheckedValues ()
     {
-        final List<T> values = new ArrayList<T> ();
+        final List<Object> values = new ArrayList<Object> ();
         for ( int i = 0; i < getSize (); i++ )
         {
-            final CheckBoxCellData<T> cellData = get ( i );
+            final CheckBoxCellData cellData = get ( i );
             if ( cellData.isSelected () )
             {
                 values.add ( cellData.getUserObject () );
@@ -77,7 +122,7 @@ public class CheckBoxListModel<T> extends WebListModel<CheckBoxCellData<T>>
      */
     public void invertCheckBoxSelection ( final int index )
     {
-        final CheckBoxCellData<T> cellData = get ( index );
+        final CheckBoxCellData cellData = get ( index );
         cellData.setSelected ( !cellData.isSelected () );
         fireContentsChanged ( this, index, index );
     }
@@ -91,7 +136,7 @@ public class CheckBoxListModel<T> extends WebListModel<CheckBoxCellData<T>>
      */
     public boolean setCheckBoxSelected ( final int index, final boolean selected )
     {
-        final CheckBoxCellData<T> cellData = get ( index );
+        final CheckBoxCellData cellData = get ( index );
         if ( cellData.isSelected () != selected )
         {
             cellData.setSelected ( selected );

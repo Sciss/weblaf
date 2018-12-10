@@ -6,16 +6,14 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link ViewportPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WViewportUI}.
+ * Simple ViewportPainter adapter class.
+ * It is used to install simple non-specific painters into WebViewportUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveViewportPainter<C extends JViewport, U extends WViewportUI> extends AdaptivePainter<C, U>
-        implements IViewportPainter<C, U>
+public final class AdaptiveViewportPainter<E extends JViewport, U extends WebViewportUI> extends AdaptivePainter<E, U>
+        implements IViewportPainter<E, U>
 {
     /**
      * Constructs new AdaptiveViewportPainter for the specified painter.

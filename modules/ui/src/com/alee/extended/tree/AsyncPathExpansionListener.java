@@ -20,27 +20,25 @@ package com.alee.extended.tree;
 /**
  * This custom listener is used to track async tree path expansion action.
  *
- * @param <N> node type
+ * @param <E> node type
  * @author Mikle Garin
  */
 
-public interface AsyncPathExpansionListener<N extends AsyncUniqueNode>
+public interface AsyncPathExpansionListener<E extends AsyncUniqueNode>
 {
+    /**
+     * Notifies that path expansion has failed and did not find even a single node.
+     * This might happen in case there is no loaded nodes with an ID from the path in the moment when expansion is invoked.
+     */
+    public void pathFailedToExpand ();
+
     /**
      * Notifies that one of path nodes was just expanded.
      * This might be called a few times per single path expansion depending on the length of the path and some other factors.
      *
      * @param expandedNode recently expanded node from the specified path
      */
-    public void pathNodeExpanded ( N expandedNode );
-
-    /**
-     * Notifies that path expansion has finished succesfully.
-     * That means that the last path node was actually reached in the tree.
-     *
-     * @param lastNode last path node
-     */
-    public void pathExpanded ( N lastNode );
+    public void pathNodeExpanded ( final E expandedNode );
 
     /**
      * Notifies that path expansion was not fully finished and cannot be continued.
@@ -49,11 +47,13 @@ public interface AsyncPathExpansionListener<N extends AsyncUniqueNode>
      *
      * @param lastFoundNode last reached path node
      */
-    public void pathPartiallyExpanded ( N lastFoundNode );
+    public void pathPartiallyExpanded ( final E lastFoundNode );
 
     /**
-     * Notifies that path expansion has failed and did not find even a single node.
-     * This might happen in case there is no loaded nodes with an ID from the path in the moment when expansion is invoked.
+     * Notifies that path expansion has finished succesfully.
+     * That means that the last path node was actually reached in the tree.
+     *
+     * @param lastNode last path node
      */
-    public void pathFailedToExpand ();
+    public void pathExpanded ( final E lastNode );
 }

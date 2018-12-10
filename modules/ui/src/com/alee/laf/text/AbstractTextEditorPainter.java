@@ -17,13 +17,15 @@
 
 package com.alee.laf.text;
 
-import com.alee.api.jdk.Objects;
-import com.alee.extended.behavior.DocumentChangeBehavior;
 import com.alee.laf.WebLookAndFeel;
+import com.alee.managers.language.LM;
 import com.alee.painter.decoration.AbstractDecorationPainter;
 import com.alee.painter.decoration.DecorationState;
 import com.alee.painter.decoration.IDecoration;
 import com.alee.utils.*;
+import com.alee.utils.general.Pair;
+import com.alee.utils.swing.DocumentChangeListener;
+import com.alee.utils.swing.DocumentEventRunnable;
 import com.alee.utils.xml.FontConverter;
 import com.thoughtworks.xstream.annotations.XStreamConverter;
 
@@ -35,20 +37,19 @@ import javax.swing.text.DefaultCaret;
 import javax.swing.text.Highlighter;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
+import java.beans.PropertyChangeListener;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Abstract painter for {@link JTextComponent} implementations.
+ * Abstract painter base for all text editing components.
  *
- * @param <C> component type
- * @param <U> component UI type
- * @param <D> decoration type
  * @author Alexandr Zernov
  * @author Mikle Garin
  */
-public abstract class AbstractTextEditorPainter<C extends JTextComponent, U extends BasicTextUI, D extends IDecoration<C, D>>
-        extends AbstractDecorationPainter<C, U, D> implements IAbstractTextEditorPainter<C, U>, SwingConstants
+
+public abstract class AbstractTextEditorPainter<E extends JTextComponent, U extends BasicTextUI, D extends IDecoration<E, D>>
+        extends AbstractDecorationPainter<E, U, D> implements IAbstractTextEditorPainter<E, U>, SwingConstants
 {
     /**
      * Input prompt text horizontal position.
@@ -85,76 +86,48 @@ public abstract class AbstractTextEditorPainter<C extends JTextComponent, U exte
     /**
      * Listeners.
      */
-    protected transient DocumentChangeBehavior<C> documentChangeBehavior;
+    protected transient Pair<DocumentChangeListener, PropertyChangeListener> documentChangeListeners;
 
     @Override
-    protected void installPropertiesAndListeners ()
+    public void install ( final E c, final U ui )
     {
-        super.installPropertiesAndListeners ();
-        installDocumentChangeListener ();
-    }
+        super.install ( c, ui );
 
-    @Override
-    protected void uninstallPropertiesAndListeners ()
-    {
-        uninstallDocumentChangeListener ();
-        super.uninstallPropertiesAndListeners ();
-    }
-
-    @Override
-    protected void propertyChanged ( final String property, final Object oldValue, final Object newValue )
-    {
-        // Perform basic actions on property changes
-        super.propertyChanged ( property, oldValue, newValue );
-
-        // Updating decoration states on editable property change
-        if ( Objects.equals ( property, WebLookAndFeel.EDITABLE_PROPERTY ) )
+        // Proper document change listener
+        // This is required to update emptiness state
+        documentChangeListeners = EventUtils.onChange ( component, new DocumentEventRunnable ()
         {
-            updateDecorationState ();
-        }
+            @Override
+            public void run ( final DocumentEvent e )
+            {
+                updateDecorationState ();
+            }
+        } );
     }
 
     @Override
-    public List<String> getDecorationStates ()
+    public void uninstall ( final E c, final U ui )
+    {
+        // Uninstalling listeners
+        component.removePropertyChangeListener ( WebLookAndFeel.DOCUMENT_PROPERTY, documentChangeListeners.getValue () );
+        component.getDocument ().removeDocumentListener ( documentChangeListeners.getKey () );
+
+        super.uninstall ( c, ui );
+    }
+
+    @Override
+    protected List<String> getDecorationStates ()
     {
         final List<String> states = super.getDecorationStates ();
-        if ( component.isEditable () )
-        {
-            states.add ( DecorationState.editable );
-        }
-        if ( SwingUtils.isEmpty ( component ) )
+        if ( TextUtils.isEmpty ( component.getText () ) )
         {
             states.add ( DecorationState.empty );
         }
         return states;
     }
 
-    /**
-     * Installs {@link DocumentChangeBehavior} required to update emptiness state.
-     */
-    protected void installDocumentChangeListener ()
-    {
-        documentChangeBehavior = new DocumentChangeBehavior<C> ( component )
-        {
-            @Override
-            public void documentChanged ( final C component, final DocumentEvent event )
-            {
-                updateDecorationState ();
-            }
-        }.install ();
-    }
-
-    /**
-     * Uninstalls {@link DocumentChangeBehavior}.
-     */
-    protected void uninstallDocumentChangeListener ()
-    {
-        documentChangeBehavior.uninstall ();
-        documentChangeBehavior = null;
-    }
-
     @Override
-    protected void paintContent ( final Graphics2D g2d, final Rectangle bounds, final C c, final U ui )
+    protected void paintContent ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
     {
         // Paints text highligher
         final Highlighter highlighter = component.getHighlighter ();
@@ -207,7 +180,7 @@ public abstract class AbstractTextEditorPainter<C extends JTextComponent, U exte
             g2d.setFont ( inputPromptFont != null ? inputPromptFont : component.getFont () );
             g2d.setPaint ( inputPromptForeground != null ? inputPromptForeground : component.getForeground () );
 
-            final String text = getInputPrompt ();
+            final String text = LM.get ( getInputPrompt () );
             final FontMetrics fm = g2d.getFontMetrics ();
             final int x;
             if ( inputPromptHorizontalPosition == CENTER )
@@ -246,26 +219,24 @@ public abstract class AbstractTextEditorPainter<C extends JTextComponent, U exte
      */
     protected Rectangle getEditorRect ()
     {
-        final Rectangle editorBounds;
-        final Dimension size = component.getSize ();
-        if ( size.width > 0 && size.height > 0 )
+        final Rectangle alloc = component.getBounds ();
+        if ( alloc.width > 0 && alloc.height > 0 )
         {
             final Insets insets = component.getInsets ();
-            final Rectangle innerBounds = new Rectangle ( 0, 0, size.width, size.height );
-            editorBounds = SwingUtils.shrink ( innerBounds, insets );
+            alloc.x = insets.left;
+            alloc.y = insets.top;
+            alloc.width -= insets.left + insets.right;
+            alloc.height -= insets.top + insets.bottom;
+            return alloc;
         }
-        else
-        {
-            editorBounds = null;
-        }
-        return editorBounds;
+        return null;
     }
 
     @Override
     public boolean isInputPromptVisible ()
     {
-        final String inputPrompt = getInputPrompt ();
-        return TextUtils.notEmpty ( inputPrompt ) && SwingUtils.isEmpty ( component ) &&
+        final String inputPrompt = LM.get ( getInputPrompt () );
+        return inputPrompt != null && !inputPrompt.isEmpty () && TextUtils.isEmpty ( component.getText () ) &&
                 ( !inputPromptOnlyWhenEditable || component.isEditable () && component.isEnabled () ) &&
                 ( !hideInputPromptOnFocus || !isFocused () );
     }

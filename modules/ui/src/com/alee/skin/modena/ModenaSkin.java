@@ -17,21 +17,21 @@
 
 package com.alee.skin.modena;
 
-import com.alee.managers.style.XmlSkin;
+import com.alee.managers.style.CustomSkin;
 
 /**
- * JavaFX Modena -like skin.
+ * JavaFX-like Modena skin.
  *
  * @author Mikle Garin
  */
 
-public class ModenaSkin extends XmlSkin
+public class ModenaSkin extends CustomSkin
 {
     /**
      * Constructs skin.
      */
     public ModenaSkin ()
     {
-        super ( ModenaSkin.class, "resources/skin.xml" );
+        super ( "resources/skin.xml" );
     }
 }

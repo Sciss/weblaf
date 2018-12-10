@@ -30,13 +30,15 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
+
 public class WebTableHeaderCellRenderer extends WebLabel implements TableCellRenderer, UIResource
 {
-    /**
-     * todo 1. Requires a complete revamp and appropriate usage of extra content for sorting icon
-     */
-
     private boolean horizontalTextPositionSet;
+
+    public WebTableHeaderCellRenderer ()
+    {
+        super ();
+    }
 
     @Override
     public void setHorizontalTextPosition ( final int textPosition )
@@ -53,10 +55,7 @@ public class WebTableHeaderCellRenderer extends WebLabel implements TableCellRen
         boolean isPaintingForPrint = false;
 
         // Updating custom style ID
-        if ( table != null )
-        {
-            setStyleId ( StyleId.tableHeaderCellRenderer.at ( table.getTableHeader () ) );
-        }
+        setStyleId ( StyleId.tableHeaderCellRenderer.at ( table.getTableHeader () ) );
 
         // Title icon
         Icon sortIcon = null;
@@ -104,11 +103,9 @@ public class WebTableHeaderCellRenderer extends WebLabel implements TableCellRen
                         case ASCENDING:
                             sortIcon = UIManager.getIcon ( "Table.ascendingSortIcon" );
                             break;
-
                         case DESCENDING:
                             sortIcon = UIManager.getIcon ( "Table.descendingSortIcon" );
                             break;
-
                         case UNSORTED:
                             sortIcon = UIManager.getIcon ( "Table.naturalSortIcon" );
                             break;
@@ -124,14 +121,7 @@ public class WebTableHeaderCellRenderer extends WebLabel implements TableCellRen
         return this;
     }
 
-    /**
-     * A subclass of {@link WebTableHeaderCellRenderer} that implements {@link javax.swing.plaf.UIResource}.
-     * It is used to determine cell renderer provided by the UI class to properly uninstall it on UI uninstall.
-     */
-    public static final class UIResource extends WebTableHeaderCellRenderer implements javax.swing.plaf.UIResource
+    public static class UIResource extends WebTableHeaderCellRenderer implements javax.swing.plaf.UIResource
     {
-        /**
-         * Implementation is used completely from {@link WebTableHeaderCellRenderer}.
-         */
     }
 }

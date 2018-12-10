@@ -7,12 +7,12 @@ import java.awt.*;
 /**
  * Base interface for text field component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IAbstractTextFieldPainter<C extends JTextComponent, U extends BasicTextUI> extends IAbstractTextEditorPainter<C, U>
+public interface IAbstractTextFieldPainter<E extends JTextComponent, U extends BasicTextUI> extends IAbstractTextEditorPainter<E, U>
 {
     /**
      * Returns field leading component.

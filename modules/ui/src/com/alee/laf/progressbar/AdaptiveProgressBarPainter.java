@@ -6,19 +6,17 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link ProgressBarPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WebProgressBarUI}.
+ * Simple ProgressBarPainter adapter class.
+ * It is used to install simple non-specific painters into WebProgressBarUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveProgressBarPainter<C extends JProgressBar, U extends WebProgressBarUI> extends AdaptivePainter<C, U>
-        implements IProgressBarPainter<C, U>
+public final class AdaptiveProgressBarPainter<E extends JProgressBar, U extends WebProgressBarUI> extends AdaptivePainter<E, U>
+        implements IProgressBarPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveProgressBarPainter} for the specified painter.
+     * Constructs new AdaptiveProgressBarPainter for the specified painter.
      *
      * @param painter painter to adapt
      */

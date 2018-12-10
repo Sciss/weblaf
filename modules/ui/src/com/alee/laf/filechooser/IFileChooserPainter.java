@@ -5,16 +5,13 @@ import com.alee.painter.SpecificPainter;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JFileChooser} component painters.
+ * Base interface for JFileChooser component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IFileChooserPainter<C extends JFileChooser, U extends WFileChooserUI> extends SpecificPainter<C, U>
+public interface IFileChooserPainter<E extends JFileChooser, U extends WebFileChooserUI> extends SpecificPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

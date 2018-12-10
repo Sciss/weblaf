@@ -31,19 +31,9 @@ public final class GroupPaneConstraints
     public static final GroupPaneConstraints PREFERRED = of ( -1, -1 );
 
     /**
-     * Fill component size constraints.
-     */
-    public static final GroupPaneConstraints FILL = of ( 1, 1 );
-
-    /**
      * Horizontal fill component size constraints.
      */
-    public static final GroupPaneConstraints HORIZONTAL_FILL = of ( 1, -1 );
-
-    /**
-     * Vertical fill component size constraints.
-     */
-    public static final GroupPaneConstraints VERTICAL_FILL = of ( -1, 1 );
+    public static final GroupPaneConstraints FILL = of ( 1, 1 );
 
     /**
      * Component width.

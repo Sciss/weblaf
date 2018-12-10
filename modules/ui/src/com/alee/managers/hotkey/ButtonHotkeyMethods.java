@@ -17,19 +17,18 @@
 
 package com.alee.managers.hotkey;
 
-import com.alee.utils.swing.extensions.MethodExtension;
+import com.alee.utils.swing.SwingMethods;
 
 /**
  * This interface provides a set of methods that should be added into button components.
+ * Basically all these methods are already implemented in HotkeyManager but it is much easier to call them directly from component.
  *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-HotkeyManager">How to use HotkeyManager</a>
- * @see HotkeyManager
- * @see MethodExtension
+ * @see com.alee.utils.swing.SwingMethods
+ * @see com.alee.managers.hotkey.HotkeyManager
  */
-public interface ButtonHotkeyMethods extends MethodExtension
+
+public interface ButtonHotkeyMethods extends SwingMethods
 {
-    /**
-     * todo 1. After reworking {@link HotkeyManager} add common methods here
-     */
+    // todo
 }

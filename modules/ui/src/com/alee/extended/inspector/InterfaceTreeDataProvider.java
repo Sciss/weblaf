@@ -18,22 +18,16 @@
 package com.alee.extended.inspector;
 
 import com.alee.extended.tree.AbstractExTreeDataProvider;
-import com.alee.laf.VisibleWindowListener;
-import com.alee.laf.WebLookAndFeel;
-import com.alee.utils.compare.Filter;
 
-import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 /**
- * Data provider implementation for {@link InterfaceTree}.
- *
  * @author Mikle Garin
  */
-public class InterfaceTreeDataProvider extends AbstractExTreeDataProvider<InterfaceTreeNode> implements Filter<Component>
+
+public class InterfaceTreeDataProvider extends AbstractExTreeDataProvider<InterfaceTreeNode>
 {
     /**
      * Interface components tree.
@@ -56,133 +50,29 @@ public class InterfaceTreeDataProvider extends AbstractExTreeDataProvider<Interf
         super ();
         this.tree = tree;
         this.inspected = inspected;
-
-        // Special comparator that keeps nodes in a strict order
-        setChildrenComparator ( new Comparator<InterfaceTreeNode> ()
-        {
-            @Override
-            public int compare ( final InterfaceTreeNode node1, final InterfaceTreeNode node2 )
-            {
-                final Component component1 = node1.getUserObject ();
-                final Component component2 = node2.getUserObject ();
-
-                final int result;
-                if ( component1 instanceof Window && component2 instanceof Window )
-                {
-                    // No point to compare windows
-                    result = 0;
-                }
-                else
-                {
-                    // Checking that parent is the same
-                    final Container parent1 = component1.getParent ();
-                    final Container parent2 = component2.getParent ();
-                    if ( parent1 == null || parent2 == null || parent1 == parent2 )
-                    {
-                        // Comparing component's Z-index
-                        final int zIndex1 = parent1 != null ? parent1.getComponentZOrder ( component1 ) : 0;
-                        final int zIndex2 = parent2 != null ? parent2.getComponentZOrder ( component2 ) : 0;
-                        result = new Integer ( zIndex2 ).compareTo ( zIndex1 );
-                    }
-                    else
-                    {
-                        throw new RuntimeException ( "Compared nodes cannot have different parent" );
-                    }
-                }
-                return result;
-            }
-        } );
-
-        if ( inspected == null )
-        {
-            WebLookAndFeel.addVisibleWindowListener ( tree, new VisibleWindowListener ()
-            {
-                @Override
-                public void windowDisplayed ( final Window window )
-                {
-                    if ( window.isShowing () )
-                    {
-                        final InterfaceTreeNode root = tree.getRootNode ();
-                        final InterfaceTreeNode node = new InterfaceTreeNode ( tree, window );
-                        tree.addChildNode ( root, node );
-                    }
-                }
-
-                @Override
-                public void windowHidden ( final Window window )
-                {
-                    final InterfaceTreeNode root = tree.getRootNode ();
-                    for ( int i = 0; i < root.getChildCount (); i++ )
-                    {
-                        final InterfaceTreeNode child = root.getChildAt ( i );
-                        if ( child.getUserObject () == window )
-                        {
-                            child.uninstall ();
-                            tree.removeNode ( child );
-                            break;
-                        }
-                    }
-                }
-            } );
-        }
     }
 
     @Override
     public InterfaceTreeNode getRoot ()
     {
-        if ( inspected != null )
-        {
-            return new InterfaceTreeNode ( tree, inspected );
-        }
-        else
-        {
-            return new InterfaceTreeNode ( tree, null );
-        }
+        return new InterfaceTreeNode ( tree, inspected );
     }
 
     @Override
-    public List<InterfaceTreeNode> getChildren ( final InterfaceTreeNode parent )
+    public List<InterfaceTreeNode> getChildren ( final InterfaceTreeNode node )
     {
-        final List<InterfaceTreeNode> nodes;
-        final Component component = parent.getUserObject ();
-        if ( component != null )
+        final Container component = ( Container ) node.getComponent ();
+        final List<InterfaceTreeNode> nodes = new ArrayList<InterfaceTreeNode> ( component.getComponentCount () );
+        for ( int i = 0; i < component.getComponentCount (); i++ )
         {
-            if ( !( component instanceof CellRendererPane ) )
-            {
-                final Container container = ( Container ) component;
-                nodes = new ArrayList<InterfaceTreeNode> ( container.getComponentCount () );
-                for ( int i = 0; i < container.getComponentCount (); i++ )
-                {
-                    final Component child = container.getComponent ( i );
-                    if ( accept ( child ) )
-                    {
-                        nodes.add ( new InterfaceTreeNode ( tree, child ) );
-                    }
-                }
-            }
-            else
-            {
-                nodes = new ArrayList<InterfaceTreeNode> ( 0 );
-            }
-        }
-        else
-        {
-            final Window[] windows = Window.getWindows ();
-            nodes = new ArrayList<InterfaceTreeNode> ( windows.length );
-            for ( final Window window : windows )
-            {
-                if ( window.isShowing () )
-                {
-                    nodes.add ( new InterfaceTreeNode ( tree, window ) );
-                }
-            }
+            nodes.add ( new InterfaceTreeNode ( tree, component.getComponent ( i ) ) );
         }
         return nodes;
     }
 
     @Override
-    public boolean accept ( final Component component )
+    public boolean isLeaf ( final InterfaceTreeNode node )
     {
-        return !( component instanceof ComponentHighlighter );
+        return !( node.getComponent () instanceof Container ) || ( ( Container ) node.getComponent () ).getComponentCount () == 0;
     }
 }

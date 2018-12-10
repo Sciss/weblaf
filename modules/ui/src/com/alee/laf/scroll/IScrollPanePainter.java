@@ -22,16 +22,13 @@ import com.alee.painter.SpecificPainter;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JScrollPane} component painters.
+ * Base interface for JScrollPane component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Mikle Garin
  */
 
-public interface IScrollPanePainter<C extends JScrollPane, U extends WebScrollPaneUI> extends SpecificPainter<C, U>
+public interface IScrollPanePainter<E extends JScrollPane, U extends WebScrollPaneUI> extends SpecificPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

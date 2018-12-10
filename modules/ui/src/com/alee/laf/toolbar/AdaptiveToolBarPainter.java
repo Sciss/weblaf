@@ -6,19 +6,17 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link ToolBarPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WebToolBarUI}.
+ * Simple ToolBarPainter adapter class.
+ * It is used to install simple non-specific painters into WebToolBarUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveToolBarPainter<C extends JToolBar, U extends WebToolBarUI> extends AdaptivePainter<C, U>
-        implements IToolBarPainter<C, U>
+public final class AdaptiveToolBarPainter<E extends JToolBar, U extends WebToolBarUI> extends AdaptivePainter<E, U>
+        implements IToolBarPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveToolBarPainter} for the specified painter.
+     * Constructs new AdaptiveToolBarPainter for the specified painter.
      *
      * @param painter painter to adapt
      */

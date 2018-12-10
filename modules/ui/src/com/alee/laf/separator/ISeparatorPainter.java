@@ -3,16 +3,13 @@ package com.alee.laf.separator;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JSeparator} component painters.
+ * Base interface for JSeparator component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface ISeparatorPainter<C extends JSeparator, U extends WSeparatorUI> extends IAbstractSeparatorPainter<C, U>
+public interface ISeparatorPainter<E extends JSeparator, U extends WebSeparatorUI> extends IAbstractSeparatorPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

@@ -17,18 +17,14 @@
 
 package com.alee.extended.colorchooser;
 
-import com.alee.api.jdk.Objects;
+import com.alee.global.StyleConstants;
 import com.alee.laf.colorchooser.WebColorChooser;
-import com.alee.managers.settings.Configuration;
+import com.alee.managers.settings.DefaultValue;
+import com.alee.managers.settings.SettingsManager;
 import com.alee.managers.settings.SettingsMethods;
 import com.alee.managers.settings.SettingsProcessor;
-import com.alee.managers.settings.UISettingsManager;
-import com.alee.utils.ColorUtils;
-import com.alee.utils.GraphicsUtils;
-import com.alee.utils.LafUtils;
-import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.extensions.SizeMethods;
-import com.alee.utils.swing.extensions.SizeMethodsImpl;
+import com.alee.utils.*;
+import com.alee.utils.swing.SizeMethods;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -42,14 +38,10 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-public class WebGradientColorChooser extends JComponent implements MouseListener, MouseMotionListener, FocusListener, SettingsMethods,
-        SizeMethods<WebGradientColorChooser>
-{
-    /**
-     * todo 1. Revamp to make use of UI and styling system
-     * todo 2. Allow having empty data
-     */
 
+public class WebGradientColorChooser extends JComponent
+        implements MouseListener, MouseMotionListener, FocusListener, SettingsMethods, SizeMethods<WebGradientColorChooser>
+{
     // Style constants
     private static final Color borderColor = Color.DARK_GRAY; // new Color ( 51, 51, 51 );
     private static final Color disabledBorderColor = Color.LIGHT_GRAY;
@@ -60,7 +52,7 @@ public class WebGradientColorChooser extends JComponent implements MouseListener
     private static final Color[] lineOverlayColors =
             new Color[]{ ColorUtils.white ( 160 ), ColorUtils.white ( 120 ), ColorUtils.white ( 100 ), ColorUtils.white ( 40 ) };
     private static final Color[] controlOverlayColors =
-            new Color[]{ ColorUtils.white ( 80 ), ColorUtils.white ( 50 ), ColorUtils.white ( 20 ), ColorUtils.transparent () };
+            new Color[]{ ColorUtils.white ( 80 ), ColorUtils.white ( 50 ), ColorUtils.white ( 20 ), StyleConstants.transparent };
     private static final float closestPoint = 0.001f;
 
     // Runtime data
@@ -80,7 +72,7 @@ public class WebGradientColorChooser extends JComponent implements MouseListener
 
     public WebGradientColorChooser ()
     {
-        this ( new GradientData () );
+        this ( SettingsManager.getDefaultValue ( GradientData.class ) );
     }
 
     public WebGradientColorChooser ( final GradientData gradientData )
@@ -119,7 +111,7 @@ public class WebGradientColorChooser extends JComponent implements MouseListener
         }
 
         // Displaying color chooser dialog on double-click
-        if ( SwingUtils.isDoubleClick ( e ) )
+        if ( SwingUtilities.isLeftMouseButton ( e ) && e.getClickCount () == 2 )
         {
             final GradientColorData colorData = getColorDataUnderPoint ( e.getPoint () );
             if ( colorData != null )
@@ -358,7 +350,7 @@ public class WebGradientColorChooser extends JComponent implements MouseListener
 
     public void setGradientData ( final GradientData gradientData )
     {
-        if ( Objects.notEquals ( this.gradientData, gradientData ) )
+        if ( !CompareUtils.equals ( this.gradientData, gradientData ) )
         {
             this.gradientData = gradientData;
             this.draggedGripper = null;
@@ -491,10 +483,10 @@ public class WebGradientColorChooser extends JComponent implements MouseListener
                     // Painting separators
                     if ( gapX2 - gapX1 > textWidth + 14 )
                     {
-                        g2d.setPaint ( new GradientPaint ( gapX1 + 2, 0, ColorUtils.transparent (), textX - 2, 0, Color.LIGHT_GRAY ) );
+                        g2d.setPaint ( new GradientPaint ( gapX1 + 2, 0, StyleConstants.transparent, textX - 2, 0, Color.LIGHT_GRAY ) );
                         g2d.drawLine ( gapX1 + 2, lineY, textX - 2, lineY );
                         g2d.setPaint ( new GradientPaint ( textX + textWidth + 2, 0, Color.LIGHT_GRAY, gapX2 - 2, 0,
-                                ColorUtils.transparent () ) );
+                                StyleConstants.transparent ) );
                         g2d.drawLine ( textX + textWidth + 2, lineY, gapX2 - 2, lineY );
                     }
                 }
@@ -509,7 +501,7 @@ public class WebGradientColorChooser extends JComponent implements MouseListener
         if ( isEnabled () && !control )
         {
             GraphicsUtils.drawShade ( g2d, new RoundRectangle2D.Double ( bounds.x, bounds.y, bounds.width - 1, bounds.height - 1, 4, 4 ),
-                    isFocusOwner () ? new Color ( 85, 142, 239 ) : new Color ( 170, 170, 170 ), shadeWidth );
+                    isFocusOwner () ? StyleConstants.fieldFocusColor : StyleConstants.borderColor, shadeWidth );
         }
 
         // Background
@@ -524,7 +516,7 @@ public class WebGradientColorChooser extends JComponent implements MouseListener
         if ( control )
         {
             g2d.setPaint ( new GradientPaint ( bounds.x + 2, bounds.y + 2, ColorUtils.white ( 180 ), bounds.x + bounds.width * 2 / 3,
-                    bounds.y + bounds.height - 2, ColorUtils.transparent () ) );
+                    bounds.y + bounds.height - 2, StyleConstants.transparent ) );
             g2d.fillRect ( bounds.x + 2, bounds.y + 2, bounds.width - 4, bounds.height - 4 );
         }
 
@@ -589,132 +581,195 @@ public class WebGradientColorChooser extends JComponent implements MouseListener
         }
     }
 
+    /**
+     * Settings methods
+     */
+
     @Override
-    public void registerSettings ( final Configuration configuration )
+    public void registerSettings ( final String key )
     {
-        UISettingsManager.registerComponent ( this, configuration );
+        SettingsManager.registerComponent ( this, key );
     }
 
     @Override
-    public void registerSettings ( final SettingsProcessor processor )
+    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass )
     {
-        UISettingsManager.registerComponent ( this, processor );
+        SettingsManager.registerComponent ( this, key, defaultValueClass );
+    }
+
+    @Override
+    public void registerSettings ( final String key, final Object defaultValue )
+    {
+        SettingsManager.registerComponent ( this, key, defaultValue );
+    }
+
+    @Override
+    public void registerSettings ( final String group, final String key )
+    {
+        SettingsManager.registerComponent ( this, group, key );
+    }
+
+    @Override
+    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValueClass );
+    }
+
+    @Override
+    public void registerSettings ( final String group, final String key, final Object defaultValue )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValue );
+    }
+
+    @Override
+    public void registerSettings ( final String key, final boolean loadInitialSettings, final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, key, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass,
+                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final String key, final Object defaultValue, final boolean loadInitialSettings,
+                                   final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, key, defaultValue, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass,
+                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final String group, final String key, final Object defaultValue, final boolean loadInitialSettings,
+                                   final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValue, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final SettingsProcessor settingsProcessor )
+    {
+        SettingsManager.registerComponent ( this, settingsProcessor );
     }
 
     @Override
     public void unregisterSettings ()
     {
-        UISettingsManager.unregisterComponent ( this );
+        SettingsManager.unregisterComponent ( this );
     }
 
     @Override
     public void loadSettings ()
     {
-        UISettingsManager.loadSettings ( this );
+        SettingsManager.loadComponentSettings ( this );
     }
 
     @Override
     public void saveSettings ()
     {
-        UISettingsManager.saveSettings ( this );
+        SettingsManager.saveComponentSettings ( this );
     }
+
+    /**
+     * Size methods.
+     */
 
     @Override
     public int getPreferredWidth ()
     {
-        return SizeMethodsImpl.getPreferredWidth ( this );
+        return SizeUtils.getPreferredWidth ( this );
     }
 
     @Override
     public WebGradientColorChooser setPreferredWidth ( final int preferredWidth )
     {
-        return SizeMethodsImpl.setPreferredWidth ( this, preferredWidth );
+        return SizeUtils.setPreferredWidth ( this, preferredWidth );
     }
 
     @Override
     public int getPreferredHeight ()
     {
-        return SizeMethodsImpl.getPreferredHeight ( this );
+        return SizeUtils.getPreferredHeight ( this );
     }
 
     @Override
     public WebGradientColorChooser setPreferredHeight ( final int preferredHeight )
     {
-        return SizeMethodsImpl.setPreferredHeight ( this, preferredHeight );
+        return SizeUtils.setPreferredHeight ( this, preferredHeight );
     }
 
     @Override
     public int getMinimumWidth ()
     {
-        return SizeMethodsImpl.getMinimumWidth ( this );
+        return SizeUtils.getMinimumWidth ( this );
     }
 
     @Override
     public WebGradientColorChooser setMinimumWidth ( final int minimumWidth )
     {
-        return SizeMethodsImpl.setMinimumWidth ( this, minimumWidth );
+        return SizeUtils.setMinimumWidth ( this, minimumWidth );
     }
 
     @Override
     public int getMinimumHeight ()
     {
-        return SizeMethodsImpl.getMinimumHeight ( this );
+        return SizeUtils.getMinimumHeight ( this );
     }
 
     @Override
     public WebGradientColorChooser setMinimumHeight ( final int minimumHeight )
     {
-        return SizeMethodsImpl.setMinimumHeight ( this, minimumHeight );
+        return SizeUtils.setMinimumHeight ( this, minimumHeight );
     }
 
     @Override
     public int getMaximumWidth ()
     {
-        return SizeMethodsImpl.getMaximumWidth ( this );
+        return SizeUtils.getMaximumWidth ( this );
     }
 
     @Override
     public WebGradientColorChooser setMaximumWidth ( final int maximumWidth )
     {
-        return SizeMethodsImpl.setMaximumWidth ( this, maximumWidth );
+        return SizeUtils.setMaximumWidth ( this, maximumWidth );
     }
 
     @Override
     public int getMaximumHeight ()
     {
-        return SizeMethodsImpl.getMaximumHeight ( this );
+        return SizeUtils.getMaximumHeight ( this );
     }
 
     @Override
     public WebGradientColorChooser setMaximumHeight ( final int maximumHeight )
     {
-        return SizeMethodsImpl.setMaximumHeight ( this, maximumHeight );
+        return SizeUtils.setMaximumHeight ( this, maximumHeight );
     }
 
     @Override
     public Dimension getPreferredSize ()
     {
-        return SizeMethodsImpl.getPreferredSize ( this, getActualPreferredSize () );
-    }
+        // todo Move to custom UI
+        final Insets i = getInsets ();
+        final int width = i.left + gripperSize.width * 5 + Math.max ( gripperSize.width, shadeWidth * 2 ) - 4 + i.right;
+        final int height = i.top + shadeWidth * 2 + lineWidth + gripperSize.height / 2 + ( gripperSize.height % 2 == 0 ? 0 : 1 ) + i.bottom;
+        final Dimension ps = new Dimension ( width, height );
 
-    @Override
-    public Dimension getOriginalPreferredSize ()
-    {
-        return SizeMethodsImpl.getOriginalPreferredSize ( this, getActualPreferredSize () );
+        return SizeUtils.getPreferredSize ( this, ps );
     }
 
     @Override
     public WebGradientColorChooser setPreferredSize ( final int width, final int height )
     {
-        return SizeMethodsImpl.setPreferredSize ( this, width, height );
-    }
-
-    protected Dimension getActualPreferredSize ()
-    {
-        // todo Move to custom UI
-        final Insets i = getInsets ();
-        final int width = i.left + gripperSize.width * 5 + Math.max ( gripperSize.width, shadeWidth * 2 ) - 4 + i.right;
-        final int height = i.top + shadeWidth * 2 + lineWidth + gripperSize.height / 2 + ( gripperSize.height % 2 == 0 ? 0 : 1 ) + i.bottom;
-        return new Dimension ( width, height );
+        return SizeUtils.setPreferredSize ( this, width, height );
     }
 }

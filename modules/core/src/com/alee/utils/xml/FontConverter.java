@@ -17,14 +17,15 @@
 
 package com.alee.utils.xml;
 
+import com.alee.managers.log.Log;
 import com.thoughtworks.xstream.converters.basic.AbstractSingleValueConverter;
 
 import java.awt.*;
 import java.util.StringTokenizer;
 
 /**
- * Custom XStream converter for {@link Font}.
- * It uses a pretty simple algorithm and doesn't serialize custom font attributes.
+ * Custom {java.awt.Font} object converter.
+ * It uses a pretty simple algorithm and might not fit all possible use cases.
  *
  * @author Mikle Garin
  */
@@ -37,13 +38,9 @@ public class FontConverter extends AbstractSingleValueConverter
     public static final String separator = ";";
 
     /**
-     * Default font style.
+     * Default settings.
      */
     public static final int defaultStyle = Font.PLAIN;
-
-    /**
-     * Default font size.
-     */
     public static final int defaultSize = 12;
 
     @Override
@@ -53,35 +50,22 @@ public class FontConverter extends AbstractSingleValueConverter
     }
 
     @Override
-    public String toString ( final Object object )
-    {
-        return fontToString ( ( Font ) object );
-    }
-
-    @Override
     public Object fromString ( final String dimension )
     {
         return fontFromString ( dimension );
     }
 
-    /**
-     * Returns {@link Font} converted into string.
-     *
-     * @param font {@link Font} to convert
-     * @return {@link Font} converted into string
-     */
-    public static String fontToString ( final Font font )
+    @Override
+    public String toString ( final Object object )
     {
-        final boolean dst = font.getStyle () == defaultStyle;
-        final boolean dsz = font.getStyle () == defaultSize;
-        return font.getName () + ( !dst || !dsz ? separator + font.getStyle () + ( !dsz ? separator + font.getSize () : "" ) : "" );
+        return fontToString ( ( Font ) object );
     }
 
     /**
-     * Returns {@link Font} read from string.
+     * Returns font read from string.
      *
-     * @param font {@link Font} string
-     * @return {@link Font} read from string
+     * @param font font string
+     * @return font read from string
      */
     public static Font fontFromString ( final String font )
     {
@@ -93,9 +77,23 @@ public class FontConverter extends AbstractSingleValueConverter
             final int size = t.hasMoreElements () ? Integer.parseInt ( t.nextToken ().trim () ) : defaultSize;
             return new Font ( name, style, size );
         }
-        catch ( final Exception e )
+        catch ( final Throwable e )
         {
-            throw new XmlException ( "Unable to parse Font: " + font, e );
+            Log.get ().error ( "Unable to parse Font: " + font, e );
+            return null;
         }
+    }
+
+    /**
+     * Returns font converted into string.
+     *
+     * @param font font to convert
+     * @return font converted into string
+     */
+    public static String fontToString ( final Font font )
+    {
+        final boolean dst = font.getStyle () == defaultStyle;
+        final boolean dsz = font.getStyle () == defaultSize;
+        return font.getName () + ( !dst || !dsz ? separator + font.getStyle () + ( !dsz ? separator + font.getSize () : "" ) : "" );
     }
 }

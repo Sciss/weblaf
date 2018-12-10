@@ -20,37 +20,42 @@ package com.alee.extended.panel;
 import java.util.EventListener;
 
 /**
- * {@link WebCollapsiblePane} expansion listener.
+ * This is a special WebCollapsiblePane events listener that fires four kinds of events.
+ * Two of them are fired before the collapsible pane finished either collapsing or expanding and two other fired after.
+ * <p>
+ * Notice that similar "before" and "after" events could be fired almost in the same time in case WebCollapsiblePane is not animated or its
+ * animation speed is increased by collapsible pane settings.
  *
  * @author Mikle Garin
  */
+
 public interface CollapsiblePaneListener extends EventListener
 {
     /**
-     * Informs about {@link WebCollapsiblePane} expansion start.
+     * Notifies when collapsible pane starts to expand.
      *
-     * @param collapsiblePane {@link WebCollapsiblePane}
+     * @param pane collapsible pane
      */
-    public void expanding ( WebCollapsiblePane collapsiblePane );
+    public void expanding ( WebCollapsiblePane pane );
 
     /**
-     * Informs about {@link WebCollapsiblePane} expansion finish.
+     * Notifies when collapsible pane finished expanding.
      *
-     * @param collapsiblePane {@link WebCollapsiblePane}
+     * @param pane collapsible pane
      */
-    public void expanded ( WebCollapsiblePane collapsiblePane );
+    public void expanded ( WebCollapsiblePane pane );
 
     /**
-     * Informs about {@link WebCollapsiblePane} collapse start.
+     * Notifies when collapsible pane starts to collapse.
      *
-     * @param collapsiblePane {@link WebCollapsiblePane}
+     * @param pane collapsible pane
      */
-    public void collapsing ( WebCollapsiblePane collapsiblePane );
+    public void collapsing ( WebCollapsiblePane pane );
 
     /**
-     * Informs about {@link WebCollapsiblePane} collapse finish.
+     * Notifies when collapsible pane finished collapsing.
      *
-     * @param collapsiblePane {@link WebCollapsiblePane}
+     * @param pane collapsible pane
      */
-    public void collapsed ( WebCollapsiblePane collapsiblePane );
+    public void collapsed ( WebCollapsiblePane pane );
 }

@@ -17,7 +17,6 @@
 
 package com.alee.extended.tab;
 
-import com.alee.api.merge.Mergeable;
 import com.alee.utils.general.Pair;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
@@ -27,56 +26,42 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * {@link WebDocumentPane} structure state holder.
- * Each {@link DocumentPaneState} represents state of a single {@link PaneData} or {@link SplitData}.
+ * Object used to store WebDocumentPane documents structure state.
  *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
- * @see PaneData
- * @see SplitData
- * @see DocumentData
  * @see WebDocumentPane#getDocumentPaneState()
  * @see WebDocumentPane#setDocumentPaneState(DocumentPaneState)
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-SettingsManager">How to use SettingsManager</a>
- * @see DocumentPaneSettingsProcessor
- * @see com.alee.managers.settings.UISettingsManager
- * @see com.alee.managers.settings.SettingsManager
- * @see com.alee.managers.settings.SettingsProcessor
  */
-@XStreamAlias ( "DocumentPaneState" )
-public class DocumentPaneState implements Mergeable, Cloneable, Serializable
-{
-    /**
-     * todo 1. Split this class into three different ones: main, split, pane
-     */
 
+@XStreamAlias ( "DocumentPaneState" )
+public class DocumentPaneState implements Serializable
+{
     /**
      * Whether or not this document pane structure level represents split.
      */
     @XStreamAsAttribute
-    protected Boolean split;
+    private Boolean split;
 
     /**
-     * Selected document identifier on this document pane structure level.
+     * Selected document ID on this document pane structure level.
      * Specified only when this is not split.
      */
     @XStreamAsAttribute
-    protected String selectedId;
+    private String selectedId;
 
     /**
-     * Identifiers of documents opened on this document pane structure level.
+     * Document IDs opened on this document pane structure level.
      * Specified only when this is not split.
      */
     @XStreamImplicit
-    protected List<String> documentIds;
+    private List<String> documentIds;
 
     /**
      * Split orientation on this document pane structure level.
      * Specified only when this is split.
-     * todo Replace with {@link com.alee.api.data.Orientation}
      */
     @XStreamAsAttribute
-    protected Integer splitOrientation;
+    private Integer splitOrientation;
 
     /**
      * Split divider location on this document pane structure level.
@@ -84,168 +69,92 @@ public class DocumentPaneState implements Mergeable, Cloneable, Serializable
      * Specified only when this is split.
      */
     @XStreamAsAttribute
-    protected Double dividerLocation;
+    private Double dividerLocation;
 
     /**
      * Split side states on this document pane structure level.
      * Specified only when this is split.
-     * todo Replace with two separate fields
      */
-    protected Pair<DocumentPaneState, DocumentPaneState> splitState;
+    private Pair<DocumentPaneState, DocumentPaneState> splitState;
 
-    /**
-     * Constructs default {@link DocumentPaneState}.
-     */
     public DocumentPaneState ()
     {
-        this.split = false;
+        super ();
     }
 
-    /**
-     * Constructs new {@link DocumentPaneState} for {@link PaneData}.
-     *
-     * @param paneData {@link PaneData} to retrieve settings from
-     */
-    public DocumentPaneState ( final PaneData paneData )
+    public DocumentPaneState ( final String selectedId, final List<String> documentIds )
     {
+        super ();
         this.split = false;
-        final DocumentData selected = paneData.getSelected ();
-        this.selectedId = selected != null ? selected.getId () : null;
-        this.documentIds = paneData.getDocumentIds ();
+        this.selectedId = selectedId;
+        this.documentIds = documentIds;
     }
 
-    /**
-     * Constructs new {@link DocumentPaneState} for {@link SplitData}.
-     *
-     * @param splitData {@link SplitData} to retrieve settings from
-     */
-    public DocumentPaneState ( final SplitData splitData )
+    public DocumentPaneState ( final int orientation, final double dividerLocation,
+                               final Pair<DocumentPaneState, DocumentPaneState> splitState )
     {
+        super ();
         this.split = true;
-        this.splitOrientation = splitData.getOrientation ();
-        this.dividerLocation = splitData.getDividerLocation ();
-        final StructureData firstData = splitData.getFirst ();
-        final DocumentPaneState firstState = firstData != null ? firstData.getDocumentPaneState () : null;
-        final StructureData lastData = splitData.getLast ();
-        final DocumentPaneState lastState = lastData != null ? lastData.getDocumentPaneState () : null;
-        this.splitState = new Pair<DocumentPaneState, DocumentPaneState> ( firstState, lastState );
+        this.splitOrientation = orientation;
+        this.dividerLocation = dividerLocation;
+        this.splitState = splitState;
     }
 
-    /**
-     * Returns whether or not this document pane structure level represents split.
-     *
-     * @return {@code true} if this document pane structure level represents split, {@code false} otherwise
-     */
     public Boolean isSplit ()
     {
         return split != null && split;
     }
 
-    /**
-     * Sets whether or not this document pane structure level represents split.
-     *
-     * @param split whether or not this document pane structure level represents split
-     */
     public void setSplit ( final Boolean split )
     {
         this.split = split;
     }
 
-    /**
-     * Returns selected document identifier on this document pane structure level.
-     *
-     * @return selected document identifier on this document pane structure level
-     */
     public String getSelectedId ()
     {
         return selectedId;
     }
 
-    /**
-     * Sets selected document identifier on this document pane structure level.
-     *
-     * @param selectedId selected document identifier on this document pane structure level
-     */
     public void setSelectedId ( final String selectedId )
     {
         this.selectedId = selectedId;
     }
 
-    /**
-     * Returns identifiers of documents opened on this document pane structure level.
-     *
-     * @return identifiers of documents opened on this document pane structure level
-     */
     public List<String> getDocumentIds ()
     {
         return documentIds;
     }
 
-    /**
-     * Sets identifiers of documents opened on this document pane structure level.
-     *
-     * @param documentIds identifiers of documents opened on this document pane structure level
-     */
     public void setDocumentIds ( final List<String> documentIds )
     {
         this.documentIds = documentIds;
     }
 
-    /**
-     * Returns split orientation on this document pane structure level.
-     *
-     * @return split orientation on this document pane structure level
-     */
     public Integer getSplitOrientation ()
     {
         return splitOrientation;
     }
 
-    /**
-     * Sets split orientation on this document pane structure level.
-     *
-     * @param orientation split orientation on this document pane structure level
-     */
     public void setSplitOrientation ( final Integer orientation )
     {
         this.splitOrientation = orientation;
     }
 
-    /**
-     * Returns split divider location on this document pane structure level.
-     *
-     * @return split divider location on this document pane structure level
-     */
     public Double getDividerLocation ()
     {
         return dividerLocation;
     }
 
-    /**
-     * Sets split divider location on this document pane structure level.
-     *
-     * @param location split divider location on this document pane structure level
-     */
     public void setDividerLocation ( final Double location )
     {
         this.dividerLocation = location;
     }
 
-    /**
-     * Returns split side states on this document pane structure level.
-     *
-     * @return split side states on this document pane structure level
-     */
     public Pair<DocumentPaneState, DocumentPaneState> getSplitState ()
     {
         return splitState;
     }
 
-    /**
-     * Sets split side states on this document pane structure level.
-     *
-     * @param splitState split side states on this document pane structure level
-     */
     public void setSplitState ( final Pair<DocumentPaneState, DocumentPaneState> splitState )
     {
         this.splitState = splitState;

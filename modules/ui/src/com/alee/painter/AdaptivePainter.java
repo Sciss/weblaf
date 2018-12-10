@@ -17,8 +17,6 @@
 
 package com.alee.painter;
 
-import com.alee.managers.style.Bounds;
-
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
 import java.awt.*;
@@ -28,21 +26,23 @@ import java.awt.*;
  * To use it properly you should extend this class and implement UI painter interface methods.
  * In general cases those methods might have no effect since general-type painters do not know anything about component specifics.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Mikle Garin
  */
-public abstract class AdaptivePainter<C extends JComponent, U extends ComponentUI> implements SpecificPainter<C, U>
+
+public abstract class AdaptivePainter<E extends JComponent, U extends ComponentUI> extends AbstractPainter<E, U>
+        implements SpecificPainter<E, U>
 {
     /**
-     * Adapted {@link Painter}.
+     * Adapted painter.
      */
     private final Painter painter;
 
     /**
-     * Constructs new {@link AdaptivePainter} to adapt specified {@link Painter}.
+     * Constructs new AdaptivePainter to adapt specified painter.
      *
-     * @param painter {@link Painter} to adapt
+     * @param painter painter to adapt
      */
     public AdaptivePainter ( final Painter painter )
     {
@@ -51,9 +51,9 @@ public abstract class AdaptivePainter<C extends JComponent, U extends ComponentU
     }
 
     /**
-     * Returns adapted {@link Painter}.
+     * Returns adapted painter.
      *
-     * @return adapted {@link Painter}
+     * @return adapted painter
      */
     public Painter getPainter ()
     {
@@ -61,21 +61,15 @@ public abstract class AdaptivePainter<C extends JComponent, U extends ComponentU
     }
 
     @Override
-    public void install ( final C c, final U ui )
+    public void install ( final E c, final U ui )
     {
         painter.install ( c, ui );
     }
 
     @Override
-    public void uninstall ( final C c, final U ui )
+    public void uninstall ( final E c, final U ui )
     {
         painter.uninstall ( c, ui );
-    }
-
-    @Override
-    public boolean isInstalled ()
-    {
-        return painter.isInstalled ();
     }
 
     @Override
@@ -85,27 +79,27 @@ public abstract class AdaptivePainter<C extends JComponent, U extends ComponentU
     }
 
     @Override
-    public int getBaseline ( final C c, final U ui, final Bounds bounds )
+    public Insets getBorders ()
     {
-        return painter.getBaseline ( c, ui, bounds );
+        return painter.getBorders ();
     }
 
     @Override
-    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final C c, final U ui )
+    public void addPainterListener ( final PainterListener listener )
     {
-        return painter.getBaselineResizeBehavior ( c, ui );
+        painter.addPainterListener ( listener );
     }
 
     @Override
-    public boolean contains ( final C c, final U ui, final Bounds bounds, final int x, final int y )
+    public void removePainterListener ( final PainterListener listener )
     {
-        return painter.contains ( c, ui, bounds, x, y );
+        painter.removePainterListener ( listener );
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final C c, final U ui, final Bounds bounds )
+    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
     {
-        painter.paint ( g2d, c, ui, bounds );
+        painter.paint ( g2d, bounds, c, ui );
     }
 
     @Override

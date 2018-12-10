@@ -21,23 +21,28 @@ import com.alee.painter.AdaptivePainter;
 import com.alee.painter.Painter;
 
 /**
- * Simple {@link StyledLabelPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WStyledLabelUI}.
+ * Simple StyledLabelPainter adapter class.
+ * It is used to install simple non-specific painters into WebStyledLabelUI.
  *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebStyledLabel">How to use WebStyledLabel</a>
- * @see WebStyledLabel
  */
-public final class AdaptiveStyledLabelPainter<C extends WebStyledLabel, U extends WStyledLabelUI<C>>
-        extends AdaptivePainter<C, U> implements IStyledLabelPainter<C, U>
+
+public final class AdaptiveStyledLabelPainter<E extends WebStyledLabel, U extends WebStyledLabelUI> extends AdaptivePainter<E, U>
+        implements IStyledLabelPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveStyledLabelPainter} for the specified painter.
+     * Constructs new AdaptiveLabelPainter for the specified painter.
      *
      * @param painter painter to adapt
      */
     public AdaptiveStyledLabelPainter ( final Painter painter )
     {
         super ( painter );
+    }
+
+    @Override
+    public void updateTextRanges ()
+    {
+        // Ignore this method in adaptive class
     }
 }

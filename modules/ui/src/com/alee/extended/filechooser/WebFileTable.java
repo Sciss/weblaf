@@ -17,33 +17,32 @@
 
 package com.alee.extended.filechooser;
 
+import com.alee.global.GlobalConstants;
 import com.alee.laf.table.WebTable;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 import com.alee.utils.FileUtils;
 import com.alee.utils.filefilter.AbstractFileFilter;
-import com.alee.utils.filefilter.NonHiddenFilter;
 
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableModel;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
 /**
- * {@link WebTable} extension for {@link File} elements.
- * It can either display specified folder content or custom list of {@link File}s.
- * <p/>
- * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
- * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
+ * File table component.
+ * It can either display specified folder content or custom list of files.
+ * <p>
+ * Note that row indices are always specified in terms of the table model
+ * and not in terms of the table view (which may change due to sorting).
  *
  * @author Mikle Garin
- * @see WebTable
- * @see com.alee.laf.table.WebTableUI
- * @see com.alee.laf.table.TablePainter
  */
+
 public class WebFileTable extends WebTable implements FileTableColumns
 {
     /**
@@ -53,19 +52,19 @@ public class WebFileTable extends WebTable implements FileTableColumns
     /**
      * File filter.
      */
-    protected AbstractFileFilter fileFilter = new NonHiddenFilter ();
+    private AbstractFileFilter fileFilter = GlobalConstants.NON_HIDDEN_ONLY_FILTER;
 
     /**
      * Displayed directory.
      */
-    protected File displayedDirectory;
+    private File displayedDirectory;
 
     /**
      * Constructs empty WebFileTable.
      */
     public WebFileTable ()
     {
-        this ( StyleId.auto );
+        this ( StyleId.filetable );
     }
 
     /**
@@ -75,7 +74,7 @@ public class WebFileTable extends WebTable implements FileTableColumns
      */
     public WebFileTable ( final List<File> files )
     {
-        this ( StyleId.auto, files );
+        this ( StyleId.filetable, files );
     }
 
     /**
@@ -86,7 +85,7 @@ public class WebFileTable extends WebTable implements FileTableColumns
      */
     public WebFileTable ( final List<File> files, final String... columns )
     {
-        this ( StyleId.auto, files, columns );
+        this ( StyleId.filetable, files, CollectionUtils.asList ( columns ) );
     }
 
     /**
@@ -97,7 +96,7 @@ public class WebFileTable extends WebTable implements FileTableColumns
      */
     public WebFileTable ( final List<File> files, final List<String> columns )
     {
-        this ( StyleId.auto, files, columns );
+        this ( StyleId.filetable, files, columns );
     }
 
     /**
@@ -144,19 +143,15 @@ public class WebFileTable extends WebTable implements FileTableColumns
     {
         super ( id );
 
-        // todo Move this into UI? style?
+        // todo Move this into
         getColumnModel ().setColumnMargin ( 0 );
 
         // Installing default model
         setModel ( new WebFileTableModel ( files, columns ) );
 
         // File table renderer and editor
-        // todo Move this into UI as well?
         setDefaultRenderer ( File.class, new WebFileTableCellRenderer () );
         setDefaultEditor ( File.class, new WebFileTableCellEditor () );
-
-        // Optimizing row height according to table data and renderers
-        setOptimizeRowHeight ( true );
     }
 
     @Override
@@ -167,12 +162,6 @@ public class WebFileTable extends WebTable implements FileTableColumns
 
         // Updating column sizes
         updateColumnSizes ();
-    }
-
-    @Override
-    public StyleId getDefaultStyleId ()
-    {
-        return StyleId.filetable;
     }
 
     /**
@@ -272,7 +261,7 @@ public class WebFileTable extends WebTable implements FileTableColumns
         // Update files data
         final File[] listedFiles = file != null ? FileUtils.listFiles ( file, ( FileFilter ) fileFilter ) : null;
         final File[] files = file != null ? FileUtils.sortFiles ( listedFiles ) : FileUtils.getDiskRoots ();
-        getFileTableModel ().setFiles ( CollectionUtils.asList ( files ) );
+        getFileTableModel ().setFiles ( Arrays.asList ( files ) );
 
         // Restoring selection if its same folder
         if ( FileUtils.equals ( displayedDirectory, file ) )
@@ -312,7 +301,7 @@ public class WebFileTable extends WebTable implements FileTableColumns
      */
     public void setColumns ( final String... columns )
     {
-        setColumns ( CollectionUtils.asList ( columns ) );
+        setColumns ( Arrays.asList ( columns ) );
     }
 
     /**

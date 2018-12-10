@@ -17,14 +17,14 @@
 
 package com.alee.demo.content.tooltip;
 
-import com.alee.demo.api.example.*;
+import com.alee.demo.api.*;
 import com.alee.extended.label.WebStyledLabel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.managers.hotkey.Hotkey;
+import com.alee.managers.language.data.TooltipWay;
 import com.alee.managers.style.StyleId;
 import com.alee.managers.tooltip.TooltipManager;
-import com.alee.managers.tooltip.TooltipWay;
 import com.alee.utils.CollectionUtils;
 
 import javax.swing.*;
@@ -36,7 +36,8 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-public class WebCustomTooltipExample extends AbstractStylePreviewExample
+
+public class WebCustomTooltipExample extends AbstractExample
 {
     @Override
     public String getId ()
@@ -60,14 +61,13 @@ public class WebCustomTooltipExample extends AbstractStylePreviewExample
     protected List<Preview> createPreviews ()
     {
         // todo Change styleId to something that com.alee.managers.tooltip.WebCustomTooltip will actually use
-        return CollectionUtils.<Preview>asList (
-                new BasicTooltip ( FeatureState.updated, StyleId.customtooltip ),
-                new InstantTooltip ( FeatureState.updated, StyleId.customtooltip ),
-                new MultipleTooltips ( FeatureState.updated, StyleId.customtooltip ),
-                new HotkeyTooltip ( FeatureState.updated, StyleId.customtooltip ),
-                new OneTimeTooltip ( FeatureState.updated, StyleId.customtooltip ),
-                new CustomTooltip ( FeatureState.updated, StyleId.customtooltip )
-        );
+        final BasicTooltip e1 = new BasicTooltip ( FeatureState.updated, StyleId.tooltip );
+        final InstantTooltip e2 = new InstantTooltip ( FeatureState.updated, StyleId.tooltip );
+        final MultipleTooltips e3 = new MultipleTooltips ( FeatureState.updated, StyleId.tooltip );
+        final HotkeyTooltip e4 = new HotkeyTooltip ( FeatureState.updated, StyleId.tooltip );
+        final OneTimeTooltip e5 = new OneTimeTooltip ( FeatureState.updated, StyleId.tooltip );
+        final CustomTooltip e6 = new CustomTooltip ( FeatureState.updated, StyleId.tooltip );
+        return CollectionUtils.<Preview>asList ( e1, e2, e3, e4, e5, e6 );
     }
 
     /**
@@ -87,7 +87,7 @@ public class WebCustomTooltipExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebLabel label = new WebLabel ( getPreviewLanguagePrefix () + "text" );
             label.setToolTip ( getPreviewLanguagePrefix () + "tip" );
@@ -112,7 +112,7 @@ public class WebCustomTooltipExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebLabel label = new WebLabel ( getPreviewLanguagePrefix () + "text" );
             label.setToolTip ( getPreviewLanguagePrefix () + "tip", TooltipWay.down, 0 );
@@ -137,7 +137,7 @@ public class WebCustomTooltipExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebLabel label = new WebLabel ( getPreviewLanguagePrefix () + "text" );
             label.addToolTip ( getPreviewLanguagePrefix () + "tip.up", TooltipWay.up );
@@ -165,7 +165,7 @@ public class WebCustomTooltipExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebButton button = new WebButton ();
             button.setLanguage ( getPreviewLanguagePrefix () + "text", 0 );
@@ -203,7 +203,7 @@ public class WebCustomTooltipExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebButton button = new WebButton ( getPreviewLanguagePrefix () + "text" );
             button.addActionListener ( new ActionListener ()
@@ -235,7 +235,7 @@ public class WebCustomTooltipExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebLabel label = new WebLabel ( getPreviewLanguagePrefix () + "text" );
             final WebStyledLabel tooltipContent = new WebStyledLabel ( getPreviewLanguagePrefix () + "tip" );

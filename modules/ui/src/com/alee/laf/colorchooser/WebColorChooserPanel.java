@@ -19,8 +19,8 @@ package com.alee.laf.colorchooser;
 
 import com.alee.extended.colorchooser.DoubleColorField;
 import com.alee.extended.colorchooser.DoubleColorFieldListener;
-import com.alee.extended.layout.LineLayout;
 import com.alee.extended.layout.TableLayout;
+import com.alee.extended.layout.ToolbarLayout;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
@@ -32,7 +32,6 @@ import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 import com.alee.utils.ColorUtils;
 import com.alee.utils.SwingUtils;
-import com.alee.utils.collection.ImmutableList;
 import com.alee.utils.swing.DialogOptions;
 
 import javax.swing.*;
@@ -46,6 +45,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -83,22 +83,12 @@ public class WebColorChooserPanel extends WebPanel implements DialogOptions
 
     public WebColorChooserPanel ()
     {
-        this ( StyleId.colorchooserpanel, false );
+        this ( false );
     }
 
     public WebColorChooserPanel ( final boolean showButtonsPanel )
     {
-        this ( StyleId.colorchooserpanel, showButtonsPanel );
-    }
-
-    public WebColorChooserPanel ( final StyleId id )
-    {
-        this ( id, false );
-    }
-
-    public WebColorChooserPanel ( final StyleId id, final boolean showButtonsPanel )
-    {
-        super ( id );
+        super ( StyleId.colorchooserPanel );
 
         this.showButtonsPanel = showButtonsPanel;
 
@@ -203,7 +193,7 @@ public class WebColorChooserPanel extends WebPanel implements DialogOptions
                         color = new HSBColor ( h, s, b ).getColor ();
                         updateColors ( color, UpdateSource.hsbField );
                     }
-                    catch ( final Exception ex )
+                    catch ( final Throwable ex )
                     {
                         //
                     }
@@ -244,7 +234,7 @@ public class WebColorChooserPanel extends WebPanel implements DialogOptions
                         color = new Color ( r, g, b );
                         updateColors ( color, UpdateSource.rgbField );
                     }
-                    catch ( final Exception ex )
+                    catch ( final Throwable ex )
                     {
                         //
                     }
@@ -274,10 +264,10 @@ public class WebColorChooserPanel extends WebPanel implements DialogOptions
 
                     try
                     {
-                        color = ColorUtils.fromHex ( hexColor.getText () );
+                        color = ColorUtils.parseHexColor ( hexColor.getText () );
                         updateColors ( color, UpdateSource.hexField );
                     }
-                    catch ( final Exception ex )
+                    catch ( final Throwable ex )
                     {
                         //
                     }
@@ -319,8 +309,8 @@ public class WebColorChooserPanel extends WebPanel implements DialogOptions
 
     private WebPanel createButtonsPanel ()
     {
-        final LineLayout layout = new LineLayout ( SwingConstants.HORIZONTAL, 2 );
-        final WebPanel controlsPanel = new WebPanel ( StyleId.colorchooserControlsPanel.at ( this ), layout );
+        final StyleId controlsStyleId = StyleId.colorchooserControlsPanel.at ( this );
+        final WebPanel controlsPanel = new WebPanel ( controlsStyleId, new ToolbarLayout ( 2, ToolbarLayout.HORIZONTAL ) );
 
         final StyleId webonlyStyleId = StyleId.colorchooserWebonlyCheck.at ( controlsPanel );
         final WebCheckBox webOnly = new WebCheckBox ( webonlyStyleId, "weblaf.colorchooser.webonly", isWebOnlyColors () );
@@ -351,13 +341,13 @@ public class WebColorChooserPanel extends WebPanel implements DialogOptions
             @Override
             public void mouseClicked ( final MouseEvent e )
             {
-                if ( SwingUtils.isDoubleClick ( e ) )
+                if ( e.getClickCount () == 2 )
                 {
                     ok.doClick ( 0 );
                 }
             }
         } );
-        controlsPanel.add ( ok, LineLayout.END );
+        controlsPanel.add ( ok, ToolbarLayout.END );
 
         final StyleId resetId = StyleId.colorchooserResetButton.at ( controlsPanel );
         final WebButton reset = new WebButton ( resetId, "weblaf.colorchooser.reset" );
@@ -371,7 +361,7 @@ public class WebColorChooserPanel extends WebPanel implements DialogOptions
                 fireResetPressed ( e );
             }
         } );
-        controlsPanel.add ( reset, LineLayout.END );
+        controlsPanel.add ( reset, ToolbarLayout.END );
 
         final StyleId cancelId = StyleId.colorchooserCancelButton.at ( controlsPanel );
         final WebButton cancel = new WebButton ( cancelId, "weblaf.colorchooser.cancel" );
@@ -386,10 +376,9 @@ public class WebColorChooserPanel extends WebPanel implements DialogOptions
                 fireCancelPressed ( e );
             }
         } );
-        controlsPanel.add ( cancel, LineLayout.END );
+        controlsPanel.add ( cancel, ToolbarLayout.END );
 
-        final List<String> properties = new ImmutableList<String> ( AbstractButton.TEXT_CHANGED_PROPERTY );
-        SwingUtils.equalizeComponentsWidth ( properties, ok, reset, cancel );
+        SwingUtils.equalizeComponentsWidth ( Arrays.asList ( AbstractButton.TEXT_CHANGED_PROPERTY ), ok, reset, cancel );
 
         return controlsPanel;
     }
@@ -483,7 +472,7 @@ public class WebColorChooserPanel extends WebPanel implements DialogOptions
     private void updateHexField ( final Color color )
     {
         // Substring removes first # symbol
-        hexColor.setText ( ColorUtils.toHex ( color ).substring ( 1 ) );
+        hexColor.setText ( ColorUtils.getHexColor ( color ).substring ( 1 ) );
     }
 
     private void updateRGBFields ( final Color color )

@@ -18,6 +18,7 @@
 package com.alee.utils.general;
 
 
+import com.alee.utils.MergeUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
@@ -26,12 +27,11 @@ import java.io.Serializable;
 /**
  * This class represents single name-value pair.
  *
- * @param <K> key type
- * @param <V> value type
  * @author Mikle Garin
  */
-@XStreamAlias ( "Pair" )
-public class Pair<K, V> implements Cloneable, Serializable
+
+@XStreamAlias ("Pair")
+public class Pair<K, V> implements Serializable, Cloneable
 {
     /**
      * Key of this {@code Pair}.
@@ -142,5 +142,11 @@ public class Pair<K, V> implements Cloneable, Serializable
                     !( value != null ? !value.equals ( pair.value ) : pair.value != null );
         }
         return false;
+    }
+
+    @Override
+    public Pair<K, V> clone ()
+    {
+        return MergeUtils.cloneByFieldsSafely ( this );
     }
 }

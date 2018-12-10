@@ -5,15 +5,13 @@ import com.alee.laf.radiobutton.IAbstractStateButtonPainter;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JCheckBox} component painters.
+ * Base interface for JCheckBox component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
-public interface ICheckBoxPainter<C extends JCheckBox, U extends WCheckBoxUI<C>> extends IAbstractStateButtonPainter<C, U>
+
+public interface ICheckBoxPainter<E extends JCheckBox, U extends WebCheckBoxUI> extends IAbstractStateButtonPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

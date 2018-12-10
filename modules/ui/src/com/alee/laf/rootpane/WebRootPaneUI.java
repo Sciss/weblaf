@@ -17,12 +17,7 @@
 
 package com.alee.laf.rootpane;
 
-import com.alee.api.data.CompassDirection;
-import com.alee.api.jdk.Consumer;
-import com.alee.api.jdk.Function;
-import com.alee.api.jdk.Objects;
-import com.alee.extended.behavior.ComponentResizeBehavior;
-import com.alee.extended.image.WebImage;
+import com.alee.extended.window.ComponentMoveBehavior;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.grouping.GroupPane;
@@ -34,9 +29,11 @@ import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
 import com.alee.utils.*;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
+import javax.swing.plaf.basic.BasicRootPaneUI;
 import java.awt.*;
 import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
@@ -44,15 +41,17 @@ import java.beans.PropertyChangeListener;
 import java.util.List;
 
 /**
- * Custom UI for {@link JRootPane} component.
- * This UI also includes custom frame and dialog decoration elements.
+ * Custom UI for JRootPane component.
+ * This UI also includes custom frame and dialog decorations.
  *
  * @author Mikle Garin
  */
-public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSupport, PaddingSupport, SwingConstants
+
+public class WebRootPaneUI extends BasicRootPaneUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport, SwingConstants
 {
     /**
-     * todo 1. Probably track content pane change and update its style in future
+     * todo 1. Resizable using sides when decorated
+     * todo 2. Probably track content pane change and update its style in future
      */
 
     /**
@@ -70,10 +69,8 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
     /**
      * Style settings.
      */
-    protected boolean installComponents;
     protected int iconSize;
     protected String emptyTitleText;
-    protected boolean setupButtonIcons;
     protected boolean displayTitleComponent;
     protected boolean displayWindowButtons;
     protected boolean displayMinimizeButton;
@@ -88,41 +85,36 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
     protected IRootPanePainter painter;
 
     /**
-     * Listeners.
-     */
-    protected transient PropertyChangeListener resizableChangeListener;
-    protected transient ComponentResizeBehavior resizeBehavior;
-    protected transient PropertyChangeListener windowTitleListener;
-
-    /**
      * Additional components used be the UI.
      */
-    protected transient JComponent titleComponent;
-    protected transient WindowDecorationBehavior decorationBehavior;
-    protected transient WebImage titleIcon;
-    protected transient WebLabel titleLabel;
-    protected transient GroupPane buttonsPanel;
-    protected transient WebButton minimizeButton;
-    protected transient WebButton maximizeButton;
-    protected transient WebButton closeButton;
+    protected JComponent titleComponent;
+    protected GroupPane buttonsPanel;
+    protected WebButton minimizeButton;
+    protected WebButton maximizeButton;
+    protected WebButton closeButton;
 
     /**
      * Runtime variables
      */
-    protected transient JRootPane root;
-    protected transient Window window;
-    protected transient Frame frame;
-    protected transient Dialog dialog;
-    protected transient LayoutManager previousLayoutManager;
-    protected transient LayoutManager layoutManager;
+    protected Insets margin = null;
+    protected Insets padding = null;
+    protected JRootPane root;
+    protected Window window;
+    protected Frame frame;
+    protected Dialog dialog;
+    protected LayoutManager previousLayoutManager;
+    protected LayoutManager layoutManager;
+    protected PropertyChangeListener titleChangeListener;
+    protected PropertyChangeListener resizableChangeListener;
 
     /**
-     * Returns an instance of the {@link WebRootPaneUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Returns an instance of the WebRootPaneUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebRootPaneUI}
+     * @return instance of the WebRootPaneUI
      */
+    @SuppressWarnings ( "UnusedParameters" )
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebRootPaneUI ();
@@ -136,6 +128,9 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
         // Saving root pane reference
         root = ( JRootPane ) c;
 
+        // Decoration
+        installWindowDecorations ();
+
         // Applying skin
         StyleManager.installSkin ( root );
 
@@ -146,11 +141,7 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
         final Container contentPane = root.getContentPane ();
         if ( contentPane instanceof JComponent )
         {
-            final JComponent jContentPane = ( JComponent ) contentPane;
-            if ( LafUtils.hasWebLafUI ( jContentPane ) )
-            {
-                StyleId.rootpaneContent.at ( root ).set ( jContentPane );
-            }
+            StyleId.rootpaneContent.at ( root ).set ( ( JComponent ) contentPane );
         }
     }
 
@@ -160,52 +151,62 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( root );
 
+        // Removing window decorations
+        uninstallWindowDecorations ();
+
         // Cleaning up runtime variables
+        layoutManager = null;
         root = null;
 
         super.uninstallUI ( c );
     }
 
     @Override
-    public Shape getShape ()
+    public StyleId getStyleId ()
+    {
+        return StyleManager.getStyleId ( root );
+    }
+
+    @Override
+    public StyleId setStyleId ( final StyleId id )
+    {
+        final StyleId styleId = StyleManager.setStyleId ( root, id );
+
+        updateWindowDecorations ();
+
+        return styleId;
+    }
+
+    @Override
+    public Shape provideShape ()
     {
         return PainterSupport.getShape ( root, painter );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return PainterSupport.isShapeDetectionEnabled ( root, painter );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        PainterSupport.setShapeDetectionEnabled ( root, painter, enabled );
-    }
-
-    @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( root );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( root, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( root );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( root, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -215,7 +216,7 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -226,10 +227,10 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( root, new Consumer<IRootPanePainter> ()
+        PainterSupport.setPainter ( root, new DataRunnable<IRootPanePainter> ()
         {
             @Override
-            public void accept ( final IRootPanePainter newPainter )
+            public void run ( final IRootPanePainter newPainter )
             {
                 WebRootPaneUI.this.painter = newPainter;
             }
@@ -237,91 +238,103 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
     }
 
     /**
-     * Returns whether or not this {@link WRootPaneUI} provides custom window decoration.
+     * Returns whether or not this root pane uses custom decoration for its window.
      *
-     * @return {@code true} if this {@link WRootPaneUI} provides custom window decoration, {@code false} otherwise
+     * @return true if this root pane uses custom decoration for its window, false otherwise
      */
     public boolean isDecorated ()
     {
         return painter != null && painter.isDecorated ();
     }
 
-    @Override
-    public void installWindowDecorations ()
-    {
-        if ( root.getWindowDecorationStyle () != JRootPane.NONE && isDecorated () )
-        {
-            window = getWindow ();
-            frame = window instanceof Frame ? ( Frame ) window : null;
-            dialog = window instanceof Dialog ? ( Dialog ) window : null;
-            installSettings ();
-            installListeners ();
-            installLayout ();
-            installDecorationComponents ();
-        }
-    }
-
-    @Override
-    public void uninstallWindowDecorations ()
-    {
-        if ( window != null )
-        {
-            uninstallDecorationComponents ();
-            uninstallLayout ();
-            uninstallListeners ();
-            uninstallSettings ();
-            dialog = null;
-            frame = null;
-            window = null;
-        }
-    }
-
-    @Override
-    public boolean isDisplayTitleComponent ()
-    {
-        return displayTitleComponent;
-    }
-
-    @Override
-    public void setDisplayTitleComponent ( final boolean display )
-    {
-        this.displayTitleComponent = display;
-        root.revalidate ();
-    }
-
-    @Override
+    /**
+     * Returns window title component.
+     *
+     * @return window title component
+     */
     public JComponent getTitleComponent ()
     {
         return titleComponent;
     }
 
-    @Override
+    /**
+     * Sets window title component.
+     *
+     * @param title new window title component
+     */
     public void setTitleComponent ( final JComponent title )
     {
         this.titleComponent = title;
         root.revalidate ();
     }
 
-    @Override
+    /**
+     * Returns window buttons panel.
+     *
+     * @return window buttons panel
+     */
+    public GroupPane getButtonsPanel ()
+    {
+        return buttonsPanel;
+    }
+
+    /**
+     * Returns whether or not window title component should be displayed.
+     *
+     * @return true if window title component should be displayed, false otherwise
+     */
+    public boolean isDisplayTitleComponent ()
+    {
+        return displayTitleComponent;
+    }
+
+    /**
+     * Sets whether or not window title component should be displayed.
+     *
+     * @param display whether or not window title component should be displayed
+     */
+    public void setDisplayTitleComponent ( final boolean display )
+    {
+        this.displayTitleComponent = display;
+        root.revalidate ();
+    }
+
+    /**
+     * Returns whether or not window buttons should be displayed.
+     *
+     * @return true if window buttons should be displayed, false otherwise
+     */
     public boolean isDisplayWindowButtons ()
     {
         return displayWindowButtons;
     }
 
-    @Override
+    /**
+     * Sets whether or not window buttons should be displayed.
+     *
+     * @param display whether or not window buttons should be displayed
+     */
     public void setDisplayWindowButtons ( final boolean display )
     {
         this.displayWindowButtons = display;
         root.revalidate ();
     }
 
-    @Override
+    /**
+     * Returns whether or not window minimize button should be displayed.
+     *
+     * @return true if window minimize button should be displayed, false otherwise
+     */
     public boolean isDisplayMinimizeButton ()
     {
         return displayMinimizeButton;
     }
 
-    @Override
+    /**
+     * Sets whether or not window minimize button should be displayed.
+     *
+     * @param display whether or not window minimize button should be displayed
+     */
     public void setDisplayMinimizeButton ( final boolean display )
     {
         this.displayMinimizeButton = display;
@@ -329,13 +342,21 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
         root.revalidate ();
     }
 
-    @Override
+    /**
+     * Returns whether or not window maximize button should be displayed.
+     *
+     * @return true if window maximize button should be displayed, false otherwise
+     */
     public boolean isDisplayMaximizeButton ()
     {
         return displayMaximizeButton;
     }
 
-    @Override
+    /**
+     * Sets whether or not window maximize button should be displayed.
+     *
+     * @param display whether or not window maximize button should be displayed
+     */
     public void setDisplayMaximizeButton ( final boolean display )
     {
         this.displayMaximizeButton = display;
@@ -343,13 +364,21 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
         root.revalidate ();
     }
 
-    @Override
+    /**
+     * Returns whether or not window close button should be displayed.
+     *
+     * @return true if window close button should be displayed, false otherwise
+     */
     public boolean isDisplayCloseButton ()
     {
         return displayCloseButton;
     }
 
-    @Override
+    /**
+     * Sets whether or not window close button should be displayed.
+     *
+     * @param display whether or not window close button should be displayed
+     */
     public void setDisplayCloseButton ( final boolean display )
     {
         this.displayCloseButton = display;
@@ -357,34 +386,94 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
         root.revalidate ();
     }
 
-    @Override
-    public JComponent getButtonsPanel ()
-    {
-        return buttonsPanel;
-    }
-
-    @Override
+    /**
+     * Returns whether or not menu bar should be displayed.
+     *
+     * @return true if menu bar should be displayed, false otherwise
+     */
     public boolean isDisplayMenuBar ()
     {
         return displayMenuBar;
     }
 
-    @Override
+    /**
+     * Sets whether or not menu bar should be displayed.
+     *
+     * @param display whether or not menu bar should be displayed
+     */
     public void setDisplayMenuBar ( final boolean display )
     {
         this.displayMenuBar = display;
         root.revalidate ();
     }
 
-    /**
-     * Installs settings used in runtime.
-     */
-    protected void installSettings ()
+    @Override
+    public void propertyChange ( final PropertyChangeEvent e )
     {
-        if ( isFrame () )
+        super.propertyChange ( e );
+
+        // Retrieving changed property
+        final String propertyName = e.getPropertyName ();
+        if ( propertyName == null )
         {
-            // Installing maximized frame bounds
-            frame.setMaximizedBounds ( SystemUtils.getMaximizedBounds ( frame ) );
+            return;
+        }
+
+        // Reinstalling window decorations
+        if ( propertyName.equals ( WebLookAndFeel.WINDOW_DECORATION_STYLE_PROPERTY ) )
+        {
+            updateWindowDecorations ();
+        }
+    }
+
+    /**
+     * Updates window decorations.
+     */
+    protected void updateWindowDecorations ()
+    {
+        if ( !root.isShowing () )
+        {
+            uninstallWindowDecorations ();
+            installWindowDecorations ();
+        }
+        else
+        {
+            throw new RuntimeException ( "Unable to modify window decoration while it is displayed" );
+        }
+    }
+
+    /**
+     * Installs window decorations.
+     */
+    protected void installWindowDecorations ()
+    {
+        if ( root.getWindowDecorationStyle () != JRootPane.NONE && isDecorated () )
+        {
+            window = SwingUtils.getWindowAncestor ( root );
+            frame = window instanceof Frame ? ( Frame ) window : null;
+            dialog = window instanceof Dialog ? ( Dialog ) window : null;
+            installListeners ();
+            installOpacity ();
+            installLayout ();
+            installDecorationComponents ();
+        }
+    }
+
+    /**
+     * Uninstalls window decorations.
+     */
+    protected void uninstallWindowDecorations ()
+    {
+        if ( window != null && isDecorated () )
+        {
+            uninstallDecorationComponents ();
+            uninstallLayout ();
+            uninstallOpacity ();
+            uninstallListeners ();
+            uninstallSettings ();
+            dialog = null;
+            frame = null;
+            window = null;
         }
     }
 
@@ -395,7 +484,7 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
     {
         if ( isFrame () )
         {
-            // Uninstalling maximized frame bounds
+            // Maximum frame size
             frame.setMaximizedBounds ( null );
         }
     }
@@ -405,6 +494,19 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
      */
     protected void installListeners ()
     {
+        // Listen to window icon and title changes
+        titleChangeListener = new PropertyChangeListener ()
+        {
+            @Override
+            public void propertyChange ( final PropertyChangeEvent evt )
+            {
+                titleComponent.revalidate ();
+                titleComponent.repaint ();
+            }
+        };
+        window.addPropertyChangeListener ( WebLookAndFeel.WINDOW_ICON_PROPERTY, titleChangeListener );
+        window.addPropertyChangeListener ( WebLookAndFeel.WINDOW_TITLE_PROPERTY, titleChangeListener );
+
         // Listen to window resizeability changes
         resizableChangeListener = new PropertyChangeListener ()
         {
@@ -414,73 +516,7 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
                 updateButtons ();
             }
         };
-        window.addPropertyChangeListener ( WebLookAndFeel.RESIZABLE_PROPERTY, resizableChangeListener );
-
-        // Window resize behavior
-        // todo Should this be tied to painter instead?
-        resizeBehavior = new ComponentResizeBehavior ( root, new Function<Point, CompassDirection> ()
-        {
-            @Override
-            public CompassDirection apply ( final Point p )
-            {
-                // Ensure dialog or frame is resizable
-                if ( dialog != null && dialog.isResizable () || frame != null && frame.isResizable () )
-                {
-                    // Ensure that point is outside of inner bounds
-                    final Rectangle bounds = BoundsType.padding.bounds ( root );
-                    final Rectangle inner = GeometryUtils.expand ( bounds, -5, -5, -10, -10 );
-                    if ( !inner.contains ( p ) )
-                    {
-                        // Ensure that point is inside the outer bounds
-                        final Rectangle outer = GeometryUtils.expand ( inner, 10, 10, 20, 20 );
-                        if ( outer.contains ( p ) )
-                        {
-                            // Return appropriate resize direction
-                            if ( p.y < inner.y )
-                            {
-                                if ( p.x < inner.x )
-                                {
-                                    return CompassDirection.northWest;
-                                }
-                                else if ( p.x > inner.x + inner.width )
-                                {
-                                    return CompassDirection.northEast;
-                                }
-                                else
-                                {
-                                    return CompassDirection.north;
-                                }
-                            }
-                            else if ( p.y > inner.y + inner.height )
-                            {
-                                if ( p.x < inner.x )
-                                {
-                                    return CompassDirection.southWest;
-                                }
-                                else if ( p.x > inner.x + inner.width )
-                                {
-                                    return CompassDirection.southEast;
-                                }
-                                else
-                                {
-                                    return CompassDirection.south;
-                                }
-                            }
-                            else if ( p.x < inner.x )
-                            {
-                                return CompassDirection.west;
-                            }
-                            else if ( p.x > inner.x + inner.width )
-                            {
-                                return CompassDirection.east;
-                            }
-                        }
-                    }
-                }
-                return null;
-            }
-        } );
-        resizeBehavior.install ();
+        window.addPropertyChangeListener ( WebLookAndFeel.WINDOW_RESIZABLE_PROPERTY, resizableChangeListener );
     }
 
     /**
@@ -488,10 +524,33 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
      */
     protected void uninstallListeners ()
     {
-        resizeBehavior.uninstall ();
-        resizeBehavior = null;
-        window.removePropertyChangeListener ( WebLookAndFeel.RESIZABLE_PROPERTY, resizableChangeListener );
-        resizableChangeListener = null;
+        window.removePropertyChangeListener ( WebLookAndFeel.WINDOW_ICON_PROPERTY, titleChangeListener );
+        window.removePropertyChangeListener ( WebLookAndFeel.WINDOW_TITLE_PROPERTY, titleChangeListener );
+        window.removePropertyChangeListener ( WebLookAndFeel.WINDOW_RESIZABLE_PROPERTY, resizableChangeListener );
+    }
+
+    /**
+     * Installs window opacity.
+     */
+    protected void installOpacity ()
+    {
+        if ( ProprietaryUtils.isWindowTransparencyAllowed () )
+        {
+            root.setOpaque ( false );
+            ProprietaryUtils.setWindowOpaque ( window, false );
+        }
+    }
+
+    /**
+     * Uninstalls window opacity.
+     */
+    protected void uninstallOpacity ()
+    {
+        if ( ProprietaryUtils.isWindowTransparencyAllowed () )
+        {
+            root.setOpaque ( true );
+            ProprietaryUtils.setWindowOpaque ( window, true );
+        }
     }
 
     /**
@@ -516,18 +575,7 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
         {
             root.setLayout ( previousLayoutManager );
             previousLayoutManager = null;
-            layoutManager = null;
         }
-    }
-
-    /**
-     * Returns whether or not custom decoration components can be installed.
-     *
-     * @return true if custom decoration components can be installed, false otherwise
-     */
-    protected boolean isComponentInstallAllowed ()
-    {
-        return installComponents && ( isFrame () || isDialog () );
     }
 
     /**
@@ -535,14 +583,12 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
      */
     protected void installDecorationComponents ()
     {
-        if ( isComponentInstallAllowed () )
-        {
-            // Title
-            createTitleComponent ();
+        // Title
+        titleComponent = createDefaultTitleComponent ();
+        root.add ( titleComponent );
 
-            // Buttons
-            updateButtons ();
-        }
+        // Buttons
+        updateButtons ();
     }
 
     /**
@@ -550,111 +596,141 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
      */
     protected void uninstallDecorationComponents ()
     {
-        if ( isComponentInstallAllowed () )
+        // Title
+        if ( titleComponent != null )
         {
-            // Title
-            destroyTitleComponent ();
+            root.remove ( titleComponent );
+            titleComponent = null;
+        }
 
-            // Buttons
-            destroyButtons ();
+        // Buttons
+        if ( buttonsPanel != null )
+        {
+            root.remove ( buttonsPanel );
+            buttonsPanel = null;
+            minimizeButton = null;
+            maximizeButton = null;
+            closeButton = null;
         }
     }
 
     /**
-     * Creates window title component.
+     * Returns default window title component.
+     *
+     * @return default window title component
      */
-    protected void createTitleComponent ()
+    protected JComponent createDefaultTitleComponent ()
     {
-        // Title panel
         final StyleId titlePanelId = StyleId.rootpaneTitlePanel.at ( root );
-        titleComponent = new WebPanel ( titlePanelId, new BorderLayout ( 0, 0 ) );
+        final WebPanel titlePanel = new WebPanel ( titlePanelId, new BorderLayout ( 5, 0 ) );
 
-        // Window icon
-        titleIcon = new WebImage ( StyleId.rootpaneTitleIcon.at ( titleComponent ), getWindowImage () );
-        titleComponent.add ( titleIcon, BorderLayout.LINE_START );
+        final WebLabel titleIcon = new WebLabel ( StyleId.rootpaneTitleIcon.at ( titlePanel ) )
+        {
+            @Override
+            public Icon getIcon ()
+            {
+                return getWindowIcon ();
+            }
+        };
+        titlePanel.add ( titleIcon, BorderLayout.LINE_START );
 
-        // Window title
-        titleLabel = new WebLabel ( StyleId.rootpaneTitleLabel.at ( titleComponent ), getWindowTitle () );
-        titleLabel.setFont ( WebLookAndFeel.globalWindowFont );
+        final TitleLabel titleLabel = new TitleLabel ( StyleId.rootpaneTitleLabel.at ( titlePanel ) );
+        titleLabel.setFont ( WebLookAndFeel.globalTitleFont );
         titleLabel.setFontSize ( 13 );
+        titleLabel.setHorizontalAlignment ( CENTER );
         titleLabel.addComponentListener ( new ComponentAdapter ()
         {
-            /**
-             * Saving initial alignment to avoid overwriting provided by the style.
-             */
-            private final int initialAlignment = titleLabel.getHorizontalAlignment ();
-
             @Override
             public void componentResized ( final ComponentEvent e )
             {
-                // Changing title horizontal alignment to avoid title jumping left/right
-                final boolean trimmed = titleLabel.getOriginalPreferredSize ().width > titleLabel.getWidth ();
-                final boolean ltr = titleLabel.getComponentOrientation ().isLeftToRight ();
-                final int alignment = trimmed ? ltr ? LEADING : TRAILING : initialAlignment;
-                titleLabel.setHorizontalAlignment ( alignment );
+                titleLabel.setHorizontalAlignment ( titleLabel.getRequiredSize ().width > titleLabel.getWidth () ? LEADING : CENTER );
             }
         } );
-        titleComponent.add ( titleLabel, BorderLayout.CENTER );
+        titlePanel.add ( titleLabel, BorderLayout.CENTER );
 
-        // Listen to window icon and title changes
-        windowTitleListener = new PropertyChangeListener ()
+        // Window move and max/restore listener
+        final ComponentMoveBehavior cma = new ComponentMoveBehavior ()
         {
             @Override
-            public void propertyChange ( final PropertyChangeEvent evt )
+            public void mouseClicked ( final MouseEvent e )
             {
-                final String property = evt.getPropertyName ();
-                if ( Objects.equals ( property, WebLookAndFeel.ICON_IMAGE_PROPERTY ) )
+                if ( isFrame () && isDisplayMaximizeButton () && SwingUtils.isLeftMouseButton ( e ) && e.getClickCount () == 2 )
                 {
-                    titleIcon.setImage ( getWindowImage () );
-                }
-                else if ( Objects.equals ( property, WebLookAndFeel.TITLE_PROPERTY ) )
-                {
-                    titleLabel.setText ( getWindowTitle () );
+                    if ( isMaximized () )
+                    {
+                        restore ();
+                    }
+                    else
+                    {
+                        maximize ();
+                    }
                 }
             }
+
+            @Override
+            public void mouseDragged ( final MouseEvent e )
+            {
+                if ( dragging && isMaximized () )
+                {
+                    // todo provide shade width
+                    //initialPoint = new Point ( initialPoint.x + shadeWidth, initialPoint.y + shadeWidth );
+                    restore ();
+                }
+                super.mouseDragged ( e );
+            }
         };
-        window.addPropertyChangeListener ( windowTitleListener );
+        titlePanel.addMouseListener ( cma );
+        titlePanel.addMouseMotionListener ( cma );
 
-        // Installing window decoration behavior
-        decorationBehavior = new WindowDecorationBehavior ( this );
-        decorationBehavior.install ();
-
-        root.add ( titleComponent );
+        return titlePanel;
     }
 
     /**
-     * Destroys window title component.
+     * Custom decoration title label.
      */
-    protected void destroyTitleComponent ()
+    public class TitleLabel extends WebLabel
     {
-        if ( titleComponent != null )
+        /**
+         * Constructs new title label.
+         *
+         * @param id style ID
+         */
+        public TitleLabel ( final StyleId id )
         {
-            decorationBehavior.uninstall ();
-            decorationBehavior = null;
-            window.removePropertyChangeListener ( windowTitleListener );
-            root.remove ( titleComponent );
-            StyleManager.resetStyleId ( titleComponent );
-            titleComponent = null;
-            titleIcon = null;
-            titleLabel = null;
+            super ( id );
+        }
+
+        /**
+         * Returns window title text.
+         * Single spacing workaround allows window dragging even when title is not set.
+         * That is required because otherwise title label would shrink to zero size due to missing content.
+         *
+         * @return window title text
+         */
+        @Override
+        public String getText ()
+        {
+            final String title = getWindowTitle ();
+            final String t = !TextUtils.isEmpty ( title ) ? title : emptyTitleText != null ? LM.get ( emptyTitleText ) : null;
+            return !TextUtils.isEmpty ( t ) ? t : " ";
+        }
+
+        /**
+         * Returns actual preferred size of the title label.
+         *
+         * @return actual preferred size of the title label
+         */
+        public Dimension getRequiredSize ()
+        {
+            return super.getPreferredSize ();
         }
     }
 
     /**
-     * Updates displayed buttons.
-     *
-     * todo 1. Optimize button updates
-     * todo 2. Reference icons in style instead of using hardcoded ones
-     * todo 3. Instead of single button for maximize/restore add a new restore button?
+     * Updates displayed buttons
      */
     protected void updateButtons ()
     {
-        // Ignore if not decorated
-        if ( !isDecorated () || !isComponentInstallAllowed () )
-        {
-            return;
-        }
-
         // Creating new buttons panel
         if ( buttonsPanel == null )
         {
@@ -669,22 +745,8 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
             if ( minimizeButton == null )
             {
                 final StyleId minimizeId = StyleId.rootpaneMinimizeButton.at ( buttonsPanel );
-                minimizeButton = new WebButton ( minimizeId )
-                {
-                    @Override
-                    public Icon getIcon ()
-                    {
-                        return setupButtonIcons ? minimizeIcon : null;
-                    }
-
-                    @Override
-                    public Icon getRolloverIcon ()
-                    {
-                        return setupButtonIcons ? minimizeActiveIcon : null;
-                    }
-                };
+                minimizeButton = new WebButton ( minimizeId, minimizeIcon, minimizeActiveIcon );
                 minimizeButton.setName ( "minimize" );
-                minimizeButton.setRolloverEnabled ( true );
                 minimizeButton.addActionListener ( new ActionListener ()
                 {
                     @Override
@@ -710,22 +772,21 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
             if ( maximizeButton == null )
             {
                 final StyleId maximizeId = StyleId.rootpaneMaximizeButton.at ( buttonsPanel );
-                maximizeButton = new WebButton ( maximizeId )
+                maximizeButton = new WebButton ( maximizeId, maximizeIcon, maximizeActiveIcon )
                 {
                     @Override
                     public Icon getIcon ()
                     {
-                        return setupButtonIcons ? isMaximized () ? restoreIcon : maximizeIcon : null;
+                        return isMaximized () ? restoreIcon : maximizeIcon;
                     }
 
                     @Override
                     public Icon getRolloverIcon ()
                     {
-                        return setupButtonIcons ? isMaximized () ? restoreActiveIcon : maximizeActiveIcon : null;
+                        return isMaximized () ? restoreActiveIcon : maximizeActiveIcon;
                     }
                 };
                 maximizeButton.setName ( "maximize" );
-                maximizeButton.setRolloverEnabled ( true );
                 maximizeButton.addActionListener ( new ActionListener ()
                 {
                     @Override
@@ -761,22 +822,8 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
             if ( closeButton == null )
             {
                 final StyleId closeId = StyleId.rootpaneCloseButton.at ( buttonsPanel );
-                closeButton = new WebButton ( closeId )
-                {
-                    @Override
-                    public Icon getIcon ()
-                    {
-                        return setupButtonIcons ? closeIcon : null;
-                    }
-
-                    @Override
-                    public Icon getRolloverIcon ()
-                    {
-                        return setupButtonIcons ? closeActiveIcon : null;
-                    }
-                };
+                closeButton = new WebButton ( closeId, closeIcon, closeActiveIcon );
                 closeButton.setName ( "close" );
-                closeButton.setRolloverEnabled ( true );
                 closeButton.addActionListener ( new ActionListener ()
                 {
                     @Override
@@ -798,69 +845,19 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
     }
 
     /**
-     * Destroys window buttons.
-     */
-    protected void destroyButtons ()
-    {
-        if ( buttonsPanel != null )
-        {
-            root.remove ( buttonsPanel );
-            buttonsPanel.resetStyleId ();
-            buttonsPanel = null;
-            minimizeButton = null;
-            maximizeButton = null;
-            closeButton = null;
-        }
-    }
-
-    /**
-     * Returns window title text.
-     * Single spacing workaround allows window dragging even when title is not set.
-     * That is required because otherwise title label would shrink to zero size due to missing content.
+     * Returns window title.
      *
-     * @return window title text
+     * @return window title
      */
     protected String getWindowTitle ()
     {
-        final String title = isDialog () ? dialog.getTitle () : isFrame () ? frame.getTitle () : null;
-        final String t = !TextUtils.isBlank ( title ) ? title : emptyTitleText != null ? LM.get ( emptyTitleText ) : null;
-        return !TextUtils.isEmpty ( t ) ? t : " ";
-    }
-
-    /**
-     * Returns window image of suitable size if possible.
-     * Image size will not be adjusted here, so make sure to do that if its needed elsewhere.
-     *
-     * @return window image of suitable size if possible
-     */
-    protected Image getWindowImage ()
-    {
-        final List<Image> images = window != null ? window.getIconImages () : null;
-        if ( CollectionUtils.notEmpty ( images ) )
+        if ( isDialog () )
         {
-            if ( images.size () > 1 )
-            {
-                int bestIndex = 0;
-                int bestDiff = Math.abs ( images.get ( bestIndex ).getWidth ( null ) - iconSize );
-                for ( int i = 1; i < images.size (); i++ )
-                {
-                    if ( bestDiff == 0 )
-                    {
-                        break;
-                    }
-                    final int diff = Math.abs ( images.get ( i ).getWidth ( null ) - iconSize );
-                    if ( diff < bestDiff )
-                    {
-                        bestIndex = i;
-                        bestDiff = diff;
-                    }
-                }
-                return images.get ( bestIndex );
-            }
-            else
-            {
-                return images.get ( 0 );
-            }
+            return dialog.getTitle ();
+        }
+        else if ( isFrame () )
+        {
+            return frame.getTitle ();
         }
         else
         {
@@ -868,26 +865,65 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
         }
     }
 
-    @Override
-    public Window getWindow ()
+    /**
+     * Returns window icon of suitable size.
+     *
+     * @return window icon of suitable size
+     */
+    protected ImageIcon getWindowIcon ()
     {
-        return CoreSwingUtils.getWindowAncestor ( root );
+        final List<Image> images = window != null ? window.getIconImages () : null;
+        if ( images != null && images.size () > 1 )
+        {
+            int bestIndex = 0;
+            int bestDiff = Math.abs ( images.get ( bestIndex ).getWidth ( null ) - iconSize );
+            for ( int i = 1; i < images.size (); i++ )
+            {
+                if ( bestDiff == 0 )
+                {
+                    break;
+                }
+                final int diff = Math.abs ( images.get ( i ).getWidth ( null ) - iconSize );
+                if ( diff < bestDiff )
+                {
+                    bestIndex = i;
+                    bestDiff = diff;
+                }
+            }
+            return generateProperIcon ( images.get ( bestIndex ) );
+        }
+        else if ( images != null && images.size () == 1 )
+        {
+            return generateProperIcon ( images.get ( 0 ) );
+        }
+        else
+        {
+            return new ImageIcon ();
+        }
     }
 
-    @Override
-    public boolean isFrame ()
+    /**
+     * Returns generated window icon of suitable size.
+     *
+     * @param image image used to generate icon of suitable size
+     * @return generated window icon of suitable size
+     */
+    protected ImageIcon generateProperIcon ( final Image image )
     {
-        return frame != null;
+        if ( image.getWidth ( null ) <= iconSize )
+        {
+            return new ImageIcon ( image );
+        }
+        else
+        {
+            return ImageUtils.createPreviewIcon ( image, iconSize );
+        }
     }
 
-    @Override
-    public boolean isDialog ()
-    {
-        return dialog != null;
-    }
-
-    @Override
-    public void close ()
+    /**
+     * Closes the Window.
+     */
+    protected void close ()
     {
         if ( window != null )
         {
@@ -895,8 +931,10 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
         }
     }
 
-    @Override
-    public void iconify ()
+    /**
+     * Iconifies the Frame.
+     */
+    protected void iconify ()
     {
         if ( frame != null )
         {
@@ -904,54 +942,28 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
         }
     }
 
-    @Override
-    public void maximize ()
+    /**
+     * Maximizes the Frame.
+     */
+    protected void maximize ()
     {
         if ( frame != null )
         {
+            // Retrieving screen device configuration
+            final GraphicsConfiguration gc = frame.getGraphicsConfiguration ().getDevice ().getDefaultConfiguration ();
+
             // Updating maximized bounds for the frame
-            frame.setMaximizedBounds ( SystemUtils.getMaximizedBounds ( frame ) );
+            frame.setMaximizedBounds ( SystemUtils.getMaxWindowBounds ( gc, true ) );
 
             // Forcing window to go into maximized state
             frame.setExtendedState ( Frame.MAXIMIZED_BOTH );
         }
     }
 
-    @Override
-    public void maximizeWest ()
-    {
-        if ( frame != null )
-        {
-            // Updating maximized bounds for the frame
-            frame.setMaximizedBounds ( SystemUtils.getMaximizedWestBounds ( frame ) );
-
-            // todo Need to provide exact bounds for west side to work properly
-            // todo frame.setBounds ( westBounds );
-
-            // Forcing window to go into maximized state
-            frame.setExtendedState ( Frame.MAXIMIZED_VERT );
-
-        }
-    }
-
-    @Override
-    public void maximizeEast ()
-    {
-        if ( frame != null )
-        {
-            // Updating maximized bounds for the frame
-            frame.setMaximizedBounds ( SystemUtils.getMaximizedEastBounds ( frame ) );
-
-            // todo Need to provide exact bounds for east side to work properly
-            // todo frame.setBounds ( eastBounds );
-
-            // Forcing window to go into maximized state
-            frame.setExtendedState ( Frame.MAXIMIZED_VERT );
-        }
-    }
-
-    @Override
-    public void restore ()
+    /**
+     * Restores the Frame size.
+     */
+    protected void restore ()
     {
         if ( frame != null )
         {
@@ -959,42 +971,54 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
         }
     }
 
-    @Override
+    /**
+     * Returns whether or not window is resizable.
+     *
+     * @return true if window is resizable, false otherwise
+     */
     protected boolean isResizable ()
     {
         return isDialog () ? dialog.isResizable () : isFrame () && frame.isResizable ();
     }
 
-    @Override
+    /**
+     * Returns whether or not this root pane is attached to frame.
+     *
+     * @return true if this root pane is attached to frame, false otherwise
+     */
+    public boolean isFrame ()
+    {
+        return frame != null;
+    }
+
+    /**
+     * Returns whether or not window this root pane is attached to is maximized.
+     *
+     * @return true if window this root pane is attached to is maximized, false otherwise
+     */
     public boolean isIconified ()
     {
         return isFrame () && ( frame.getExtendedState () & Frame.ICONIFIED ) == Frame.ICONIFIED;
     }
 
-    @Override
+    /**
+     * Returns whether or not window this root pane is attached to is maximized.
+     *
+     * @return true if window this root pane is attached to is maximized, false otherwise
+     */
     public boolean isMaximized ()
     {
-        return isFrame () && ( ( frame.getExtendedState () & Frame.MAXIMIZED_BOTH ) == Frame.MAXIMIZED_BOTH ||
-                ( frame.getExtendedState () & Frame.MAXIMIZED_HORIZ ) == Frame.MAXIMIZED_HORIZ ||
-                ( frame.getExtendedState () & Frame.MAXIMIZED_VERT ) == Frame.MAXIMIZED_VERT );
+        return isFrame () && ( frame.getExtendedState () & Frame.MAXIMIZED_BOTH ) == Frame.MAXIMIZED_BOTH;
     }
 
-    @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
+    /**
+     * Returns whether or not this root pane is attached to dialog.
+     *
+     * @return true if this root pane is attached to dialog, false otherwise
+     */
+    public boolean isDialog ()
     {
-        return PainterSupport.contains ( c, this, painter, x, y );
-    }
-
-    @Override
-    public int getBaseline ( final JComponent c, final int width, final int height )
-    {
-        return PainterSupport.getBaseline ( c, this, painter, width, height );
-    }
-
-    @Override
-    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
-    {
-        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+        return dialog != null;
     }
 
     @Override
@@ -1002,7 +1026,7 @@ public class WebRootPaneUI extends WRootPaneUI implements ShapeSupport, MarginSu
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
     }
 

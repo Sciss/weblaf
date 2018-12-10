@@ -18,7 +18,6 @@
 package com.alee.extended.tab;
 
 import com.alee.laf.splitpane.WebSplitPane;
-import com.alee.utils.CoreSwingUtils;
 import com.alee.utils.SwingUtils;
 import com.alee.utils.swing.Customizer;
 
@@ -31,11 +30,11 @@ import java.beans.PropertyChangeListener;
  * Data for single split pane within document pane.
  * It basically contains split pane and links to two other elements contained within split pane.
  *
- * @param <T> {@link DocumentData} type
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
  * @see com.alee.extended.tab.WebDocumentPane
  */
+
 public final class SplitData<T extends DocumentData> implements StructureData<T>
 {
     /**
@@ -90,11 +89,10 @@ public final class SplitData<T extends DocumentData> implements StructureData<T>
      */
     protected WebSplitPane createSplit ( final int orientation, final StructureData first, final StructureData last )
     {
-        // todo Appropriate split style
         final WebSplitPane splitPane = new WebSplitPane ( orientation, first.getComponent (), last.getComponent () );
         splitPane.putClientProperty ( WebDocumentPane.DATA_KEY, this );
         splitPane.setContinuousLayout ( true );
-        // splitPane.setDrawDividerBorder ( true );
+        splitPane.setDrawDividerBorder ( true );
         splitPane.setDividerSize ( 8 );
         splitPane.setResizeWeight ( 0.5 );
         splitPane.addPropertyChangeListener ( JSplitPane.DIVIDER_LOCATION_PROPERTY, new PropertyChangeListener ()
@@ -102,7 +100,7 @@ public final class SplitData<T extends DocumentData> implements StructureData<T>
             @Override
             public void propertyChange ( final PropertyChangeEvent evt )
             {
-                CoreSwingUtils.invokeLater ( new Runnable ()
+                SwingUtilities.invokeLater ( new Runnable ()
                 {
                     @Override
                     public void run ()
@@ -139,12 +137,6 @@ public final class SplitData<T extends DocumentData> implements StructureData<T>
     public PaneData<T> findClosestPane ()
     {
         return getFirst ().findClosestPane ();
-    }
-
-    @Override
-    public DocumentPaneState getDocumentPaneState ()
-    {
-        return new DocumentPaneState ( this );
     }
 
     /**

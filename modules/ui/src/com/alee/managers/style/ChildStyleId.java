@@ -17,18 +17,17 @@
 
 package com.alee.managers.style;
 
-import com.alee.utils.CoreSwingUtils;
+import com.alee.utils.SwingUtils;
 
 import javax.swing.*;
 import java.awt.*;
 
 /**
- * Component style ID container that can be used for convenient {@link StyleId} construction.
+ * Component style ID container that can be used for convenient {@link com.alee.managers.style.StyleId} construction.
  *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
- * @see StyleManager
  */
+
 public final class ChildStyleId
 {
     /**
@@ -77,7 +76,7 @@ public final class ChildStyleId
      */
     public StyleId at ( final Window parent )
     {
-        return at ( CoreSwingUtils.getRootPane ( parent ) );
+        return at ( SwingUtils.getRootPane ( parent ) );
     }
 
     /**

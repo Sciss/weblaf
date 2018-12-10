@@ -8,19 +8,20 @@ import com.alee.painter.decoration.IDecoration;
 import java.util.List;
 
 /**
- * Basic painter for {@link WebTristateCheckBox} component.
- * It is used as {@link WTristateCheckBoxUI} default painter.
+ * Basic painter for WebTristateCheckBox component.
+ * It is used as WebTristateCheckBoxUI default painter.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @param <D> decoration type
  * @author Alexandr Zernov
  */
-public class TristateCheckBoxPainter<C extends WebTristateCheckBox, U extends WTristateCheckBoxUI<C>, D extends IDecoration<C, D>>
-        extends AbstractStateButtonPainter<C, U, D> implements ITristateCheckBoxPainter<C, U>
+
+public class TristateCheckBoxPainter<E extends WebTristateCheckBox, U extends WebTristateCheckBoxUI, D extends IDecoration<E, D>>
+        extends AbstractStateButtonPainter<E, U, D> implements ITristateCheckBoxPainter<E, U>
 {
     @Override
-    public List<String> getDecorationStates ()
+    protected List<String> getDecorationStates ()
     {
         final List<String> states = super.getDecorationStates ();
         if ( component.getState () == CheckState.checked )

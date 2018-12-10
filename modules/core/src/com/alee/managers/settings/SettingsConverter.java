@@ -17,6 +17,7 @@
 
 package com.alee.managers.settings;
 
+import com.alee.managers.log.Log;
 import com.alee.utils.xml.XMLChar;
 import com.thoughtworks.xstream.converters.MarshallingContext;
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
@@ -25,18 +26,18 @@ import com.thoughtworks.xstream.converters.reflection.ReflectionProvider;
 import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import com.thoughtworks.xstream.mapper.Mapper;
-import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Custom XStream converter for {@link SettingsGroup}.
+ * Custom XStream converter for SettingsManager groups.
  *
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-SettingsManager">How to use SettingsManager</a>
- * @see SettingsManager
+ * @see com.alee.managers.settings.SettingsManager
  */
+
 public class SettingsConverter extends ReflectionConverter
 {
     /**
@@ -45,10 +46,10 @@ public class SettingsConverter extends ReflectionConverter
     private static final String NULL_TYPE = "null";
 
     /**
-     * Constructs new {@link SettingsConverter}.
+     * Constructs SettingsConverter with the specified mapper and reflection provider.
      *
-     * @param mapper             {@link Mapper}
-     * @param reflectionProvider {@link ReflectionProvider}
+     * @param mapper             mapper
+     * @param reflectionProvider reflection provider
      */
     public SettingsConverter ( final Mapper mapper, final ReflectionProvider reflectionProvider )
     {
@@ -71,7 +72,7 @@ public class SettingsConverter extends ReflectionConverter
         writer.addAttribute ( "name", settingsGroup.getName () );
 
         // Converting settings
-        for ( final Map.Entry<String, Object> entry : settingsGroup.settings ().entrySet () )
+        for ( final Map.Entry<String, Object> entry : settingsGroup.getSettings ().entrySet () )
         {
             // If key text is proper for node name it will be used, otherwise it will be separated
             final String key = entry.getKey ();
@@ -122,7 +123,7 @@ public class SettingsConverter extends ReflectionConverter
         final SettingsGroup settingsGroup = new SettingsGroup ( reader.getAttribute ( "id" ), reader.getAttribute ( "name" ) );
 
         // Collecting readable settings
-        final HashMap<String, Object> settings = new HashMap<String, Object> ();
+        final Map<String, Object> settings = new HashMap<String, Object> ();
         while ( reader.hasMoreChildren () )
         {
             // Read next map entry
@@ -167,11 +168,13 @@ public class SettingsConverter extends ReflectionConverter
                         settings.put ( key, context.convertAnother ( settings, type ) );
                     }
                 }
-                catch ( final Exception e )
+                catch ( final Throwable e )
                 {
-                    final String msg = "Unable to load settings entry for group '%s' under key '%s' due to unexpected exception";
-                    final String fmsg = String.format ( msg, settingsGroup.getName (), key );
-                    LoggerFactory.getLogger ( SettingsConverter.class ).error ( fmsg, e );
+                    if ( SettingsManager.isLoggingEnabled () )
+                    {
+                        Log.error ( this, "Unable to load settings entry for group \"" +
+                                settingsGroup.getName () + "\" under key \"" + key + "\" due to unexpected exception:", e );
+                    }
                 }
             }
             reader.moveUp ();

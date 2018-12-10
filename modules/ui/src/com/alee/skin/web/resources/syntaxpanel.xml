@@ -1,4 +1,4 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.extended.syntax.WebSyntaxPanel -->
 
@@ -7,7 +7,7 @@
         <component>
             <opaque>false</opaque>
         </component>
-        <painter class="SyntaxPanelPainter">
+        <painter class="com.alee.extended.syntax.SyntaxPanelPainter">
             <style>thick</style>
         </painter>
     </style>

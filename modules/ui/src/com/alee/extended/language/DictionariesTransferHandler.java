@@ -40,7 +40,7 @@ public class DictionariesTransferHandler extends TransferHandler
 {
     private final DataFlavor[] flavors = new DataFlavor[]{ DataFlavor.stringFlavor };
 
-    private final DictionariesTree tree;
+    private DictionariesTree tree;
 
     public static void install ( final DictionariesTree tree )
     {
@@ -148,14 +148,14 @@ public class DictionariesTransferHandler extends TransferHandler
                 // Drop Value into Record
                 return true;
             }
-            else if ( dlo instanceof Value && droppedObject instanceof Text )
+            else if ( dlo instanceof Value && ( droppedObject instanceof Text || droppedObject instanceof Tooltip ) )
             {
                 // Drop Text or Tooltip into Value
                 return true;
             }
             return false;
         }
-        catch ( final Exception e )
+        catch ( final Throwable e )
         {
             return false;
         }
@@ -183,6 +183,7 @@ public class DictionariesTransferHandler extends TransferHandler
                 if ( droppedObject instanceof Dictionary )
                 {
                     final Dictionary dictionary = ( Dictionary ) droppedObject;
+                    dictionary.setId ();
                     final DefaultMutableTreeNode dn = tree.createDictionaryNode ( dictionary );
                     tree.getActualModel ().insertNodeInto ( dn, dropLocation, dropLocation.getChildCount () );
                     tree.selectAndShow ( dn );
@@ -193,14 +194,15 @@ public class DictionariesTransferHandler extends TransferHandler
                     return false;
                 }
             }
-            else if ( dlo instanceof Dictionary )
+            if ( dlo instanceof Dictionary )
             {
                 // Drop Dictionary or Record into Dictionary
                 final Dictionary dropTo = ( Dictionary ) dlo;
                 if ( droppedObject instanceof Dictionary )
                 {
                     final Dictionary dictionary = ( Dictionary ) droppedObject;
-                    dropTo.addDictionary ( dictionary );
+                    dictionary.setId ();
+                    dropTo.addSubDictionary ( dictionary );
                     final DefaultMutableTreeNode dn = tree.createDictionaryNode ( dictionary );
                     tree.getActualModel ().insertNodeInto ( dn, dropLocation, dropLocation.getChildCount () );
                     tree.selectAndShow ( dn );
@@ -250,6 +252,15 @@ public class DictionariesTransferHandler extends TransferHandler
                     tree.selectAndShow ( tn );
                     return true;
                 }
+                else if ( droppedObject instanceof Tooltip )
+                {
+                    Tooltip tooltip = ( Tooltip ) droppedObject;
+                    tooltip = dropTo.addTooltip ( tooltip );
+                    final DefaultMutableTreeNode tn = tree.createTooltipNode ( tooltip );
+                    tree.getActualModel ().insertNodeInto ( tn, dropLocation, dropLocation.getChildCount () );
+                    tree.selectAndShow ( tn );
+                    return true;
+                }
                 else
                 {
                     return false;
@@ -260,7 +271,7 @@ public class DictionariesTransferHandler extends TransferHandler
                 return false;
             }
         }
-        catch ( final Exception e )
+        catch ( final Throwable e )
         {
             return false;
         }

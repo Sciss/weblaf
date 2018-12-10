@@ -18,11 +18,12 @@
 package com.alee.managers.notification;
 
 /**
- * Special listener for {@link WebNotification} and {@link WebInnerNotification}.
+ * Special listener for WebNotificationPopup component.
  *
  * @author Mikle Garin
  * @see WebInnerNotification
  */
+
 public interface NotificationListener
 {
     /**
@@ -30,7 +31,7 @@ public interface NotificationListener
      * This a separate from accepted/closed method that will be called only if some options list was set into notification popup.
      * Popup may still be closed without selecting any options if its settings allows that.
      *
-     * @param option selected {@link NotificationOption}
+     * @param option selected option
      */
     public void optionSelected ( NotificationOption option );
 

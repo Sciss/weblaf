@@ -29,14 +29,15 @@ import java.awt.*;
  * Single color background.
  * Fills component shape with a single color.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <D> decoration type
  * @param <I> background type
  * @author Mikle Garin
  */
-@XStreamAlias ( "ColorBackground" )
-public class ColorBackground<C extends JComponent, D extends IDecoration<C, D>, I extends ColorBackground<C, D, I>>
-        extends AbstractBackground<C, D, I>
+
+@XStreamAlias ("ColorBackground")
+public class ColorBackground<E extends JComponent, D extends IDecoration<E, D>, I extends ColorBackground<E, D, I>>
+        extends AbstractBackground<E, D, I>
 {
     /**
      * Background color.
@@ -49,13 +50,13 @@ public class ColorBackground<C extends JComponent, D extends IDecoration<C, D>, 
      *
      * @return background color
      */
-    protected Color getColor ()
+    public Color getColor ()
     {
         return color != null ? color : Color.WHITE;
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final C c, final D d, final Shape shape )
+    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final D d, final Shape shape )
     {
         final float opacity = getOpacity ();
         if ( opacity > 0 )
@@ -66,5 +67,16 @@ public class ColorBackground<C extends JComponent, D extends IDecoration<C, D>, 
             GraphicsUtils.restorePaint ( g2d, op );
             GraphicsUtils.restoreComposite ( g2d, oc, opacity < 1f );
         }
+    }
+
+    @Override
+    public I merge ( final I background )
+    {
+        super.merge ( background );
+        if ( background.color != null )
+        {
+            color = background.color;
+        }
+        return ( I ) this;
     }
 }

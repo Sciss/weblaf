@@ -18,145 +18,121 @@
 package com.alee.extended.tree;
 
 import com.alee.laf.checkbox.CheckState;
-import com.alee.laf.tree.NodesAcceptPolicy;
+import com.alee.laf.tree.TreeUtils;
+import com.alee.utils.CollectionUtils;
 
-import javax.swing.event.EventListenerList;
-import javax.swing.tree.MutableTreeNode;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeNode;
 import java.util.*;
 
 /**
- * Default checking model for {@link WebCheckBoxTree}.
+ * Default checking model for WebCheckBoxTree.
  *
- * @param <N> {@link MutableTreeNode} type
  * @author Mikle Garin
  */
-public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCheckBoxTree<N>> implements TreeCheckingModel<N>
+
+public class DefaultTreeCheckingModel<E extends DefaultMutableTreeNode> implements TreeCheckingModel<E>
 {
     /**
-     * {@link WebCheckBoxTree} that uses this checking model.
+     * Checkbox tree which uses this checking model.
      */
-    protected final T checkBoxTree;
+    protected WebCheckBoxTree<E> checkBoxTree;
 
     /**
-     * {@link MutableTreeNode} check states.
+     * Node check states cache.
      */
-    protected Map<N, CheckState> nodeCheckStates;
+    protected Map<E, CheckState> nodeCheckStates = new WeakHashMap<E, CheckState> ();
 
     /**
-     * Model listeners.
-     *
-     * @see CheckStateChangeListener
+     * Checkbox tree check state change listeners.
      */
-    protected EventListenerList listeners;
+    protected List<CheckStateChangeListener<E>> checkStateChangeListeners = new ArrayList<CheckStateChangeListener<E>> ( 1 );
 
     /**
-     * Comparator for {@link MutableTreeNode}s returned for specified {@link CheckState}.
+     * @param checkBoxTree checkbox tree which uses this checking model.
      */
-    protected Comparator<N> nodesComparator;
-
-    /**
-     * Constructs new {@link DefaultTreeCheckingModel} for the specified {@link WebCheckBoxTree}.
-     *
-     * @param checkBoxTree {@link WebCheckBoxTree} that uses this {@link DefaultTreeCheckingModel}
-     */
-    public DefaultTreeCheckingModel ( final T checkBoxTree )
+    public DefaultTreeCheckingModel ( final WebCheckBoxTree<E> checkBoxTree )
     {
         super ();
         this.checkBoxTree = checkBoxTree;
-        this.nodeCheckStates = new WeakHashMap<N, CheckState> ();
-        this.listeners = new EventListenerList ();
-        this.nodesComparator = createNodesComparator ();
     }
 
     /**
-     * Returns new {@link Comparator} for nodes.
-     * Can also return {@code null} to disable nodes sorting.
+     * Returns checkbox tree which uses this checking model.
      *
-     * @return new {@link Comparator} for nodes
+     * @return checkbox tree which uses this checking model
      */
-    protected Comparator<N> createNodesComparator ()
+    public WebCheckBoxTree<E> getCheckBoxTree ()
     {
-        return new NodesPositionComparator<N> ();
+        return checkBoxTree;
+    }
+
+    /**
+     * Sets checkbox tree which uses this checking model.
+     * This method call also forces cache to clear all stored values.
+     *
+     * @param checkBoxTree checkbox tree which uses this checking model.
+     */
+    public void setCheckBoxTree ( final WebCheckBoxTree<E> checkBoxTree )
+    {
+        nodeCheckStates.clear ();
+        this.checkBoxTree = checkBoxTree;
     }
 
     @Override
-    public List<N> getNodes ( final CheckState state, final NodesAcceptPolicy policy )
+    public List<E> getCheckedNodes ( final boolean optimize )
     {
-        // Collecting nodes for state
-        final List<N> collected = new ArrayList<N> ();
-        if ( state == CheckState.checked || state == CheckState.mixed )
+        return getAllNodesForState ( CheckState.checked, optimize );
+    }
+
+    @Override
+    public List<E> getMixedNodes ()
+    {
+        return getAllNodesForState ( CheckState.mixed, false );
+    }
+
+    /**
+     * Returns list of nodes for the specified state.
+     * For a reasonable cause this will not work for unchecked state.
+     *
+     * @param state    check state
+     * @param optimize whether should optimize selected nodes or not
+     * @return list of nodes for the specified state
+     */
+    protected List<E> getAllNodesForState ( final CheckState state, final boolean optimize )
+    {
+        final List<E> checkedNodes = new ArrayList<E> ( nodeCheckStates.size () );
+        for ( final Map.Entry<E, CheckState> entry : nodeCheckStates.entrySet () )
         {
-            // Collecting checked or mixed nodes
-            for ( final Map.Entry<N, CheckState> entry : nodeCheckStates.entrySet () )
+            if ( entry.getValue () == state )
             {
-                if ( entry.getValue () == state )
-                {
-                    collected.add ( entry.getKey () );
-                }
+                checkedNodes.add ( entry.getKey () );
             }
         }
-        else
+        if ( optimize )
         {
-            // Collecting unchecked nodes
-            final List<N> runthrough = new ArrayList<N> ();
-            runthrough.add ( checkBoxTree.getRootNode () );
-            while ( !runthrough.isEmpty () )
-            {
-                // Removing first element to shrink runthrough list
-                final N node = runthrough.remove ( 0 );
-                final CheckState nodeState = nodeCheckStates.get ( node );
-                final boolean unchecked = nodeState == null || nodeState == CheckState.unchecked;
-
-                // Simply adding unchecked node
-                if ( unchecked )
-                {
-                    collected.add ( node );
-                }
-
-                // Make sure to check all child nodes
-                for ( int i = 0; i < getChildCount ( node ); i++ )
-                {
-                    runthrough.add ( getChildAt ( node, i ) );
-                }
-            }
+            TreeUtils.optimizeNodes ( checkedNodes );
         }
-
-        // Removing chilren of collected nodes
-        if ( policy != null )
-        {
-            policy.filter ( checkBoxTree, collected );
-        }
-
-        // Sorting nodes by their position in the tree
-        if ( nodesComparator != null )
-        {
-            Collections.sort ( collected, nodesComparator );
-        }
-
-        return collected;
+        return checkedNodes;
     }
 
     @Override
-    public CheckState getCheckState ( final N node )
-    {
-        final CheckState checkState = nodeCheckStates.get ( node );
-        return checkState != null ? checkState : CheckState.unchecked;
-    }
-
-    @Override
-    public void setChecked ( final N node, final boolean checked )
+    public void setChecked ( final Collection<E> nodes, final boolean checked )
     {
         // Collecting state changes
-        final boolean collectChanges = listeners.getListenerCount ( CheckStateChangeListener.class ) > 0;
-        List<CheckStateChange<N>> changes = null;
+        final boolean collectChanges = checkStateChangeListeners.size () > 0;
+        List<CheckStateChange<E>> changes = null;
         if ( collectChanges )
         {
-            changes = new ArrayList<CheckStateChange<N>> ( 1 );
+            changes = new ArrayList<CheckStateChange<E>> ( nodes.size () );
         }
 
         // Updating states
-        final List<N> toUpdate = new ArrayList<N> ();
-        setCheckedImpl ( node, checked, toUpdate, changes );
+        final List<E> toUpdate = new ArrayList<E> ();
+        for ( final E node : nodes )
+        {
+            setCheckedImpl ( node, checked, toUpdate, changes );
+        }
         repaintTreeNodes ( toUpdate );
 
         // Informing about state changes
@@ -164,22 +140,26 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
     }
 
     @Override
-    public void setChecked ( final Collection<N> nodes, final boolean checked )
+    public CheckState getCheckState ( final E node )
+    {
+        final CheckState checkState = nodeCheckStates.get ( node );
+        return checkState != null ? checkState : CheckState.unchecked;
+    }
+
+    @Override
+    public void setChecked ( final E node, final boolean checked )
     {
         // Collecting state changes
-        final boolean collectChanges = listeners.getListenerCount ( CheckStateChangeListener.class ) > 0;
-        List<CheckStateChange<N>> changes = null;
+        final boolean collectChanges = checkStateChangeListeners.size () > 0;
+        List<CheckStateChange<E>> changes = null;
         if ( collectChanges )
         {
-            changes = new ArrayList<CheckStateChange<N>> ( nodes.size () );
+            changes = new ArrayList<CheckStateChange<E>> ( 1 );
         }
 
         // Updating states
-        final List<N> toUpdate = new ArrayList<N> ();
-        for ( final N node : nodes )
-        {
-            setCheckedImpl ( node, checked, toUpdate, changes );
-        }
+        final List<E> toUpdate = new ArrayList<E> ();
+        setCheckedImpl ( node, checked, toUpdate, changes );
         repaintTreeNodes ( toUpdate );
 
         // Informing about state changes
@@ -194,7 +174,7 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
      * @param toUpdate list of nodes for later update
      * @param changes  list to collect state changes into
      */
-    protected void setCheckedImpl ( final N node, final boolean checked, final List<N> toUpdate, final List<CheckStateChange<N>> changes )
+    protected void setCheckedImpl ( final E node, final boolean checked, final List<E> toUpdate, final List<CheckStateChange<E>> changes )
     {
         // Remembering old and new states
         final CheckState oldState = getCheckState ( node );
@@ -209,7 +189,7 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
             // Saving changes
             if ( changes != null )
             {
-                changes.add ( new CheckStateChange<N> ( node, oldState, newState ) );
+                changes.add ( new CheckStateChange<E> ( node, oldState, newState ) );
             }
 
             // Updating parent and child node states
@@ -228,19 +208,19 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
      * @param toUpdate list of nodes for later update
      * @param changes  list to collect state changes into
      */
-    protected void updateParentStates ( final N node, final List<N> toUpdate, final List<CheckStateChange<N>> changes )
+    protected void updateParentStates ( final E node, final List<E> toUpdate, final List<CheckStateChange<E>> changes )
     {
         // Updating all parent node states
-        N parent = getParent ( node );
+        E parent = ( E ) node.getParent ();
         while ( parent != null )
         {
             // Calculating parent state
             CheckState state = CheckState.unchecked;
             boolean hasChecked = false;
             boolean hasUnchecked = false;
-            for ( int i = 0; i < getChildCount ( parent ); i++ )
+            for ( int i = 0; i < parent.getChildCount (); i++ )
             {
-                final CheckState checkState = getCheckState ( getChildAt ( parent, i ) );
+                final CheckState checkState = getCheckState ( ( E ) parent.getChildAt ( i ) );
                 if ( checkState == CheckState.mixed )
                 {
                     state = CheckState.mixed;
@@ -280,7 +260,7 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
                 // Saving changes
                 if ( changes != null )
                 {
-                    changes.add ( new CheckStateChange<N> ( parent, oldState, state ) );
+                    changes.add ( new CheckStateChange<E> ( parent, oldState, state ) );
                 }
 
                 // Updating state
@@ -288,7 +268,7 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
             }
 
             // Moving upstairs
-            parent = getParent ( parent );
+            parent = ( E ) parent.getParent ();
         }
     }
 
@@ -300,17 +280,17 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
      * @param toUpdate list of nodes for later update
      * @param changes  list to collect state changes into
      */
-    protected void updateChildNodesState ( final N node, final CheckState newState, final List<N> toUpdate,
-                                           final List<CheckStateChange<N>> changes )
+    protected void updateChildNodesState ( final E node, final CheckState newState, final List<E> toUpdate,
+                                           final List<CheckStateChange<E>> changes )
     {
-        for ( int i = 0; i < getChildCount ( node ); i++ )
+        for ( int i = 0; i < node.getChildCount (); i++ )
         {
-            final N childNode = getChildAt ( node, i );
+            final E childNode = ( E ) node.getChildAt ( i );
 
             // Saving changes
             if ( changes != null )
             {
-                changes.add ( new CheckStateChange<N> ( childNode, getCheckState ( childNode ), newState ) );
+                changes.add ( new CheckStateChange<E> ( childNode, getCheckState ( childNode ), newState ) );
             }
 
             // Updating state
@@ -328,7 +308,7 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
      * @param newState new check state
      * @param toUpdate list of nodes for later update
      */
-    protected void updateNodeState ( final N node, final CheckState newState, final List<N> toUpdate )
+    protected void updateNodeState ( final E node, final CheckState newState, final List<E> toUpdate )
     {
         if ( newState != CheckState.unchecked )
         {
@@ -342,18 +322,18 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
     }
 
     @Override
-    public void invertCheck ( final N node )
+    public void invertCheck ( final E node )
     {
         // Collecting state changes
-        final boolean collectChanges = listeners.getListenerCount ( CheckStateChangeListener.class ) > 0;
-        List<CheckStateChange<N>> changes = null;
+        final boolean collectChanges = checkStateChangeListeners.size () > 0;
+        List<CheckStateChange<E>> changes = null;
         if ( collectChanges )
         {
-            changes = new ArrayList<CheckStateChange<N>> ( 1 );
+            changes = new ArrayList<CheckStateChange<E>> ( 1 );
         }
 
         // Updating states
-        final List<N> toUpdate = new ArrayList<N> ();
+        final List<E> toUpdate = new ArrayList<E> ();
         setCheckedImpl ( node, getNextState ( getCheckState ( node ) ) == CheckState.checked, toUpdate, changes );
         repaintTreeNodes ( toUpdate );
 
@@ -362,20 +342,20 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
     }
 
     @Override
-    public void invertCheck ( final Collection<N> nodes )
+    public void invertCheck ( final Collection<E> nodes )
     {
         // Collecting state changes
-        final boolean collectChanges = listeners.getListenerCount ( CheckStateChangeListener.class ) > 0;
-        List<CheckStateChange<N>> changes = null;
+        final boolean collectChanges = checkStateChangeListeners.size () > 0;
+        List<CheckStateChange<E>> changes = null;
         if ( collectChanges )
         {
-            changes = new ArrayList<CheckStateChange<N>> ( nodes.size () );
+            changes = new ArrayList<CheckStateChange<E>> ( nodes.size () );
         }
 
         // Updating states
-        final List<N> toUpdate = new ArrayList<N> ();
+        final List<E> toUpdate = new ArrayList<E> ();
         boolean check = false;
-        for ( final N node : nodes )
+        for ( final E node : nodes )
         {
             if ( getCheckState ( node ) != CheckState.checked )
             {
@@ -383,7 +363,7 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
                 break;
             }
         }
-        for ( final N node : nodes )
+        for ( final E node : nodes )
         {
             setCheckedImpl ( node, check, toUpdate, changes );
         }
@@ -394,30 +374,25 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
     }
 
     @Override
-    public void checkAll ()
+    public void uncheckAll ()
     {
-        final List<N> allNodes = checkBoxTree.getAvailableNodes ();
-
         // Collecting state changes
-        List<CheckStateChange<N>> changes = null;
-        if ( listeners.getListenerCount ( CheckStateChangeListener.class ) > 0 )
+        List<CheckStateChange<E>> changes = null;
+        if ( checkStateChangeListeners.size () > 0 )
         {
-            changes = new ArrayList<CheckStateChange<N>> ( allNodes.size () );
-            for ( final N node : allNodes )
+            changes = new ArrayList<CheckStateChange<E>> ( nodeCheckStates.size () );
+            for ( final Map.Entry<E, CheckState> entry : nodeCheckStates.entrySet () )
             {
-                final CheckState state = getCheckState ( node );
-                if ( state != CheckState.checked )
+                final CheckState state = entry.getValue ();
+                if ( state == CheckState.mixed || state == CheckState.checked )
                 {
-                    changes.add ( new CheckStateChange<N> ( node, state, CheckState.checked ) );
+                    changes.add ( new CheckStateChange<E> ( entry.getKey (), state, CheckState.unchecked ) );
                 }
             }
         }
 
         // Updating states
-        for ( final N node : allNodes )
-        {
-            nodeCheckStates.put ( node, CheckState.checked );
-        }
+        nodeCheckStates.clear ();
         repaintVisibleTreeRect ();
 
         // Informing about state changes
@@ -425,25 +400,30 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
     }
 
     @Override
-    public void uncheckAll ()
+    public void checkAll ()
     {
+        final List<E> allNodes = checkBoxTree.getAllNodes ();
+
         // Collecting state changes
-        List<CheckStateChange<N>> changes = null;
-        if ( listeners.getListenerCount ( CheckStateChangeListener.class ) > 0 )
+        List<CheckStateChange<E>> changes = null;
+        if ( checkStateChangeListeners.size () > 0 )
         {
-            changes = new ArrayList<CheckStateChange<N>> ( nodeCheckStates.size () );
-            for ( final Map.Entry<N, CheckState> entry : nodeCheckStates.entrySet () )
+            changes = new ArrayList<CheckStateChange<E>> ( allNodes.size () );
+            for ( final E node : allNodes )
             {
-                final CheckState state = entry.getValue ();
-                if ( state == CheckState.mixed || state == CheckState.checked )
+                final CheckState state = getCheckState ( node );
+                if ( state != CheckState.checked )
                 {
-                    changes.add ( new CheckStateChange<N> ( entry.getKey (), state, CheckState.unchecked ) );
+                    changes.add ( new CheckStateChange<E> ( node, state, CheckState.checked ) );
                 }
             }
         }
 
         // Updating states
-        nodeCheckStates.clear ();
+        for ( final E node : allNodes )
+        {
+            nodeCheckStates.put ( node, CheckState.checked );
+        }
         repaintVisibleTreeRect ();
 
         // Informing about state changes
@@ -462,11 +442,10 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
         {
             case unchecked:
                 return CheckState.checked;
-
+            case checked:
+                return CheckState.unchecked;
             case mixed:
                 return checkBoxTree.isCheckMixedOnToggle () ? CheckState.checked : CheckState.unchecked;
-
-            case checked:
             default:
                 return CheckState.unchecked;
         }
@@ -476,20 +455,20 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
     public void checkingModeChanged ( final boolean recursive )
     {
         // Collecting state changes
-        final boolean collectChanges = listeners.getListenerCount ( CheckStateChangeListener.class ) > 0;
-        List<CheckStateChange<N>> changes = null;
+        final boolean collectChanges = checkStateChangeListeners.size () > 0;
+        List<CheckStateChange<E>> changes = null;
         if ( collectChanges )
         {
-            changes = new ArrayList<CheckStateChange<N>> ();
+            changes = new ArrayList<CheckStateChange<E>> ();
         }
 
         // Updating states
-        final List<N> toUpdate = new ArrayList<N> ();
+        final List<E> toUpdate = new ArrayList<E> ();
         if ( recursive )
         {
             // Retrieving all checked nodes
-            final List<N> checked = new ArrayList<N> ( nodeCheckStates.size () );
-            for ( final Map.Entry<N, CheckState> entry : nodeCheckStates.entrySet () )
+            final List<E> checked = new ArrayList<E> ( nodeCheckStates.size () );
+            for ( final Map.Entry<E, CheckState> entry : nodeCheckStates.entrySet () )
             {
                 if ( entry.getValue () == CheckState.checked )
                 {
@@ -502,7 +481,7 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
             filterOutChildNodes ( checked );
 
             // Updating node states
-            for ( final N node : checked )
+            for ( final E node : checked )
             {
                 updateParentStates ( node, toUpdate, changes );
                 updateChildNodesState ( node, CheckState.checked, toUpdate, changes );
@@ -511,21 +490,21 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
         else
         {
             // Removing existing mixed states
-            final Iterator<Map.Entry<N, CheckState>> iterator = nodeCheckStates.entrySet ().iterator ();
+            final Iterator<Map.Entry<E, CheckState>> iterator = nodeCheckStates.entrySet ().iterator ();
             while ( iterator.hasNext () )
             {
-                final Map.Entry<N, CheckState> entry = iterator.next ();
+                final Map.Entry<E, CheckState> entry = iterator.next ();
                 if ( entry.getValue () == CheckState.mixed )
                 {
                     // Updating node state
-                    final N node = entry.getKey ();
+                    final E node = entry.getKey ();
                     toUpdate.add ( node );
                     iterator.remove ();
 
                     // Saving changes
                     if ( changes != null )
                     {
-                        changes.add ( new CheckStateChange<N> ( node, CheckState.mixed, CheckState.unchecked ) );
+                        changes.add ( new CheckStateChange<E> ( node, CheckState.mixed, CheckState.unchecked ) );
                     }
                 }
             }
@@ -541,13 +520,13 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
      *
      * @param nodes list of nodes to filter
      */
-    protected void filterOutChildNodes ( final List<N> nodes )
+    protected void filterOutChildNodes ( final List<E> nodes )
     {
-        final Iterator<N> checkedIterator = nodes.iterator ();
+        final Iterator<E> checkedIterator = nodes.iterator ();
         while ( checkedIterator.hasNext () )
         {
-            final N node = checkedIterator.next ();
-            for ( final N otherNode : nodes )
+            final E node = checkedIterator.next ();
+            for ( final E otherNode : nodes )
             {
                 if ( isChildNode ( node, otherNode ) )
                 {
@@ -561,67 +540,33 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
     /**
      * Returns whether the specified node is a child of another node or some of its child nodes or not.
      *
-     * @param node   node to process
-     * @param parent node to compare parent nodes with
-     * @return {@code true} if the specified node is a child of another node or some of its child nodes, {@code false} otherwise
+     * @param node    node to process
+     * @param childOf node to compare parent nodes with
+     * @return true if the specified node is a child of another node or some of its child nodes, false otherwise
      */
-    protected boolean isChildNode ( final N node, final N parent )
+    protected boolean isChildNode ( final E node, final E childOf )
     {
-        if ( node == parent )
+        if ( node == childOf )
         {
             return false;
         }
-        else if ( parent == null )
+        else if ( childOf == null )
         {
             return true;
         }
         else
         {
-            N nodeParent = getParent ( node );
-            while ( nodeParent != null )
+            TreeNode parent = node.getParent ();
+            while ( parent != null )
             {
-                if ( nodeParent == parent )
+                if ( parent == childOf )
                 {
                     return true;
                 }
-                nodeParent = getParent ( nodeParent );
+                parent = parent.getParent ();
             }
             return false;
         }
-    }
-
-    /**
-     * Returns parent {@link MutableTreeNode} for the specified {@link MutableTreeNode}.
-     *
-     * @param node {@link MutableTreeNode} to find parent for
-     * @return parent {@link MutableTreeNode} for the specified {@link MutableTreeNode}
-     */
-    protected N getParent ( final N node )
-    {
-        return ( N ) node.getParent ();
-    }
-
-    /**
-     * Returns child {@link MutableTreeNode} for the specified parent {@link MutableTreeNode} at the specified index.
-     *
-     * @param parent parent {@link MutableTreeNode}
-     * @param index  child {@link MutableTreeNode} index
-     * @return child {@link MutableTreeNode} for the specified parent {@link MutableTreeNode} at the specified index
-     */
-    protected N getChildAt ( final N parent, final int index )
-    {
-        return ( N ) parent.getChildAt ( index );
-    }
-
-    /**
-     * Returns amount of children for the specified parent {@link MutableTreeNode}.
-     *
-     * @param parent {@link MutableTreeNode} to count children for
-     * @return amount of children for the specified parent {@link MutableTreeNode}
-     */
-    protected int getChildCount ( final N parent )
-    {
-        return parent.getChildCount ();
     }
 
     /**
@@ -637,7 +582,7 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
      *
      * @param nodes tree nodes to repaint
      */
-    protected void repaintTreeNodes ( final List<N> nodes )
+    protected void repaintTreeNodes ( final List<E> nodes )
     {
         checkBoxTree.repaint ( nodes );
     }
@@ -645,27 +590,27 @@ public class DefaultTreeCheckingModel<N extends MutableTreeNode, T extends WebCh
     @Override
     public void addCheckStateChangeListener ( final CheckStateChangeListener listener )
     {
-        listeners.add ( CheckStateChangeListener.class, listener );
+        checkStateChangeListeners.add ( listener );
     }
 
     @Override
     public void removeCheckStateChangeListener ( final CheckStateChangeListener listener )
     {
-        listeners.remove ( CheckStateChangeListener.class, listener );
+        checkStateChangeListeners.remove ( listener );
     }
 
     /**
-     * Informs about single or multiple check state changes.
+     * Informs about single or multiply check state changes.
      *
      * @param stateChanges check state changes list
      */
-    public void fireCheckStateChanged ( final List<CheckStateChange<N>> stateChanges )
+    public void fireCheckStateChanged ( final List<CheckStateChange<E>> stateChanges )
     {
         if ( stateChanges != null )
         {
-            for ( final CheckStateChangeListener<N> listener : listeners.getListeners ( CheckStateChangeListener.class ) )
+            for ( final CheckStateChangeListener<E> listener : CollectionUtils.copy ( checkStateChangeListeners ) )
             {
-                listener.checkStateChanged ( checkBoxTree, stateChanges );
+                listener.checkStateChanged ( stateChanges );
             }
         }
     }

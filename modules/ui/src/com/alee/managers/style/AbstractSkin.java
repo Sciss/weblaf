@@ -29,9 +29,10 @@ import java.util.List;
  *
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
- * @see StyleManager
+ * @see com.alee.managers.style.StyleManager
  * @see Skin
  */
+
 public abstract class AbstractSkin implements Skin
 {
     /**
@@ -61,7 +62,7 @@ public abstract class AbstractSkin implements Skin
     @Override
     public boolean applySkin ( final JComponent component )
     {
-        if ( getStyle ( component ).apply ( component ) )
+        if ( getComponentStyle ( component ).apply ( component ) )
         {
             component.repaint ();
             return true;
@@ -80,7 +81,7 @@ public abstract class AbstractSkin implements Skin
     @Override
     public boolean removeSkin ( final JComponent component )
     {
-        return getStyle ( component ).remove ( component );
+        return getComponentStyle ( component ).remove ( component );
     }
 
     @Override

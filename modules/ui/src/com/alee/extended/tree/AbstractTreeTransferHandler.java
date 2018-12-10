@@ -17,25 +17,29 @@
 
 package com.alee.extended.tree;
 
-import com.alee.laf.tree.*;
+import com.alee.laf.tree.TreeUtils;
+import com.alee.laf.tree.UniqueNode;
+import com.alee.laf.tree.WebTree;
+import com.alee.laf.tree.WebTreeModel;
 import com.alee.utils.CollectionUtils;
-import com.alee.utils.CoreSwingUtils;
-import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import javax.swing.tree.TreePath;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Most common transfer handler implementation that handles tree nodes transfer.
  *
  * @param <N> nodes type
  * @param <T> tree type
- * @param <M> tree model type
  * @author Mikle Garin
  */
+
 public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extends WebTree<N>, M extends WebTreeModel<N>>
         extends TransferHandler
 {
@@ -44,9 +48,9 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
      */
 
     /**
-     * {@link NodesAcceptPolicy} that defines a way to filter dragged nodes.
+     * Whether or not should optimize dragged nodes list to minimum.
      */
-    protected NodesAcceptPolicy nodesAcceptPolicy = NodesAcceptPolicy.ancestors;
+    protected boolean optimizeDraggedNodes = true;
 
     /**
      * Whether or not should expand single dragged node when it is dropped onto the tree.
@@ -54,14 +58,14 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
     protected boolean expandSingleNode = false;
 
     /**
-     * Whether or not should expand multiple dragged nodes when they are dropped onto the tree.
+     * Whether or not should expand multiply dragged nodes when they are dropped onto the tree.
      */
-    protected boolean expandMultipleNodes = false;
+    protected boolean expandMultiplyNodes = false;
 
     /**
      * Transferred data handlers.
      */
-    protected List<? extends TreeDropHandler> dropHandlers;
+    protected List<TreeDropHandler<N, T>> dropHandlers;
 
     /**
      * Array of dragged nodes.
@@ -90,29 +94,29 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
      *
      * @return supported drop handlers
      */
-    protected List<? extends TreeDropHandler> createDropHandlers ()
+    protected List<TreeDropHandler<N, T>> createDropHandlers ()
     {
-        return CollectionUtils.asList ( new NodesDropHandler () );
+        return CollectionUtils.<TreeDropHandler<N, T>>asList ( new NodesDropHandler () );
     }
 
     /**
-     * Return {@link NodesAcceptPolicy} that defines a way to filter dragged nodes.
+     * Return whether or not should optimize dragged nodes list to minimum.
      *
-     * @return {@link NodesAcceptPolicy} that defines a way to filter dragged nodes
+     * @return true if should optimize dragged nodes list to minimum, false otherwise
      */
-    public NodesAcceptPolicy getNodesAcceptPolicy ()
+    public boolean isOptimizeDraggedNodes ()
     {
-        return nodesAcceptPolicy;
+        return optimizeDraggedNodes;
     }
 
     /**
-     * Sets {@link NodesAcceptPolicy} that defines a way to filter dragged nodes.
+     * Sets whether or not should optimize dragged nodes list to minimum.
      *
-     * @param policy {@link NodesAcceptPolicy} that defines a way to filter dragged nodes
+     * @param optimize whether or not should optimize dragged nodes list to minimum
      */
-    public void setNodesAcceptPolicy ( final NodesAcceptPolicy policy )
+    public void setOptimizeDraggedNodes ( final boolean optimize )
     {
-        this.nodesAcceptPolicy = policy;
+        this.optimizeDraggedNodes = optimize;
     }
 
     /**
@@ -136,23 +140,23 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
     }
 
     /**
-     * Returns whether or not should expand multiple dragged nodes when they are dropped onto the tree.
+     * Returns whether or not should expand multiply dragged nodes when they are dropped onto the tree.
      *
-     * @return {@code true} if should expand multiple dragged nodes when they are dropped onto the tree, {@code false} otherwise
+     * @return true if should expand multiply dragged nodes when they are dropped onto the tree, false otherwise
      */
-    public boolean isExpandMultipleNodes ()
+    public boolean isExpandMultiplyNodes ()
     {
-        return expandMultipleNodes;
+        return expandMultiplyNodes;
     }
 
     /**
-     * Sets whether or not should expand multiple dragged nodes when they are dropped onto the tree.
+     * Sets whether or not should expand multiply dragged nodes when they are dropped onto the tree.
      *
-     * @param expand whether or not should expand multiple dragged nodes when they are dropped onto the tree
+     * @param expand whether or not should expand multiply dragged nodes when they are dropped onto the tree
      */
-    public void setExpandMultipleNodes ( final boolean expand )
+    public void setExpandMultiplyNodes ( final boolean expand )
     {
-        this.expandMultipleNodes = expand;
+        this.expandMultiplyNodes = expand;
     }
 
     /**
@@ -164,32 +168,13 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
      * @return type of transfer actions supported by the source
      */
     @Override
-    public abstract int getSourceActions ( JComponent c );
-
-    /**
-     * Returns whether action is MOVE or not.
-     *
-     * @param action drag action
-     * @return true if action is MOVE, false otherwise
-     */
-    protected boolean isMoveAction ( final int action )
+    public int getSourceActions ( final JComponent c )
     {
-        return ( action & MOVE ) == MOVE;
+        return MOVE;
     }
 
     /**
-     * Returns whether action is COPY or not.
-     *
-     * @param action drag action
-     * @return true if action is COPY, false otherwise
-     */
-    protected boolean isCopyAction ( final int action )
-    {
-        return ( action & COPY ) == COPY;
-    }
-
-    /**
-     * Creates a {@link Transferable} to use as the source for a data transfer.
+     * Creates a Transferable to use as the source for a data transfer.
      * Returns the representation of the data to be transferred, or null if the component's property is null
      *
      * @param c the component holding the data to be transferred, provided to enable sharing of TransferHandlers
@@ -208,18 +193,14 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
                 return null;
             }
 
-            // Excluding descendants if needed
-            if ( nodesAcceptPolicy != null )
+            // Optimizing dragged nodes
+            if ( optimizeDraggedNodes )
             {
-                nodesAcceptPolicy.filter ( tree, nodes );
+                TreeUtils.optimizeNodes ( nodes );
             }
 
-            // Sorting nodes according to their position in the tree
-            CollectionUtils.sort ( nodes, new NodesRowComparator<N> ( tree ) );
-
             // Checking whether or not can drag specified nodes
-            final M model = ( M ) tree.getModel ();
-            if ( !canBeDragged ( tree, model, nodes ) )
+            if ( !canBeDragged ( tree, nodes ) )
             {
                 return null;
             }
@@ -228,7 +209,7 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
             final List<N> copies = new ArrayList<N> ();
             for ( final N node : nodes )
             {
-                copies.add ( copy ( tree, model, node ) );
+                copies.add ( copy ( tree, node ) );
             }
 
             // Saving list of dragged nodes
@@ -250,7 +231,7 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
             }
 
             // Returning new nodes transferable
-            return createTransferable ( tree, model, copies );
+            return createTransferable ( tree, copies );
         }
         return null;
     }
@@ -259,33 +240,31 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
      * Returns whether the specified nodes drag can be started or not.
      *
      * @param tree  source tree
-     * @param model tree model
      * @param nodes nodes to drag
      * @return true if the specified nodes drag can be started, false otherwise
      */
-    protected abstract boolean canBeDragged ( T tree, M model, List<N> nodes );
+    protected abstract boolean canBeDragged ( T tree, List<N> nodes );
 
     /**
      * Returns node copy used in createTransferable.
      * Used each time when node is moved within tree or into another tree.
      * Node copy should have the same ID and content but must be another instance of node type class.
      *
-     * @param tree  source tree
-     * @param model tree model
-     * @param node  node to copy
+     * @param tree source tree
+     * @param node node to copy
      * @return node copy
      */
-    protected abstract N copy ( T tree, M model, N node );
+    protected abstract N copy ( T tree, N node );
 
     /**
      * Returns new transferable based on dragged nodes.
      *
      * @param tree  source tree
-     * @param model tree model
      * @param nodes dragged nodes
      * @return new transferable based on dragged nodes
      */
-    protected Transferable createTransferable ( final T tree, final M model, final List<N> nodes )
+    @SuppressWarnings ( "UnusedParameters" )
+    protected Transferable createTransferable ( final T tree, final List<N> nodes )
     {
         return new NodesTransferable ( nodes );
     }
@@ -294,6 +273,13 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
     public boolean canImport ( final TransferSupport support )
     {
         if ( !support.isDrop () )
+        {
+            return false;
+        }
+
+        // Do not allow drop if there are no supported drop handlers available
+        final List<TreeDropHandler<N, T>> dropHandlers = getSupportedDropHandlers ( support );
+        if ( CollectionUtils.isEmpty ( dropHandlers ) )
         {
             return false;
         }
@@ -308,9 +294,8 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
 
         // Check whether actual TransferHandler accepts drop to this location
         final T tree = ( T ) support.getComponent ();
-        final M model = ( M ) tree.getModel ();
         final N destination = ( N ) path.getLastPathComponent ();
-        if ( !canDropTo ( support, tree, model, destination ) )
+        if ( !canDropTo ( tree, destination ) )
         {
             return false;
         }
@@ -331,9 +316,16 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
             }
         }
 
-        // Perform actual drop check
-        final TreeDropHandler<N, T, M> dropHandler = getDropHandler ( support, tree, model, destination );
-        final boolean canBeDropped = dropHandler != null && dropHandler.canDrop ( support, tree, model, destination );
+        // Perform actual drop checks
+        boolean canBeDropped = false;
+        for ( final TreeDropHandler<N, T> dataTransferHandler : dropHandlers )
+        {
+            if ( dataTransferHandler.canDrop ( support, tree, destination ) )
+            {
+                canBeDropped = true;
+                break;
+            }
+        }
 
         // Displaying drop location
         support.setShowDropLocation ( canBeDropped );
@@ -342,46 +334,43 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
     }
 
     /**
-     * Returns whether or not specified destination is acceptable for drop.
-     * This check is performed before another check for nodes drop possibility.
+     * Returns list of drop handlers supporting this drop operation.
      *
-     * @param support     transfer support data
-     * @param tree        destination tree
-     * @param model       tree model
-     * @param destination node onto which drop was performed
-     * @return {@code true} if the specified destination is acceptable for drop, {@code false} otherwise
+     * @param support transfer support data
+     * @return list of drop handlers supporting this drop operation
      */
-    protected boolean canDropTo ( final TransferSupport support, final T tree, final M model, final N destination )
+    protected List<TreeDropHandler<N, T>> getSupportedDropHandlers ( final TransferSupport support )
     {
-        return destination != null;
-    }
-
-    /**
-     * Returns drop handler supporting this drop operation.
-     *
-     * @param support     transfer support data
-     * @param tree        destination tree
-     * @param model       tree model
-     * @param destination node onto which drop was performed
-     * @return drop handler supporting this drop operation
-     */
-    protected TreeDropHandler<N, T, M> getDropHandler ( final TransferSupport support, final T tree, final M model, final N destination )
-    {
-        for ( final TreeDropHandler<N, T, M> dropHandler : dropHandlers )
+        final List<TreeDropHandler<N, T>> handlers = new ArrayList<TreeDropHandler<N, T>> ( dropHandlers.size () );
+        for ( final TreeDropHandler<N, T> dropHandler : dropHandlers )
         {
             final List<DataFlavor> flavors = dropHandler.getSupportedFlavors ();
-            if ( CollectionUtils.notEmpty ( flavors ) )
+            if ( !CollectionUtils.isEmpty ( flavors ) )
             {
                 for ( final DataFlavor flavor : flavors )
                 {
                     if ( support.isDataFlavorSupported ( flavor ) )
                     {
-                        return dropHandler;
+                        handlers.add ( dropHandler );
+                        break;
                     }
                 }
             }
         }
-        return null;
+        return handlers;
+    }
+
+    /**
+     * Returns whether or not specified destination is acceptable for drop.
+     * This check is performed before another check for nodes drop possibility.
+     *
+     * @param tree        destination tree
+     * @param destination node onto which drop was performed
+     * @return true if the specified destination is acceptable for drop, false otherwise
+     */
+    protected boolean canDropTo ( final T tree, final N destination )
+    {
+        return destination != null;
     }
 
     @Override
@@ -395,8 +384,23 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
         final T tree = ( T ) support.getComponent ();
         final M model = ( M ) tree.getModel ();
 
+        // Retrieving dropped nodes
+        List<N> nodes = null;
+        for ( final TreeDropHandler<N, T> dropHandler : getSupportedDropHandlers ( support ) )
+        {
+            nodes = dropHandler.getDroppedNodes ( support, tree, parent );
+            if ( !CollectionUtils.isEmpty ( nodes ) )
+            {
+                break;
+            }
+        }
+        if ( CollectionUtils.isEmpty ( nodes ) )
+        {
+            return false;
+        }
+
         // Prepare drop operation
-        return prepareDropOperation ( support, tree, model, parent, dropIndex );
+        return prepareDropOperation ( support, tree, nodes, dropIndex, parent, model );
     }
 
     /**
@@ -404,13 +408,14 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
      *
      * @param support   transfer support data
      * @param tree      tree to drop nodes onto
-     * @param model     tree model
-     * @param parent    parent node to drop nodes into
+     * @param nodes     list of nodes to drop
      * @param dropIndex preliminary nodes drop index
-     * @return {@code true} if drop operation was successfully completed, {@code false} otherwise
+     * @param parent    parent node to drop nodes into
+     * @param model     tree model
+     * @return true if drop operation was successfully completed, false otherwise
      */
-    protected boolean prepareDropOperation ( final TransferSupport support, final T tree, final M model,
-                                             final N parent, final int dropIndex )
+    protected boolean prepareDropOperation ( final TransferSupport support, final T tree, final List<N> nodes, final int dropIndex,
+                                             final N parent, final M model )
     {
         // Expanding parent first
         if ( !tree.isExpanded ( parent ) )
@@ -422,7 +427,85 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
         final int adjustedDropIndex = getAdjustedDropIndex ( dropIndex, support.getDropAction (), parent );
 
         // Now we can perform drop
-        return performDropOperation ( support, tree, model, parent, adjustedDropIndex );
+        return performDropOperation ( tree, nodes, parent, model, adjustedDropIndex );
+    }
+
+    /**
+     * Performs actual nodes drop operation.
+     *
+     * @param tree   tree to drop nodes onto
+     * @param nodes  list of nodes to drop
+     * @param parent parent node to drop nodes into
+     * @param model  tree model
+     * @param index  nodes drop index
+     * @return true if drop operation was successfully completed, false otherwise
+     */
+    protected boolean performDropOperation ( final T tree, final List<N> nodes, final N parent, final M model, final int index )
+    {
+        // This operation should be performed in EDT later to allow drop operation get completed in source TransferHandler first
+        // Otherwise new nodes will be added into the tree before old ones are removed which is bad if it is the same tree
+        // This is meaningful for D&D opearation within one tree, for other situations its meaningless but doesn't cause any problems
+        SwingUtilities.invokeLater ( new Runnable ()
+        {
+            @Override
+            public void run ()
+            {
+                // Adding data to model
+                model.insertNodesInto ( nodes, parent, index );
+
+                // Expanding nodes after drop operation
+                if ( expandSingleNode && nodes.size () == 1 )
+                {
+                    tree.expandNode ( nodes.get ( 0 ) );
+                }
+                else if ( expandMultiplyNodes )
+                {
+                    for ( final N node : nodes )
+                    {
+                        tree.expandNode ( node );
+                    }
+                }
+
+                // Selecting inserted nodes
+                tree.setSelectedNodes ( nodes );
+
+                // Informing about nodes drop
+                informNodesDropped ( tree, nodes, parent, model, index );
+            }
+        } );
+        return true;
+    }
+
+    /**
+     * Informing about nodes drop operation.
+     * This method is separate to allowmodifying logic of this specific call.
+     *
+     * @param tree   tree nodes were dropped onto
+     * @param nodes  list of dropped nodes
+     * @param parent parent where nodes were dropped
+     * @param model  tree model
+     * @param index  nodes drop index
+     */
+    protected void informNodesDropped ( final T tree, final List<N> nodes, final N parent, final M model, final int index )
+    {
+        nodesDropped ( nodes, parent, tree, model, index );
+    }
+
+    /**
+     * Informs about nodes drop operation completition in a separate tree thread.
+     * This method should be used to perform actual data move operation.
+     *
+     * @param nodes  list of nodes to drop
+     * @param parent parent node to drop nodes into
+     * @param tree   tree to drop nodes onto
+     * @param model  tree model
+     * @param index  nodes drop index
+     */
+    @SuppressWarnings ( "UnusedParameters" )
+    public void nodesDropped ( final List<N> nodes, final N parent, final T tree, final M model, final int index )
+    {
+        // No actions are required by default
+        // Override this method to perform any post-drop actions
     }
 
     /**
@@ -430,7 +513,7 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
      *
      * @param dropIndex  drop index if dropped between nodes under dropLocation node or -1 if dropped directly onto dropLocation node
      * @param dropAction actual drop action
-     * @param parent     parent node to drop nodes into
+     * @param parent     parent node to drop nodes into  @return properly adjusted nodes drop index
      * @return properly adjusted nodes drop index
      */
     protected int getAdjustedDropIndex ( final int dropIndex, final int dropAction, final N parent )
@@ -457,198 +540,6 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
     }
 
     /**
-     * Performs actual nodes drop operation.
-     *
-     * @param support     transfer support data
-     * @param tree        tree to drop nodes onto
-     * @param model       tree model
-     * @param destination parent node to drop nodes into
-     * @param index       nodes drop index
-     * @return {@code true} if drop operation was successfully completed, {@code false} otherwise
-     */
-    protected boolean performDropOperation ( final TransferSupport support, final T tree, final M model,
-                                             final N destination, final int index )
-    {
-        // Retrieving drop handler that will perform actual drop
-        final TreeDropHandler<N, T, M> handler = getDropHandler ( support, tree, model, destination );
-
-        // Preparing drop operation
-        // Some heavy checks might still be running here
-        final boolean dropApproved = handler.prepareDrop ( support, tree, model, destination, index );
-
-        // Proceeding to drop which might happen asynchronously in the handler
-        // At this point we have done all we can to provide synchronous drop visual feedback
-        if ( dropApproved )
-        {
-            // Retrieving callback responsible for the drop
-            final NodesDropCallback<N> callback = createNodesDropCallback ( support, tree, model, destination, index );
-            if ( callback != null )
-            {
-                // Performing actual drop using the appropriate handler
-                handler.performDrop ( support, tree, model, destination, index, callback );
-            }
-        }
-
-        // Return the result
-        return dropApproved;
-    }
-
-    /**
-     * Returns actual nodes drop operation callback for drop completion.
-     * All node inserts should be performed later in EDT to allow drop operation get completed in source TransferHandler first.
-     * Otherwise new nodes will be added into the tree before old ones are removed which would cause issues if it is the same tree.
-     * This is meaningful for D&D opearation within one tree, for other situations its meaningless but doesn't cause any problems.
-     *
-     * @param support     transfer support data
-     * @param tree        destination tree
-     * @param model       tree model
-     * @param destination node onto which drop was performed
-     * @param index       nodes drop index
-     * @return actual nodes drop operation callback for drop completion
-     */
-    protected NodesDropCallback<N> createNodesDropCallback ( final TransferSupport support, final T tree, final M model,
-                                                             final N destination, final int index )
-    {
-        return new NodesDropCallback<N> ()
-        {
-            /**
-             * Dropped nodes collected while drop callback is used.
-             */
-            private final List<N> dropped = new ArrayList<N> ();
-
-            @Override
-            public void dropped ( final N... nodes )
-            {
-                // Insert dropped nodes in EDT
-                CoreSwingUtils.invokeLater ( new Runnable ()
-                {
-                    @Override
-                    public void run ()
-                    {
-                        // Saving added nodes
-                        Collections.addAll ( dropped, nodes );
-
-                        // Adding dropped nodes into model
-                        model.insertNodesInto ( nodes, destination, index );
-                    }
-                } );
-            }
-
-            @Override
-            public void dropped ( final List<N> nodes )
-            {
-                // Insert dropped nodes in EDT
-                CoreSwingUtils.invokeLater ( new Runnable ()
-                {
-                    @Override
-                    public void run ()
-                    {
-                        // Saving added nodes
-                        dropped.addAll ( nodes );
-
-                        // Adding dropped nodes into model
-                        model.insertNodesInto ( nodes, destination, index );
-                    }
-                } );
-            }
-
-            @Override
-            public void completed ()
-            {
-                dropCompleted ( support, tree, model, destination, index, dropped );
-            }
-
-            @Override
-            public void failed ( final Throwable cause )
-            {
-                dropFailed ( support, tree, model, destination, index, dropped, cause );
-            }
-        };
-    }
-
-    /**
-     * Called upon drop completion.
-     *
-     * @param support     transfer support data
-     * @param tree        destination tree
-     * @param model       tree model
-     * @param destination node onto which drop was performed
-     * @param index       nodes drop index
-     * @param dropped     dropped nodes collected while drop callback was used
-     */
-    protected void dropCompleted ( final TransferSupport support, final T tree, final M model,
-                                   final N destination, final int index, final List<N> dropped )
-    {
-        // Simply finish drop operation
-        finishDrop ( support, tree, model, destination, index, dropped );
-    }
-
-    /**
-     * Called upon drop fail.
-     *
-     * @param support     transfer support data
-     * @param tree        destination tree
-     * @param model       tree model
-     * @param destination node onto which drop was performed
-     * @param index       nodes drop index
-     * @param dropped     dropped nodes collected while drop callback was used
-     * @param cause       drop failure cause
-     */
-    protected void dropFailed ( final TransferSupport support, final T tree, final M model,
-                                final N destination, final int index, final List<N> dropped, final Throwable cause )
-    {
-        // todo Think of a good way to process drop failure
-        // Logging drop operation issues that have occurred
-        LoggerFactory.getLogger ( AbstractTreeTransferHandler.class ).error ( "Unable to perform drop operation", cause );
-
-        // Finish drop operation after logging cause
-        finishDrop ( support, tree, model, destination, index, dropped );
-    }
-
-    /**
-     * Drop operation completion.
-     * This will be called even if only partial data has been dropped.
-     *
-     * @param support     transfer support data
-     * @param tree        destination tree
-     * @param model       tree model
-     * @param destination node onto which drop was performed
-     * @param index       nodes drop index
-     * @param dropped     dropped nodes collected while drop callback was used
-     */
-    protected void finishDrop ( final TransferSupport support, final T tree, final M model,
-                                final N destination, final int index, final List<N> dropped )
-    {
-        CoreSwingUtils.invokeLater ( new Runnable ()
-        {
-            @Override
-            public void run ()
-            {
-                if ( dropped.size () > 0 )
-                {
-                    // Expanding nodes after drop operation
-                    if ( expandSingleNode && dropped.size () == 1 )
-                    {
-                        // Expand single dropped node
-                        tree.expandNode ( dropped.get ( 0 ) );
-                    }
-                    else if ( expandMultipleNodes )
-                    {
-                        // Expand all dropped nodes
-                        for ( final N node : dropped )
-                        {
-                            tree.expandNode ( node );
-                        }
-                    }
-
-                    // Selecting inserted nodes
-                    tree.setSelectedNodes ( dropped );
-                }
-            }
-        } );
-    }
-
-    /**
      * Invoked after data has been exported.
      * This method should remove the data that was transferred if the action was MOVE.
      * This method is invoked from EDT so it is safe to perform tree operations.
@@ -665,11 +556,8 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
             // Removing nodes saved in draggedNodes in createTransferable
             final T tree = ( T ) source;
             removeTreeNodes ( tree, draggedNodes );
+            draggedNodes = null;
         }
-
-        // Cleaning up
-        draggedNodeIndices = null;
-        draggedNodes = null;
     }
 
     /**
@@ -698,6 +586,28 @@ public abstract class AbstractTreeTransferHandler<N extends UniqueNode, T extend
             objects.add ( ( O ) node.getUserObject () );
         }
         return objects;
+    }
+
+    /**
+     * Returns whether action is MOVE or not.
+     *
+     * @param action drag action
+     * @return true if action is MOVE, false otherwise
+     */
+    protected boolean isMoveAction ( final int action )
+    {
+        return ( action & MOVE ) == MOVE;
+    }
+
+    /**
+     * Returns whether action is COPY or not.
+     *
+     * @param action drag action
+     * @return true if action is COPY, false otherwise
+     */
+    protected boolean isCopyAction ( final int action )
+    {
+        return ( action & COPY ) == COPY;
     }
 
     @Override

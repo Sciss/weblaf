@@ -89,24 +89,24 @@ public class GroupLayout extends AbstractLayoutManager implements SwingConstants
     }
 
     @Override
-    public Dimension preferredLayoutSize ( final Container container )
+    public Dimension preferredLayoutSize ( final Container parent )
     {
-        return getLayoutSize ( container, false );
+        return getLayoutSize ( parent, false );
     }
 
     @Override
-    public Dimension minimumLayoutSize ( final Container container )
+    public Dimension minimumLayoutSize ( final Container parent )
     {
-        return getLayoutSize ( container, true );
+        return getLayoutSize ( parent, true );
     }
 
     @Override
-    public void layoutContainer ( final Container container )
+    public void layoutContainer ( final Container parent )
     {
         // Gathering component sizes
         int fillCount = 0;
         int preferred = 0;
-        for ( final Component component : container.getComponents () )
+        for ( final Component component : parent.getComponents () )
         {
             final boolean fill = isFill ( component );
             if ( fill )
@@ -122,15 +122,15 @@ public class GroupLayout extends AbstractLayoutManager implements SwingConstants
                 preferred += fill ? 0 : component.getPreferredSize ().height;
             }
         }
-        if ( container.getComponentCount () > 0 )
+        if ( parent.getComponentCount () > 0 )
         {
-            preferred += gap * ( container.getComponentCount () - 1 );
+            preferred += gap * ( parent.getComponentCount () - 1 );
         }
 
         // Calculating required sizes
-        final boolean ltr = container.getComponentOrientation ().isLeftToRight ();
-        final Insets insets = container.getInsets ();
-        final Dimension size = container.getSize ();
+        final boolean ltr = parent.getComponentOrientation ().isLeftToRight ();
+        final Insets insets = parent.getInsets ();
+        final Dimension size = parent.getSize ();
         final int width = size.width - insets.left - insets.right;
         final int height = size.height - insets.top - insets.bottom;
         final int fillSize = orientation == HORIZONTAL ? fillCount > 0 && width > preferred ? ( width - preferred ) / fillCount : 0 :
@@ -139,7 +139,7 @@ public class GroupLayout extends AbstractLayoutManager implements SwingConstants
         int y = insets.top;
 
         // Placing components
-        for ( final Component component : container.getComponents () )
+        for ( final Component component : parent.getComponents () )
         {
             final Dimension cps = component.getPreferredSize ();
             final boolean fill = isFill ( component );
@@ -158,11 +158,11 @@ public class GroupLayout extends AbstractLayoutManager implements SwingConstants
         }
     }
 
-    protected Dimension getLayoutSize ( final Container container, final boolean minimum )
+    protected Dimension getLayoutSize ( final Container parent, final boolean minimum )
     {
-        final Insets insets = container.getInsets ();
+        final Insets insets = parent.getInsets ();
         final Dimension ps = new Dimension ();
-        for ( final Component component : container.getComponents () )
+        for ( final Component component : parent.getComponents () )
         {
             final Dimension cps = minimum ? component.getMinimumSize () : component.getPreferredSize ();
             final boolean ignoreSize = minimum && isFill ( component );
@@ -177,15 +177,15 @@ public class GroupLayout extends AbstractLayoutManager implements SwingConstants
                 ps.height += ignoreSize ? 1 : cps.height;
             }
         }
-        if ( container.getComponentCount () > 0 )
+        if ( parent.getComponentCount () > 0 )
         {
             if ( orientation == HORIZONTAL )
             {
-                ps.width += gap * ( container.getComponentCount () - 1 );
+                ps.width += gap * ( parent.getComponentCount () - 1 );
             }
             else
             {
-                ps.height += gap * ( container.getComponentCount () - 1 );
+                ps.height += gap * ( parent.getComponentCount () - 1 );
             }
         }
         ps.width += insets.left + insets.right;

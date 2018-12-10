@@ -17,7 +17,7 @@
 
 package com.alee.laf;
 
-import org.slf4j.LoggerFactory;
+import com.alee.managers.log.Log;
 
 /**
  * Custom exceptions handler.
@@ -33,15 +33,8 @@ public class ExceptionHandler implements Thread.UncaughtExceptionHandler
         handleException ( thread.getName (), thrown );
     }
 
-    /**
-     * Handles {@link Throwable} that occured on the {@link Thread} with the specified name.
-     *
-     * @param tname  {@link Thread} name
-     * @param thrown {@link Throwable} that occured on the {@link Thread}
-     */
     protected void handleException ( final String tname, final Throwable thrown )
     {
-        final String msg = "Exception in thread %s";
-        LoggerFactory.getLogger ( ExceptionHandler.class ).error ( String.format ( msg, tname ), thrown );
+        Log.error ( ExceptionHandler.class, "Exception in thread " + tname + ": ", thrown );
     }
 }

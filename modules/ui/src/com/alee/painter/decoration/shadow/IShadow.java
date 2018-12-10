@@ -18,23 +18,25 @@
 package com.alee.painter.decoration.shadow;
 
 import com.alee.api.Identifiable;
-import com.alee.api.merge.Overwriting;
+import com.alee.api.Mergeable;
 import com.alee.painter.decoration.IDecoration;
-import com.alee.painter.decoration.IShapedElement;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.Serializable;
 
 /**
- * Interface for any custom shadow effects.
+ * This interface is a base for any custom shadow.
+ * It exists exclusively to provide custom-shaped elements shadow painting algorithms.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <D> decoration type
  * @param <I> shadow type
  * @author Mikle Garin
  */
-public interface IShadow<C extends JComponent, D extends IDecoration<C, D>, I extends IShadow<C, D, I>>
-        extends IShapedElement<C, D, I>, Identifiable, Overwriting, Cloneable, Serializable
+
+public interface IShadow<E extends JComponent, D extends IDecoration<E, D>, I extends IShadow<E, D, I>>
+        extends Serializable, Cloneable, Mergeable<I>, Identifiable
 {
     /**
      * Returns shadow type.
@@ -50,4 +52,15 @@ public interface IShadow<C extends JComponent, D extends IDecoration<C, D>, I ex
      * @return shadow width
      */
     public int getWidth ();
+
+    /**
+     * Paints shadow for the specified shape.
+     *
+     * @param g2d    graphics context
+     * @param bounds painting bounds
+     * @param c      painted component
+     * @param d      painted decoration state
+     * @param shape  background shape
+     */
+    public void paint ( Graphics2D g2d, Rectangle bounds, E c, D d, Shape shape );
 }

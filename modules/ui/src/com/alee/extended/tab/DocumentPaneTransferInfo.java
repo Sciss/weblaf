@@ -3,29 +3,27 @@ package com.alee.extended.tab;
 import java.io.Serializable;
 
 /**
- * Class containing information about {@link WebDocumentPane} drag operation.
+ * Class containing information about {@link com.alee.extended.tab.WebDocumentPane} drag operation.
  *
  * @author nsofronov
- * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
- * @see WebDocumentPane
  */
+
 public class DocumentPaneTransferInfo implements Serializable
 {
     /**
-     * {@link WebDocumentPane} unique ID.
+     * {@link com.alee.extended.tab.WebDocumentPane} unique ID.
      */
     protected final String documentPaneId;
 
     /**
-     * Whether or not source {@link WebDocumentPane} allows drag between panes.
+     * Whether or not source {@link com.alee.extended.tab.WebDocumentPane} allows drag between panes.
      */
     protected final Boolean dragBetweenPanesEnabled;
 
     /**
      * Constructs new drag operation information.
      *
-     * @param documentPane source {@link WebDocumentPane}
+     * @param documentPane source {@link com.alee.extended.tab.WebDocumentPane}
      */
     public DocumentPaneTransferInfo ( final WebDocumentPane documentPane )
     {
@@ -34,9 +32,9 @@ public class DocumentPaneTransferInfo implements Serializable
     }
 
     /**
-     * Returns {@link WebDocumentPane} unique identifier.
+     * Returns {@link com.alee.extended.tab.WebDocumentPane} unique ID.
      *
-     * @return {@link WebDocumentPane} unique identifier
+     * @return {@link com.alee.extended.tab.WebDocumentPane} unique ID
      */
     public String getDocumentPaneId ()
     {
@@ -44,9 +42,9 @@ public class DocumentPaneTransferInfo implements Serializable
     }
 
     /**
-     * Returns whether or not source {@link WebDocumentPane} allows drag between panes.
+     * Returns whether or not source {@link com.alee.extended.tab.WebDocumentPane} allows drag between panes.
      *
-     * @return true if source {@link WebDocumentPane} allows drag between panes, false otherwise
+     * @return true if source {@link com.alee.extended.tab.WebDocumentPane} allows drag between panes, false otherwise
      */
     public Boolean getDragBetweenPanesEnabled ()
     {

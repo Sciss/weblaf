@@ -4,16 +4,13 @@ import javax.swing.plaf.basic.BasicTextUI;
 import javax.swing.text.JTextComponent;
 
 /**
- * Base interface for {@link JTextComponent} painters.
+ * Base interface for text area component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IAbstractTextAreaPainter<C extends JTextComponent, U extends BasicTextUI> extends IAbstractTextEditorPainter<C, U>
+public interface IAbstractTextAreaPainter<E extends JTextComponent, U extends BasicTextUI> extends IAbstractTextEditorPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

@@ -1,23 +1,14 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.laf.radiobutton.WebRadioButton -->
 
-    <!-- Radio button -->
+    <!-- Tristate checkbox -->
     <style type="radiobutton">
+        <component>
+            <foreground>255,255,255,240</foreground>
+        </component>
         <painter>
-            <decorations>
-                <decoration>
-                    <ButtonLayout>
-                        <SimpleButtonIcon constraints="icon" />
-                        <ButtonText constraints="text" color="245,245,245" />
-                    </ButtonLayout>
-                </decoration>
-                <decoration states="disabled">
-                    <ButtonLayout>
-                        <ButtonText color="180,180,180" />
-                    </ButtonLayout>
-                </decoration>
-            </decorations>
+            <selectedForeground>255,255,255,240</selectedForeground>
 
             <!-- Radio state painter -->
             <checkStatePainter>
@@ -31,8 +22,8 @@
                             <color>black</color>
                         </GradientBackground>
                     </decoration>
-                    <decoration states="checked">
-                        <RadioIcon padding="2" leftColor="255,255,255,225" rightColor="255,255,255,235" />
+                    <decoration states="selected">
+                        <RadioIcon leftColor="255,255,255,225" rightColor="255,255,255,235" />
                     </decoration>
                     <decoration states="focused">
                         <LineBorder color="black" />
@@ -40,51 +31,17 @@
                     <decoration states="disabled">
                         <WebShadow type="outer" opacity="0" />
                         <LineBorder color="68,72,74" />
-                        <ColorBackground color="80,80,80" />
+                        <GradientBackground type="radial" from="0.5,0.5" to="2,0.5">
+                            <color>111,115,117</color>
+                            <color>77,81,83</color>
+                        </GradientBackground>
                     </decoration>
-                    <decoration states="disabled,checked">
-                        <RadioIcon padding="2" leftColor="120,120,120" rightColor="130,130,130" />
+                    <decoration states="disabled,selected">
+                        <RadioIcon leftColor="120,120,120" rightColor="130,130,130" />
                     </decoration>
                 </decorations>
             </checkStatePainter>
 
-        </painter>
-    </style>
-
-    <!-- Radio button supporting styled text -->
-    <style type="radiobutton" id="styled">
-        <painter>
-            <decorations>
-                <decoration>
-                    <ButtonLayout>
-                        <StyledButtonText constraints="text" color="245,245,245" />
-                    </ButtonLayout>
-                </decoration>
-                <decoration states="disabled">
-                    <ButtonLayout>
-                        <StyledButtonText color="180,180,180" ignoreStyleColors="true" />
-                    </ButtonLayout>
-                </decoration>
-            </decorations>
-        </painter>
-    </style>
-
-    <!-- Link-like radio button -->
-    <style type="radiobutton" id="link" extends="styled">
-        <painter>
-            <decorations>
-                <decoration cursor="hand" />
-                <decoration states="hover">
-                    <ButtonLayout>
-                        <StyledButtonText globalStyle="u" />
-                    </ButtonLayout>
-                </decoration>
-                <decoration states="disabled">
-                    <ButtonLayout>
-                        <StyledButtonText globalStyle="" />
-                    </ButtonLayout>
-                </decoration>
-            </decorations>
         </painter>
     </style>
 

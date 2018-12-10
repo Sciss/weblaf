@@ -21,7 +21,7 @@ import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.api.jdk.Consumer;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -29,12 +29,11 @@ import javax.swing.plaf.basic.BasicDesktopIconUI;
 import java.awt.*;
 
 /**
- * Custom UI for {@link JInternalFrame.JDesktopIcon} component.
- *
  * @author Mikle Garin
  * @author Alexandr Zernov
  */
-public class WebDesktopIconUI extends BasicDesktopIconUI implements ShapeSupport, MarginSupport, PaddingSupport
+
+public class WebDesktopIconUI extends BasicDesktopIconUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -43,17 +42,29 @@ public class WebDesktopIconUI extends BasicDesktopIconUI implements ShapeSupport
     protected IDesktopIconPainter painter;
 
     /**
-     * Returns an instance of the {@link WebDesktopIconUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Runtime variables.
+     */
+    protected Insets margin = null;
+    protected Insets padding = null;
+
+    /**
+     * Returns an instance of the WebDesktopIconUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebDesktopIconUI}
+     * @return instance of the WebDesktopIconUI
      */
+    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebDesktopIconUI ();
     }
 
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
@@ -63,6 +74,11 @@ public class WebDesktopIconUI extends BasicDesktopIconUI implements ShapeSupport
         StyleManager.installSkin ( desktopIcon );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -85,87 +101,47 @@ public class WebDesktopIconUI extends BasicDesktopIconUI implements ShapeSupport
     }
 
     @Override
-    protected void installComponents ()
+    public StyleId getStyleId ()
     {
-        iconPane = new WebInternalFrameTitlePane ( desktopIcon, frame );
-        desktopIcon.setLayout ( new BorderLayout () );
-        desktopIcon.add ( iconPane, BorderLayout.CENTER );
+        return StyleManager.getStyleId ( desktopIcon );
     }
 
     @Override
-    protected void uninstallComponents ()
+    public StyleId setStyleId ( final StyleId id )
     {
-        desktopIcon.remove ( iconPane );
-        desktopIcon.setLayout ( null );
-        iconPane = null;
+        return StyleManager.setStyleId ( desktopIcon, id );
     }
 
     @Override
-    protected void installListeners ()
-    {
-        // Installing default listeners
-        super.installListeners ();
-
-        // Instaling custom listeners
-        if ( iconPane instanceof WebInternalFrameTitlePane )
-        {
-            ( ( WebInternalFrameTitlePane ) iconPane ).install ();
-        }
-    }
-
-    @Override
-    protected void uninstallListeners ()
-    {
-        // Uninstaling custom listeners
-        if ( iconPane instanceof WebInternalFrameTitlePane )
-        {
-            ( ( WebInternalFrameTitlePane ) iconPane ).uninstall ();
-        }
-
-        // Uninstalling default listeners
-        super.uninstallListeners ();
-    }
-
-    @Override
-    public Shape getShape ()
+    public Shape provideShape ()
     {
         return PainterSupport.getShape ( desktopIcon, painter );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return PainterSupport.isShapeDetectionEnabled ( desktopIcon, painter );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        PainterSupport.setShapeDetectionEnabled ( desktopIcon, painter, enabled );
-    }
-
-    @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( desktopIcon );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( desktopIcon, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( desktopIcon );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( desktopIcon, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -175,7 +151,7 @@ public class WebDesktopIconUI extends BasicDesktopIconUI implements ShapeSupport
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -186,10 +162,10 @@ public class WebDesktopIconUI extends BasicDesktopIconUI implements ShapeSupport
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( desktopIcon, new Consumer<IDesktopIconPainter> ()
+        PainterSupport.setPainter ( desktopIcon, new DataRunnable<IDesktopIconPainter> ()
         {
             @Override
-            public void accept ( final IDesktopIconPainter newPainter )
+            public void run ( final IDesktopIconPainter newPainter )
             {
                 WebDesktopIconUI.this.painter = newPainter;
             }
@@ -197,21 +173,11 @@ public class WebDesktopIconUI extends BasicDesktopIconUI implements ShapeSupport
     }
 
     @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
+    protected void installComponents ()
     {
-        return PainterSupport.contains ( c, this, painter, x, y );
-    }
-
-    @Override
-    public int getBaseline ( final JComponent c, final int width, final int height )
-    {
-        return PainterSupport.getBaseline ( c, this, painter, width, height );
-    }
-
-    @Override
-    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
-    {
-        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+        desktopIcon.setLayout ( new BorderLayout () );
+        iconPane = new WebInternalFrameTitlePane ( desktopIcon, frame );
+        desktopIcon.add ( iconPane, BorderLayout.CENTER );
     }
 
     @Override
@@ -219,7 +185,7 @@ public class WebDesktopIconUI extends BasicDesktopIconUI implements ShapeSupport
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
     }
 

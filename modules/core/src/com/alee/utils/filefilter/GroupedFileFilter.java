@@ -17,8 +17,6 @@
 
 package com.alee.utils.filefilter;
 
-import com.alee.api.ui.RenderingParameters;
-
 import javax.swing.*;
 import java.io.File;
 import java.io.FileFilter;
@@ -97,9 +95,9 @@ public class GroupedFileFilter extends AbstractFileFilter
     }
 
     @Override
-    public Icon getIcon ( final RenderingParameters parameters )
+    public ImageIcon getIcon ()
     {
-        return defaultFilter != null ? defaultFilter.getIcon ( parameters ) : null;
+        return defaultFilter != null ? defaultFilter.getIcon () : null;
     }
 
     @Override

@@ -22,16 +22,9 @@ package com.alee.utils;
  *
  * @author Mikle Garin
  */
+
 public final class ThreadUtils
 {
-    /**
-     * Private constructor to avoid instantiation.
-     */
-    private ThreadUtils ()
-    {
-        throw new UtilityException ( "Utility classes are not meant to be instantiated" );
-    }
-
     /**
      * Causes calling thread to sleep and ignores thrown InterruptedException.
      *
@@ -43,7 +36,7 @@ public final class ThreadUtils
         {
             Thread.sleep ( millis );
         }
-        catch ( final InterruptedException ignored )
+        catch ( final InterruptedException e )
         {
             //
         }

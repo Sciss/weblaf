@@ -17,22 +17,43 @@
 
 package com.alee.laf.table;
 
+import com.alee.managers.language.data.TooltipWay;
 import com.alee.managers.tooltip.AbstractToolTipProvider;
-import com.alee.managers.tooltip.TooltipWay;
 
-import javax.swing.*;
+import java.awt.*;
 
 /**
- * Abstract WebLaF tooltip provider for {@link JTable} component.
+ * Abstract WebLaF tooltip provider for WebTable component.
  *
- * @param <V> cell value type
  * @author Mikle Garin
  */
-public abstract class TableToolTipProvider<V> extends AbstractToolTipProvider<V, JTable, TableCellArea<V, JTable>>
+
+public abstract class TableToolTipProvider extends AbstractToolTipProvider<WebTable>
 {
     @Override
-    public TooltipWay getDirection ( final JTable component, final V value, final TableCellArea<V, JTable> area )
+    public Rectangle getSourceBounds ( final WebTable table, final Object value, final int index, final int column,
+                                       final boolean isSelected )
+    {
+        final Rectangle bounds = table.getCellRect ( index, column, false );
+        return bounds.intersection ( table.getVisibleRect () );
+    }
+
+    @Override
+    public TooltipWay getDirection ( final WebTable component, final Object value, final int index, final int column,
+                                     final boolean isSelected )
     {
         return TooltipWay.down;
+    }
+
+    @Override
+    protected Object getValue ( final WebTable table, final int index, final int column )
+    {
+        return table.getValueAt ( index, column );
+    }
+
+    @Override
+    protected boolean isSelected ( final WebTable table, final int index, final int column )
+    {
+        return table.isCellSelected ( index, column );
     }
 }

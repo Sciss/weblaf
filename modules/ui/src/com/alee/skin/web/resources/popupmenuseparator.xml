@@ -1,19 +1,18 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.laf.menu.WebPopupMenuSeparator -->
 
     <!-- Popup menu separator -->
-    <style type="popupmenuseparator">
+    <style type="popupmenuseparator" margin="4,5,4,5">
+        <component>
+            <opaque>false</opaque>
+        </component>
         <painter>
-            <decorations>
-                <decoration>
-                    <SeparatorStripes padding="4,5,4,5">
-                        <Stripe>
-                            <color>220,220,220</color>
-                        </Stripe>
-                    </SeparatorStripes>
-                </decoration>
-            </decorations>
+            <lines>
+                <line>
+                    <color>220,220,220</color>
+                </line>
+            </lines>
         </painter>
     </style>
 

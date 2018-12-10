@@ -21,20 +21,20 @@ import com.alee.api.Identifiable;
 import com.alee.utils.ReflectUtils;
 import com.alee.utils.TextUtils;
 
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreePath;
+import java.io.Serializable;
+
 /**
- * Custom {@link javax.swing.tree.MutableTreeNode} implementation for {@link com.alee.extended.tree.WebExTree}.
- * This node always contains an identifier unique within its tree component model.
+ * This class provides a custom node with a specific ID.
+ * This node is used in various WebLookAndFeel tree components to properly save selections and expansion states.
+ * This node might also be used for some advanced cases like asynchronous tree.
  *
- * @param <N> tree node type
- * @param <T> stored object type
  * @author Mikle Garin
  */
-public class UniqueNode<N extends UniqueNode<N, T>, T> extends WebTreeNode<N, T> implements Identifiable
-{
-    /**
-     * todo 1. Make a better identifier initialization and ensure it doesn't break things
-     */
 
+public class UniqueNode extends DefaultMutableTreeNode implements Identifiable, Serializable
+{
     /**
      * Prefix for node ID.
      */
@@ -57,9 +57,9 @@ public class UniqueNode<N extends UniqueNode<N, T>, T> extends WebTreeNode<N, T>
     /**
      * Costructs a node with a specified user object.
      *
-     * @param userObject optional node {@link Object}
+     * @param userObject custom user object
      */
-    public UniqueNode ( final T userObject )
+    public UniqueNode ( final Object userObject )
     {
         super ( userObject );
         setId ();
@@ -68,10 +68,10 @@ public class UniqueNode<N extends UniqueNode<N, T>, T> extends WebTreeNode<N, T>
     /**
      * Costructs a node with a specified user object and node ID.
      *
-     * @param id         unique node identifier
-     * @param userObject optional node {@link Object}
+     * @param id         node ID
+     * @param userObject custom user object
      */
-    public UniqueNode ( final String id, final T userObject )
+    public UniqueNode ( final String id, final Object userObject )
     {
         super ( userObject );
         setId ( id );
@@ -108,6 +108,22 @@ public class UniqueNode<N extends UniqueNode<N, T>, T> extends WebTreeNode<N, T>
     protected void setId ()
     {
         this.id = TextUtils.generateId ( ID_PREFIX );
+    }
+
+    @Override
+    public UniqueNode getParent ()
+    {
+        return ( UniqueNode ) super.getParent ();
+    }
+
+    /**
+     * Returns TreePath for this node.
+     *
+     * @return TreePath for this node
+     */
+    public TreePath getTreePath ()
+    {
+        return new TreePath ( getPath () );
     }
 
     /**

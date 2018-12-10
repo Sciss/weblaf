@@ -24,19 +24,17 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Simple {@link ScrollBarPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WScrollBarUI}.
+ * Simple ScrollBarPainter adapter class.
+ * It is used to install simple non-specific painters into WebScrollBarUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Mikle Garin
  */
 
-public final class AdaptiveScrollBarPainter<C extends JScrollBar, U extends WScrollBarUI> extends AdaptivePainter<C, U>
-        implements IScrollBarPainter<C, U>
+public final class AdaptiveScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> extends AdaptivePainter<E, U>
+        implements IScrollBarPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveScrollBarPainter} for the specified painter.
+     * Constructs new AdaptiveScrollBarPainter for the specified painter.
      *
      * @param painter painter to adapt
      */

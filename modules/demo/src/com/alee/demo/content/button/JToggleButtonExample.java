@@ -17,12 +17,9 @@
 
 package com.alee.demo.content.button;
 
-import com.alee.demo.api.example.*;
-import com.alee.demo.api.example.wiki.OracleWikiPage;
-import com.alee.demo.api.example.wiki.WikiPage;
+import com.alee.demo.api.*;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.grouping.GroupPane;
-import com.alee.managers.language.UILanguageManager;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
@@ -32,7 +29,8 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-public class JToggleButtonExample extends AbstractStylePreviewExample
+
+public class JToggleButtonExample extends AbstractExample
 {
     @Override
     public String getId ()
@@ -53,20 +51,13 @@ public class JToggleButtonExample extends AbstractStylePreviewExample
     }
 
     @Override
-    public WikiPage getWikiPage ()
-    {
-        return new OracleWikiPage ( "How to Use Toggle Buttons", "button" );
-    }
-
-    @Override
     protected List<Preview> createPreviews ()
     {
-        return CollectionUtils.<Preview>asList (
-                new TextToggleButton ( StyleId.togglebutton ),
-                new TextToggleButton ( StyleId.togglebuttonHover ),
-                new IconToggleButton ( StyleId.togglebuttonIcon ),
-                new IconToggleButton ( StyleId.togglebuttonIconHover )
-        );
+        final TextToggleButton e1 = new TextToggleButton ( StyleId.togglebutton );
+        final TextToggleButton e2 = new TextToggleButton ( StyleId.togglebuttonHover );
+        final IconToggleButton e3 = new IconToggleButton ( StyleId.togglebuttonIcon );
+        final IconToggleButton e4 = new IconToggleButton ( StyleId.togglebuttonIconHover );
+        return CollectionUtils.<Preview>asList ( e1, e2, e3, e4 );
     }
 
     /**
@@ -85,29 +76,21 @@ public class JToggleButtonExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
-            final JToggleButton basic = new JToggleButton ( "", true );
-            basic.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
-            UILanguageManager.registerComponent ( basic, getPreviewLanguagePrefix () + "basic" );
+            final JToggleButton button = new JToggleButton ( "Click me", true );
+            button.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
 
-            final JToggleButton group1 = new JToggleButton ( "", true );
-            group1.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
-            UILanguageManager.registerComponent ( group1, getPreviewLanguagePrefix () + "group1" );
+            final JToggleButton first = new JToggleButton ( "First", true );
+            first.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
 
-            final JToggleButton group2 = new JToggleButton ();
-            group2.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
-            UILanguageManager.registerComponent ( group2, getPreviewLanguagePrefix () + "group2" );
+            final JToggleButton second = new JToggleButton ( "Second" );
+            second.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
 
-            final JToggleButton group3 = new JToggleButton ();
-            group3.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
-            UILanguageManager.registerComponent ( group3, getPreviewLanguagePrefix () + "group3" );
-
-            final JToggleButton icon = new JToggleButton ( WebLookAndFeel.getIcon ( 16 ) );
+            final JToggleButton icon = new JToggleButton ( "With icon", WebLookAndFeel.getIcon ( 16 ) );
             icon.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
-            UILanguageManager.registerComponent ( icon, getPreviewLanguagePrefix () + "icon" );
 
-            return CollectionUtils.asList ( basic, new GroupPane ( group1, group2, group3 ), icon );
+            return CollectionUtils.asList ( button, new GroupPane ( first, second ), icon );
         }
     }
 
@@ -127,7 +110,7 @@ public class JToggleButtonExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final JToggleButton button = new JToggleButton ( WebLookAndFeel.getIcon ( 16 ) );
             button.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );

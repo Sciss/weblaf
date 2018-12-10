@@ -17,7 +17,7 @@
 
 package com.alee.utils;
 
-import com.alee.api.jdk.Objects;
+import com.alee.utils.collection.DoubleMap;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -25,61 +25,30 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * This class provides a set of utilities to work with various {@link Map} implementations.
+ * This class provides a set of utilities to work with various maps.
  *
  * @author Mikle Garin
  */
+
 public final class MapUtils
 {
     /**
-     * Private constructor to avoid instantiation.
-     */
-    private MapUtils ()
-    {
-        throw new UtilityException ( "Utility classes are not meant to be instantiated" );
-    }
-
-    /**
-     * Returns whether specified {@link Map} is empty or not.
+     * Returns whether specified map is empty or not.
      *
-     * @param map {@link Map} to process
-     * @return {@code true} if specified {@link Map} is empty, {@code false} otherwise
+     * @param map map to process
+     * @return true if specified map is empty, false otherwise
      */
-    public static boolean isEmpty ( final Map map )
+    public static boolean isEmpty ( final Map<?, ?> map )
     {
         return map == null || map.isEmpty ();
     }
 
     /**
-     * Returns whether specified {@link Map} is empty or not.
-     *
-     * @param map {@link Map} to process
-     * @return {@code true} if specified {@link Map} is not empty, {@code false} otherwise
-     */
-    public static boolean notEmpty ( final Map map )
-    {
-        return map != null && !map.isEmpty ();
-    }
-
-    /**
-     * Returns non-{@code null} {@link Map} that is either specified {@code map} or new empty {@link HashMap}.
-     *
-     * @param map {@link Map}
-     * @param <K> map key type
-     * @param <V> map value type
-     * @return non-{@code null} {@link Map} that is either specified {@code map} or new empty {@link HashMap}
-     */
-    public static <K, V> Map<K, V> nonNull ( final Map<K, V> map )
-    {
-        return map != null ? map : new HashMap ( 0 );
-    }
-
-    /**
      * Returns copied Map.
      *
-     * @param map map to copy
-     * @param <K> map key type
-     * @param <V> map value type
+     * @param map Map to copy
+     * @param <K> Map key type
+     * @param <V> Map value type
      * @return copied Map
      */
     public static <K, V> HashMap<K, V> copyMap ( final Map<K, V> map )
@@ -114,16 +83,16 @@ public final class MapUtils
     }
 
     /**
-     * Returns newly created HashMap with the specified map data.
+     * Returns copied DoubleMap.
      *
-     * @param data data map
-     * @param <K>  key type
-     * @param <V>  value type
-     * @return newly created HashMap
+     * @param map DoubleMap to copy
+     * @param <K> DoubleMap key type
+     * @param <V> DoubleMap value type
+     * @return copied DoubleMap
      */
-    public static <K, V> HashMap<K, V> newHashMap ( final Map<K, V> data )
+    public static <K, V> DoubleMap<K, V> copyDoubleMap ( final DoubleMap<K, V> map )
     {
-        return new HashMap<K, V> ( data );
+        return new DoubleMap<K, V> ( map );
     }
 
     /**
@@ -145,7 +114,7 @@ public final class MapUtils
     /**
      * Returns newly created HashMap with the specified key and value pairs added.
      *
-     * @param objects mixed keys and values
+     * @param objects key-value pairs
      * @param <K>     key type
      * @param <V>     value type
      * @return newly created HashMap
@@ -236,7 +205,7 @@ public final class MapUtils
         while ( iterator.hasNext () )
         {
             final Map.Entry<K, V> entry = iterator.next ();
-            if ( Objects.equals ( entry.getValue (), value ) )
+            if ( CompareUtils.equals ( entry.getValue (), value ) )
             {
                 iterator.remove ();
             }

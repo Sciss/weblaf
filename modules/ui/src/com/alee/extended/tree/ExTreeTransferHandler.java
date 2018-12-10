@@ -20,18 +20,17 @@ package com.alee.extended.tree;
 import com.alee.laf.tree.UniqueNode;
 
 /**
- * Custom {@link javax.swing.TransferHandler} implementation for {@link WebExTree} that provides a quick and convenient way to implement
- * drag and drop for {@link UniqueNode}s within the tree or between different trees using the same type of {@link UniqueNode}s.
+ * Custom TransferHandler for WebAsyncTree that provides a quick and convenient way to implement nodes DnD.
  *
- * @param <N> {@link UniqueNode} type
- * @param <T> {@link WebExTree} type
- * @param <M> {@link ExTreeModel} type
+ * @param <N> nodes type
+ * @param <T> tree type
  * @author Mikle Garin
  */
-public abstract class ExTreeTransferHandler<N extends UniqueNode, T extends WebExTree<N>, M extends ExTreeModel<N>>
-        extends AbstractTreeTransferHandler<N, T, M>
+
+public abstract class ExTreeTransferHandler<N extends UniqueNode, T extends WebExTree<N>>
+        extends AbstractTreeTransferHandler<N, T, ExTreeModel<N>>
 {
     /**
-     * This handler uses the same methods as {@link AbstractTreeTransferHandler}.
+     * This handler uses the same methods as {@link com.alee.extended.tree.AbstractTreeTransferHandler}.
      */
 }

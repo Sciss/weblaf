@@ -8,21 +8,21 @@ import javax.swing.tree.TreePath;
 import java.util.Hashtable;
 
 /**
- * Base interface for {@link JTree} component painters.
+ * Base interface for JTree component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> UI type
  * @author Alexandr Zernov
  */
 
-public interface ITreePainter<C extends JTree, U extends WTreeUI> extends SpecificPainter<C, U>
+public interface ITreePainter<E extends JTree, U extends WebTreeUI> extends SpecificPainter<E, U>
 {
     /**
-     * Returns whether or not row hover decoration is supported by this tree painter.
+     * Returns whether or not hover node decoration is supported by this tree painter.
      *
-     * @return {@code true} if row hover decoration is supported by this tree painter, {@code false} otherwise
+     * @return true if hover node decoration is supported by this tree painter, false otherwise
      */
-    public boolean isRowHoverDecorationSupported ();
+    public boolean isHoverDecorationSupported ();
 
     /**
      * Prepares painter to pain tree.

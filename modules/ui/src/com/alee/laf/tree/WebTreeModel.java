@@ -17,32 +17,27 @@
 
 package com.alee.laf.tree;
 
-import com.alee.utils.CollectionUtils;
-import com.alee.utils.compare.IntegerComparator;
-
+import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.MutableTreeNode;
-import javax.swing.tree.TreeNode;
-import java.util.ArrayList;
-import java.util.HashMap;
+import javax.swing.tree.TreePath;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Swing {@link DefaultTreeModel} extension.
- * This model works with specific known node type and contains additional methods to affect multiple model elements at once.
+ * Extended Swing DefaultTreeModel.
+ * This model contains multiply elements add/remove methods and works with typed elements.
  *
- * @param <N> node type
  * @author Mikle Garin
  */
-public class WebTreeModel<N extends MutableTreeNode> extends DefaultTreeModel
+
+public class WebTreeModel<E extends DefaultMutableTreeNode> extends DefaultTreeModel
 {
     /**
      * Constructs tree model with a specified node as root.
      *
      * @param root TreeNode object that is the root of the tree
      */
-    public WebTreeModel ( final N root )
+    public WebTreeModel ( final E root )
     {
         super ( root );
     }
@@ -53,7 +48,7 @@ public class WebTreeModel<N extends MutableTreeNode> extends DefaultTreeModel
      * @param root               TreeNode object that is the root of the tree
      * @param asksAllowsChildren false if any node can have children, true if each node is asked to see if it can have children
      */
-    public WebTreeModel ( final N root, final boolean asksAllowsChildren )
+    public WebTreeModel ( final E root, final boolean asksAllowsChildren )
     {
         super ( root, asksAllowsChildren );
     }
@@ -63,19 +58,9 @@ public class WebTreeModel<N extends MutableTreeNode> extends DefaultTreeModel
      *
      * @return root node
      */
-    public N getRootNode ()
+    public E getRootNode ()
     {
-        return ( N ) getRoot ();
-    }
-
-    @Override
-    public void insertNodeInto ( final MutableTreeNode child, final MutableTreeNode parent, final int index )
-    {
-        // Inserting node
-        parent.insert ( child, index );
-
-        // Firing node addition
-        nodesWereInserted ( parent, new int[]{ index } );
+        return ( E ) getRoot ();
     }
 
     /**
@@ -85,23 +70,20 @@ public class WebTreeModel<N extends MutableTreeNode> extends DefaultTreeModel
      * @param parent   parent node
      * @param index    insert index
      */
-    public void insertNodesInto ( final List<N> children, final N parent, final int index )
+    public void insertNodesInto ( final List<E> children, final E parent, final int index )
     {
-        final int count = children.size ();
-        if ( count > 0 )
+        for ( int i = children.size () - 1; i >= 0; i-- )
         {
-            // Inserting nodes
-            final int[] indices = new int[ count ];
-            for ( int i = index; i < index + count; i++ )
-            {
-                final int sourceIndex = i - index;
-                parent.insert ( children.get ( sourceIndex ), i );
-                indices[ sourceIndex ] = i;
-            }
-
-            // Firing nodes addition
-            nodesWereInserted ( parent, indices );
+            parent.insert ( children.get ( i ), index );
         }
+
+        final int[] indices = new int[ children.size () ];
+        for ( int i = 0; i < children.size (); i++ )
+        {
+            indices[ i ] = index + i;
+        }
+
+        nodesWereInserted ( parent, indices );
     }
 
     /**
@@ -111,63 +93,65 @@ public class WebTreeModel<N extends MutableTreeNode> extends DefaultTreeModel
      * @param parent   parent node
      * @param index    insert index
      */
-    public void insertNodesInto ( final N[] children, final N parent, final int index )
+    public void insertNodesInto ( final E[] children, final E parent, final int index )
     {
-        final int count = children.length;
-        if ( count > 0 )
+        for ( int i = children.length - 1; i >= 0; i-- )
         {
-            // Inserting nodes
-            final int[] indices = new int[ count ];
-            for ( int i = index; i < index + count; i++ )
-            {
-                final int sourceIndex = i - index;
-                parent.insert ( children[ sourceIndex ], i );
-                indices[ sourceIndex ] = i;
-            }
-
-            // Firing nodes addition
-            nodesWereInserted ( parent, indices );
+            parent.insert ( children[ i ], index );
         }
+
+        final int[] indices = new int[ children.length ];
+        for ( int i = 0; i < children.length; i++ )
+        {
+            indices[ i ] = index + i;
+        }
+
+        nodesWereInserted ( parent, indices );
     }
 
-    @Override
-    public void removeNodeFromParent ( final MutableTreeNode node )
+    /**
+     * Removes specified nodes from tree structure.
+     *
+     * @param nodes nodes to remove
+     */
+    public void removeNodesFromParent ( final List<E> nodes )
     {
-        // Removing nodes and collecting information on the operation
-        final N parent = ( N ) node.getParent ();
-        if ( parent == null )
-        {
-            throw new IllegalArgumentException ( "Removed node does not have a parent" );
-        }
-        final int index = parent.getIndex ( node );
-        parent.remove ( index );
+        // todo Optimize delete process
 
-        // Firing nodes removal
-        nodesWereRemoved ( parent, new int[]{ index }, new Object[]{ node } );
+        //        final Map<E, List<Integer>> removedNodes = new HashMap<E, List<Integer>> ();
+        //        for ( final E node : nodes )
+        //        {
+        //            final E parent = ( E ) node.getParent ();
+        //            final int index = parent.getIndex ( node );
+        //
+        //            List<Integer> indices = removedNodes.get ( parent );
+        //            indices
+        //        }
+        //
+        //        final int[] indices = new int[ children.length ];
+        //        for ( int i = 0; i < children.length; i++ )
+        //        {
+        //            indices[ i ] = index + i;
+        //        }
+        //
+        //        nodesWereRemoved ( parent, childIndex, removedArray );
+
+        for ( final E node : nodes )
+        {
+            removeNodeFromParent ( node );
+        }
     }
 
     /**
      * Removes all child nodes under the specified node from tree structure.
      *
-     * @param parent node to remove children from
+     * @param node node to remove children from
      */
-    public void removeNodesFromParent ( final N parent )
+    public void removeNodesFromParent ( final E node )
     {
-        final int count = parent.getChildCount ();
-        if ( count > 0 )
+        for ( int i = 0; i < node.getChildCount (); i++ )
         {
-            // Removing nodes and collecting information on the operation
-            final int[] indices = new int[ count ];
-            final Object[] removed = new Object[ count ];
-            for ( int index = 0; index < count; index++ )
-            {
-                indices[ index ] = index;
-                removed[ index ] = parent.getChildAt ( index );
-                parent.remove ( index );
-            }
-
-            // Firing nodes removal
-            nodesWereRemoved ( parent, indices, removed );
+            removeNodeFromParent ( ( MutableTreeNode ) node.getChildAt ( i ) );
         }
     }
 
@@ -176,60 +160,21 @@ public class WebTreeModel<N extends MutableTreeNode> extends DefaultTreeModel
      *
      * @param nodes nodes to remove
      */
-    public void removeNodesFromParent ( final N[] nodes )
+    public void removeNodesFromParent ( final E[] nodes )
     {
-        removeNodesFromParent ( CollectionUtils.toList ( nodes ) );
+        // todo Optimize delete process
+        for ( final E node : nodes )
+        {
+            removeNodeFromParent ( node );
+        }
     }
 
-    /**
-     * Removes specified nodes from tree structure.
-     *
-     * @param nodes nodes to remove
-     */
-    public void removeNodesFromParent ( final List<N> nodes )
+    @Override
+    public void valueForPathChanged ( final TreePath path, final Object newValue )
     {
-        if ( nodes.size () > 0 )
-        {
-            // Collecting nodes for each parent
-            final Map<N, List<Integer>> mappedNodes = new HashMap<N, List<Integer>> ();
-            for ( final N node : nodes )
-            {
-                // Empty parents are ignored as they might have been removed just now
-                final N parent = ( N ) node.getParent ();
-                if ( parent != null )
-                {
-                    List<Integer> parentNodes = mappedNodes.get ( parent );
-                    if ( parentNodes == null )
-                    {
-                        parentNodes = new ArrayList<Integer> ( nodes.size () );
-                        mappedNodes.put ( parent, parentNodes );
-                    }
-                    parentNodes.add ( parent.getIndex ( node ) );
-                }
-            }
-
-            // Removing mapped nodes
-            for ( final Map.Entry<N, List<Integer>> parentEntry : mappedNodes.entrySet () )
-            {
-                // Retrieving parent and sorted indices of nodes to remove
-                final N parent = parentEntry.getKey ();
-                final List<Integer> removedIndices = CollectionUtils.sort ( parentEntry.getValue (), IntegerComparator.instance () );
-
-                // Removing nodes from parent
-                final List<N> removedNodes = new ArrayList<N> ( removedIndices.size () );
-                for ( int i = removedIndices.size () - 1; i >= 0; i-- )
-                {
-                    final int index = removedIndices.get ( i );
-                    removedNodes.add ( ( N ) parent.getChildAt ( index ) );
-                    parent.remove ( index );
-                }
-
-                // Firing removal event
-                final int[] indices = CollectionUtils.toIntArray ( removedIndices );
-                final Object[] removed = CollectionUtils.toObjectArray ( removedNodes );
-                nodesWereRemoved ( parent, indices, removed );
-            }
-        }
+        final MutableTreeNode aNode = ( MutableTreeNode ) path.getLastPathComponent ();
+        // aNode.setUserObject ( newValue ); // Hidden to avoid problems
+        nodeChanged ( aNode );
     }
 
     /**
@@ -237,7 +182,7 @@ public class WebTreeModel<N extends MutableTreeNode> extends DefaultTreeModel
      *
      * @param node tree node to be updated
      */
-    public void updateNode ( final N node )
+    public void updateNode ( final E node )
     {
         if ( node != null )
         {
@@ -246,43 +191,11 @@ public class WebTreeModel<N extends MutableTreeNode> extends DefaultTreeModel
     }
 
     /**
-     * Forces tree nodes to be updated.
-     *
-     * @param nodes tree nodes to be updated
-     */
-    public void updateNodes ( final N... nodes )
-    {
-        if ( nodes != null && nodes.length > 0 )
-        {
-            for ( final N node : nodes )
-            {
-                fireTreeNodesChanged ( WebTreeModel.this, getPathToRoot ( node ), null, null );
-            }
-        }
-    }
-
-    /**
-     * Forces tree nodes to be updated.
-     *
-     * @param nodes tree nodes to be updated
-     */
-    public void updateNodes ( final List<N> nodes )
-    {
-        if ( CollectionUtils.notEmpty ( nodes ) )
-        {
-            for ( final N node : nodes )
-            {
-                fireTreeNodesChanged ( WebTreeModel.this, getPathToRoot ( node ), null, null );
-            }
-        }
-    }
-
-    /**
      * Forces tree node to be updated.
      *
      * @param node tree node to be updated
      */
-    public void updateNodeStructure ( final N node )
+    public void updateNodeStructure ( final E node )
     {
         if ( node != null )
         {
@@ -296,7 +209,6 @@ public class WebTreeModel<N extends MutableTreeNode> extends DefaultTreeModel
      */
     public void updateTree ()
     {
-        final TreeNode[] path = TreeUtils.getPath ( getRootNode () );
-        fireTreeStructureChanged ( WebTreeModel.this, path, null, null );
+        fireTreeStructureChanged ( WebTreeModel.this, getRootNode ().getPath (), null, null );
     }
 }

@@ -17,7 +17,6 @@
 
 package com.alee.extended.style;
 
-import com.alee.api.jdk.Objects;
 import com.alee.extended.window.PopOverDirection;
 import com.alee.extended.window.WebPopOver;
 import com.alee.laf.colorchooser.WebColorChooserPanel;
@@ -25,12 +24,12 @@ import com.alee.laf.list.WebList;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.slider.WebSlider;
 import com.alee.managers.hotkey.Hotkey;
-import com.alee.managers.style.ComponentDescriptor;
+import com.alee.managers.log.Log;
 import com.alee.managers.style.StyleId;
-import com.alee.managers.style.StyleManager;
+import com.alee.managers.style.StyleableComponent;
 import com.alee.managers.style.data.ComponentStyleConverter;
+import com.alee.utils.CompareUtils;
 import com.alee.utils.MathUtils;
-import com.alee.utils.collection.ImmutableList;
 import com.alee.utils.xml.ColorConverter;
 import com.alee.utils.xml.InsetsConverter;
 import com.thoughtworks.xstream.converters.basic.FloatConverter;
@@ -38,19 +37,17 @@ import net.htmlparser.jericho.*;
 import org.fife.ui.rsyntaxtextarea.LinkGenerator;
 import org.fife.ui.rsyntaxtextarea.LinkGeneratorResult;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.slf4j.LoggerFactory;
 
-import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.HyperlinkEvent;
-import javax.swing.plaf.ComponentUI;
 import javax.swing.text.BadLocationException;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -63,17 +60,14 @@ public class CodeLinkGenerator implements LinkGenerator
     /**
      * Code constants.
      */
-    private static final ImmutableList<String> propertyNodes = new ImmutableList<String> (
-            ComponentStyleConverter.COMPONENT_NODE,
-            ComponentStyleConverter.UI_NODE,
-            ComponentStyleConverter.PAINTER_NODE
-    );
+    private static final List<String> propertyNodes =
+            Arrays.asList ( ComponentStyleConverter.COMPONENT_NODE, ComponentStyleConverter.UI_NODE, ComponentStyleConverter.PAINTER_NODE );
     private static final String trueString = "true";
     private static final String falseString = "false";
-    private static final ImmutableList<String> booleanContent = new ImmutableList<String> ( trueString, falseString );
-    private static final ImmutableList<String> colorContent = new ImmutableList<String> ( "foreground", "fg", "background", "bg", "color" );
-    private static final ImmutableList<String> insetsContent = new ImmutableList<String> ( "insets", "margin" );
-    private static final ImmutableList<String> opacityContent = new ImmutableList<String> ( "opacity", "transparency" );
+    private static final List<String> booleanContent = Arrays.asList ( trueString, falseString );
+    private static final List<String> colorContent = Arrays.asList ( "foreground", "fg", "background", "bg", "color" );
+    private static final List<String> insetsContent = Arrays.asList ( "insets", "margin" );
+    private static final List<String> opacityContent = Arrays.asList ( "opacity", "transparency" );
 
     /**
      * Data converters.
@@ -108,7 +102,7 @@ public class CodeLinkGenerator implements LinkGenerator
     public LinkGeneratorResult isLinkAtOffset ( final RSyntaxTextArea source, final int pos )
     {
         final String code = source.getText ();
-        if ( src == null || Objects.notEquals ( src, code ) )
+        if ( src == null || !CompareUtils.equals ( src, code ) )
         {
             text = code;
             src = new Source ( code );
@@ -142,7 +136,7 @@ public class CodeLinkGenerator implements LinkGenerator
                     {
                         final Segment content = attribute.getValueSegment ();
                         final String type = element.getAttributeValue ( ComponentStyleConverter.COMPONENT_TYPE_ATTRIBUTE );
-                        final ComponentDescriptor<JComponent, ComponentUI> descriptor = StyleManager.getDescriptor ( type );
+                        final StyleableComponent selectedType = StyleableComponent.valueOf ( type );
 
                         return new LinkGeneratorResult ()
                         {
@@ -155,13 +149,12 @@ public class CodeLinkGenerator implements LinkGenerator
                                     typeChooser.setCloseOnFocusLoss ( true );
                                     typeChooser.setPadding ( 5, 0, 5, 0 );
 
-                                    final List<ComponentDescriptor> types = StyleManager.getDescriptors ();
+                                    final List<StyleableComponent> types = StyleableComponent.list ();
                                     final WebList typesList = new WebList ( types );
                                     typesList.setOpaque ( false );
                                     typesList.setVisibleRowCount ( Math.min ( 10, types.size () ) );
                                     typesList.setSelectOnHover ( true );
-                                    typesList.setSelectedValue ( descriptor );
-
+                                    typesList.setSelectedValue ( selectedType );
                                     final Runnable commitChanges = new Runnable ()
                                     {
                                         @Override
@@ -195,15 +188,15 @@ public class CodeLinkGenerator implements LinkGenerator
                                     final WebScrollPane scrollPane = new WebScrollPane ( StyleId.scrollpanePopup, typesList );
                                     typeChooser.add ( scrollPane );
 
-                                    final int position = ( content.getBegin () + content.getEnd () ) / 2;
-                                    final Rectangle wb = source.getUI ().modelToView ( source, position );
+                                    final Rectangle wb =
+                                            source.getUI ().modelToView ( source, ( content.getBegin () + content.getEnd () ) / 2 );
                                     typeChooser.show ( source, wb.x, wb.y, wb.width, wb.height, PopOverDirection.down );
 
                                     return new HyperlinkEvent ( this, HyperlinkEvent.EventType.EXITED, null );
                                 }
                                 catch ( final BadLocationException e )
                                 {
-                                    LoggerFactory.getLogger ( CodeLinkGenerator.class ).error ( e.toString (), e );
+                                    Log.error ( this, e );
                                     return null;
                                 }
                             }
@@ -229,8 +222,8 @@ public class CodeLinkGenerator implements LinkGenerator
                     @Override
                     public HyperlinkEvent execute ()
                     {
-                        final String str = contentString.equals ( trueString ) ? falseString : trueString;
-                        source.replaceRange ( str, content.getBegin (), content.getEnd () );
+                        source.replaceRange ( contentString.equals ( trueString ) ? falseString : trueString, content.getBegin (),
+                                content.getEnd () );
                         return new HyperlinkEvent ( this, HyperlinkEvent.EventType.EXITED, null );
                     }
 
@@ -243,7 +236,7 @@ public class CodeLinkGenerator implements LinkGenerator
             }
             else
             {
-                if ( contains ( name.toLowerCase ( Locale.ROOT ), colorContent ) )
+                if ( CompareUtils.contains ( name.toLowerCase ( Locale.ROOT ), colorContent ) )
                 {
                     final Color color = ( Color ) colorConverter.fromString ( contentString );
                     if ( color != null || contentString.equals ( ColorConverter.NULL_COLOR ) )
@@ -278,15 +271,15 @@ public class CodeLinkGenerator implements LinkGenerator
                                     } );
                                     colorChooser.add ( colorChooserPanel );
 
-                                    final int position = ( content.getBegin () + content.getEnd () ) / 2;
-                                    final Rectangle wb = source.getUI ().modelToView ( source, position );
+                                    final Rectangle wb =
+                                            source.getUI ().modelToView ( source, ( content.getBegin () + content.getEnd () ) / 2 );
                                     colorChooser.show ( source, wb.x, wb.y, wb.width, wb.height, PopOverDirection.down );
 
                                     return new HyperlinkEvent ( this, HyperlinkEvent.EventType.EXITED, null );
                                 }
                                 catch ( final BadLocationException e )
                                 {
-                                    LoggerFactory.getLogger ( CodeLinkGenerator.class ).error ( e.toString (), e );
+                                    Log.error ( this, e );
                                     return null;
                                 }
                             }
@@ -299,7 +292,7 @@ public class CodeLinkGenerator implements LinkGenerator
                         };
                     }
                 }
-                else if ( contains ( name.toLowerCase ( Locale.ROOT ), opacityContent ) )
+                else if ( CompareUtils.contains ( name.toLowerCase ( Locale.ROOT ), opacityContent ) )
                 {
                     final Float f = ( Float ) floatConverter.fromString ( contentString );
                     if ( f != null )
@@ -337,15 +330,15 @@ public class CodeLinkGenerator implements LinkGenerator
                                     } );
                                     opacityChooser.add ( slider );
 
-                                    final int position = ( content.getBegin () + content.getEnd () ) / 2;
-                                    final Rectangle wb = source.getUI ().modelToView ( source, position );
+                                    final int pos = ( content.getBegin () + content.getEnd () ) / 2;
+                                    final Rectangle wb = source.getUI ().modelToView ( source, pos );
                                     opacityChooser.show ( source, wb.x, wb.y, wb.width, wb.height, PopOverDirection.down );
 
                                     return new HyperlinkEvent ( this, HyperlinkEvent.EventType.EXITED, null );
                                 }
                                 catch ( final BadLocationException e )
                                 {
-                                    LoggerFactory.getLogger ( CodeLinkGenerator.class ).error ( e.toString (), e );
+                                    Log.error ( this, e );
                                     return null;
                                 }
                             }
@@ -358,7 +351,7 @@ public class CodeLinkGenerator implements LinkGenerator
                         };
                     }
                 }
-                else if ( contains ( name.toLowerCase ( Locale.ROOT ), insetsContent ) )
+                else if ( CompareUtils.contains ( name.toLowerCase ( Locale.ROOT ), insetsContent ) )
                 {
                     final Insets insets = ( Insets ) insetsConverter.fromString ( contentString );
                     if ( insets != null )
@@ -386,24 +379,5 @@ public class CodeLinkGenerator implements LinkGenerator
         //        }
 
         return null;
-    }
-
-    /**
-     * Returns whether text contains any of the tokens from the specified list or not.
-     *
-     * @param text   text to look for tokens
-     * @param tokens tokens list
-     * @return true if text contains any of the tokens from the specified list, false otherwise
-     */
-    protected boolean contains ( final String text, final List<String> tokens )
-    {
-        for ( final String token : tokens )
-        {
-            if ( text.contains ( token ) )
-            {
-                return true;
-            }
-        }
-        return false;
     }
 }

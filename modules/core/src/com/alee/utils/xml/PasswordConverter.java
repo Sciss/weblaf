@@ -21,7 +21,7 @@ import com.alee.utils.EncryptionUtils;
 import com.thoughtworks.xstream.converters.basic.StringConverter;
 
 /**
- * Custom XStream converter for serialized passwords.
+ * Custom converter to keep serialized passwords encrypted.
  *
  * @author Mikle Garin
  */
@@ -29,14 +29,14 @@ import com.thoughtworks.xstream.converters.basic.StringConverter;
 public class PasswordConverter extends StringConverter
 {
     @Override
-    public String toString ( final Object obj )
-    {
-        return EncryptionUtils.encrypt ( super.toString ( obj ) );
-    }
-
-    @Override
     public Object fromString ( final String str )
     {
         return EncryptionUtils.decrypt ( ( String ) super.fromString ( str ) );
+    }
+
+    @Override
+    public String toString ( final Object obj )
+    {
+        return EncryptionUtils.encrypt ( super.toString ( obj ) );
     }
 }

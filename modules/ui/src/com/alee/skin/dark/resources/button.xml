@@ -1,10 +1,16 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.laf.button.WebButton -->
 
     <!-- Button -->
     <style type="button" padding="2,4,2,4">
+        <component>
+            <foreground>255,255,255,240</foreground>
+            <horizontalAlignment>0</horizontalAlignment>
+            <verticalAlignment>0</verticalAlignment>
+        </component>
         <painter>
+            <selectedForeground>255,255,255,240</selectedForeground>
             <decorations>
                 <decoration>
                     <WebShape round="3" />
@@ -14,10 +20,6 @@
                         <color>111,115,117</color>
                         <color>77,81,83</color>
                     </GradientBackground>
-                    <ButtonLayout>
-                        <ButtonIcon constraints="icon" />
-                        <ButtonText constraints="text" color="245,245,245" />
-                    </ButtonLayout>
                 </decoration>
                 <decoration states="focused">
                     <LineBorder color="black" />
@@ -30,27 +32,6 @@
                 <decoration states="disabled">
                     <WebShadow type="outer" opacity="0" />
                     <LineBorder color="68,72,74" />
-                    <ButtonLayout>
-                        <ButtonText color="180,180,180" />
-                    </ButtonLayout>
-                </decoration>
-            </decorations>
-        </painter>
-    </style>
-
-    <!-- Button supporting styled text -->
-    <style type="button" id="styled">
-        <painter>
-            <decorations>
-                <decoration>
-                    <ButtonLayout>
-                        <StyledButtonText constraints="text" color="245,245,245" />
-                    </ButtonLayout>
-                </decoration>
-                <decoration states="disabled">
-                    <ButtonLayout>
-                        <StyledButtonText color="180,180,180" ignoreStyleColors="true" />
-                    </ButtonLayout>
                 </decoration>
             </decorations>
         </painter>
@@ -91,15 +72,6 @@
                 </decoration>
                 <decoration states="enabled,hover" opacity="1" />
                 <decoration states="enabled,pressed" opacity="1" />
-            </decorations>
-        </painter>
-    </style>
-
-    <!-- Undecorated button -->
-    <style type="button" id="undecorated" padding="0">
-        <painter>
-            <decorations>
-                <decoration visible="false" />
             </decorations>
         </painter>
     </style>

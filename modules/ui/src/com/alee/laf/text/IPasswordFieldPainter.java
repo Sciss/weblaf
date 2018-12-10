@@ -3,16 +3,13 @@ package com.alee.laf.text;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JPasswordField} component painters.
+ * Base interface for JPasswordField component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IPasswordFieldPainter<C extends JPasswordField, U extends WPasswordFieldUI> extends IAbstractTextFieldPainter<C, U>
+public interface IPasswordFieldPainter<E extends JPasswordField, U extends WebPasswordFieldUI> extends IAbstractTextFieldPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

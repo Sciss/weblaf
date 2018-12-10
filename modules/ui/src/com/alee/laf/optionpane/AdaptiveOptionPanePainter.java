@@ -6,19 +6,17 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link OptionPanePainter} adapter class.
- * It is used to install simple non-specific painters into {@link WebOptionPaneUI}.
+ * Simple OptionPanePainter adapter class.
+ * It is used to install simple non-specific painters into WebOptionPaneUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveOptionPanePainter<C extends JOptionPane, U extends WebOptionPaneUI> extends AdaptivePainter<C, U>
-        implements IOptionPanePainter<C, U>
+public final class AdaptiveOptionPanePainter<E extends JOptionPane, U extends WebOptionPaneUI> extends AdaptivePainter<E, U>
+        implements IOptionPanePainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveOptionPanePainter} for the specified painter.
+     * Constructs new AdaptiveOptionPanePainter for the specified painter.
      *
      * @param painter painter to adapt
      */

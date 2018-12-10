@@ -17,8 +17,6 @@
 
 package com.alee.utils.filefilter;
 
-import com.alee.api.ui.RenderingParameters;
-
 import javax.swing.*;
 
 /**
@@ -53,7 +51,7 @@ public abstract class AbstractFileFilterAdapter extends AbstractFileFilter
     }
 
     @Override
-    public Icon getIcon ( final RenderingParameters parameters )
+    public ImageIcon getIcon ()
     {
         return icon;
     }

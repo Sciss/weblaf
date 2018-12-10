@@ -17,7 +17,7 @@
 
 package com.alee.laf.tree;
 
-import com.alee.api.merge.Mergeable;
+import com.alee.utils.MergeUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamConverter;
 
@@ -32,49 +32,75 @@ import java.util.Map;
  * @author Mikle Garin
  * @see TreeUtils
  */
-@XStreamAlias ( "TreeState" )
-@XStreamConverter ( TreeStateConverter.class )
-public class TreeState implements Mergeable, Cloneable, Serializable
+
+@XStreamAlias ("TreeState")
+@XStreamConverter (TreeStateConverter.class)
+public class TreeState implements Serializable, Cloneable
 {
     /**
-     * {@link NodeState}s of a single tree.
+     * Tree node states.
      */
-    protected final Map<String, NodeState> states;
+    protected Map<String, NodeState> states = new LinkedHashMap<String, NodeState> ();
 
     /**
-     * Constructs new {@link TreeState} with empty states.
+     * Constructs new object instance with empty states.
      */
     public TreeState ()
     {
-        states = new LinkedHashMap<String, NodeState> ();
+        super ();
     }
 
     /**
-     * Returns all {@link NodeState}s.
+     * Constructs new object instance with specified states.
      *
-     * @return all {@link NodeState}s
+     * @param states node states
      */
-    public Map<String, NodeState> states ()
+    public TreeState ( final Map<String, NodeState> states )
+    {
+        super ();
+        if ( states != null )
+        {
+            setStates ( states );
+        }
+    }
+
+    /**
+     * Returns all node states.
+     *
+     * @return all node states
+     */
+    public Map<String, NodeState> getStates ()
     {
         return states;
     }
 
     /**
+     * Sets all node states.
+     *
+     * @param states all node states
+     */
+    public void setStates ( final Map<String, NodeState> states )
+    {
+        this.states = states;
+    }
+
+    /**
      * Adds node state.
      *
-     * @param nodeId node identifier
-     * @param state  {@link NodeState}
+     * @param nodeId   node ID
+     * @param expanded expansion state
+     * @param selected selection state
      */
-    public void addState ( final String nodeId, final NodeState state )
+    public void addState ( final String nodeId, final boolean expanded, final boolean selected )
     {
-        states.put ( nodeId, state );
+        states.put ( nodeId, new NodeState ( expanded, selected ) );
     }
 
     /**
      * Returns whether node with the specified ID is expanded or not.
      *
-     * @param nodeId node identifier
-     * @return {@code true} if node with the specified ID is expanded, {@code false} otherwise
+     * @param nodeId node ID
+     * @return true if node with the specified ID is expanded, false otherwise
      */
     public boolean isExpanded ( final String nodeId )
     {
@@ -85,12 +111,23 @@ public class TreeState implements Mergeable, Cloneable, Serializable
     /**
      * Returns whether node with the specified ID is selected or not.
      *
-     * @param nodeId node identifier
-     * @return {@code true} if node with the specified ID is expanded, {@code false} otherwise
+     * @param nodeId node ID
+     * @return true if node with the specified ID is expanded, false otherwise
      */
     public boolean isSelected ( final String nodeId )
     {
         final NodeState state = states.get ( nodeId );
         return state != null && state.isSelected ();
+    }
+
+    /**
+     * Returns cloned tree state.
+     *
+     * @return cloned tree state
+     */
+    @Override
+    public TreeState clone ()
+    {
+        return MergeUtils.cloneByFieldsSafely ( this );
     }
 }

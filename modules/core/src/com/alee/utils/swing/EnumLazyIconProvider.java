@@ -17,7 +17,7 @@
 
 package com.alee.utils.swing;
 
-import org.slf4j.LoggerFactory;
+import com.alee.managers.log.Log;
 
 import javax.swing.*;
 import java.util.HashMap;
@@ -29,7 +29,7 @@ import java.util.Map;
  * @author Mikle Garin
  */
 
-public final class EnumLazyIconProvider
+public class EnumLazyIconProvider
 {
     /**
      * Cached enum icons map.
@@ -76,7 +76,6 @@ public final class EnumLazyIconProvider
      * @param enumeration enumeration constant for which icon should be loaded
      * @param state       enumeration icon state
      * @param folder      enumeration icons folder
-     * @param extension   image format extension with dot
      * @param <E>         enumeration type
      * @return cached or just loaded enum icon
      */
@@ -99,11 +98,10 @@ public final class EnumLazyIconProvider
                 imageIcon = new ImageIcon ( enumeration.getClass ().getResource ( path ) );
                 stateIcons.put ( state, imageIcon );
             }
-            catch ( final Exception e )
+            catch ( final Throwable e )
             {
                 final String cn = enumeration.getClass ().getCanonicalName ();
-                final String msg = "Unable to find icon '%s' near class: %s";
-                LoggerFactory .getLogger ( EnumLazyIconProvider.class ).error ( String.format ( msg, path, cn ) );
+                Log.error ( EnumLazyIconProvider.class, "Unable to find icon \"" + path + "\" near class: " + cn );
                 stateIcons.put ( state, null );
             }
         }

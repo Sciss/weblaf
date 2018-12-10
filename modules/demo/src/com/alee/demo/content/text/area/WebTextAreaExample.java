@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.text.area;
 
-import com.alee.demo.api.example.*;
+import com.alee.demo.api.*;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.text.WebTextArea;
 import com.alee.managers.style.StyleId;
@@ -29,7 +29,8 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-public class WebTextAreaExample extends AbstractStylePreviewExample
+
+public class WebTextAreaExample extends AbstractExample
 {
     @Override
     public String getId ()
@@ -52,10 +53,9 @@ public class WebTextAreaExample extends AbstractStylePreviewExample
     @Override
     protected List<Preview> createPreviews ()
     {
-        return CollectionUtils.<Preview>asList (
-                new PromptArea ( "prompt", StyleId.textarea ),
-                new DecoratedArea ( "decorated", StyleId.textareaDecorated )
-        );
+        final PromptArea e1 = new PromptArea ( "prompt", StyleId.textarea );
+        final DecoratedArea e2 = new DecoratedArea ( "decorated", StyleId.textareaDecorated );
+        return CollectionUtils.<Preview>asList ( e1, e2 );
     }
 
     /**
@@ -75,7 +75,7 @@ public class WebTextAreaExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebTextArea textArea = new WebTextArea ( getStyleId (), 3, 20 );
             textArea.setInputPrompt ( getPreviewLanguagePrefix () + "prompt" );
@@ -100,7 +100,7 @@ public class WebTextAreaExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebTextArea textArea = new WebTextArea ( getStyleId (), "Sample\nmultiline\ntext", 3, 20 );
             return CollectionUtils.asList ( textArea );

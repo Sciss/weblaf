@@ -24,6 +24,7 @@ import java.util.EventListener;
  *
  * @author Mikle Garin
  */
+
 public interface TooltipListener extends EventListener
 {
     /**

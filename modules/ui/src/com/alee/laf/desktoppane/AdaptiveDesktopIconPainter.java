@@ -6,19 +6,17 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link DesktopIconPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WebDesktopIconUI}.
+ * Simple DesktopIconPainter adapter class.
+ * It is used to install simple non-specific painters into WebDesktopIconUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveDesktopIconPainter<C extends JInternalFrame.JDesktopIcon, U extends WebDesktopIconUI>
-        extends AdaptivePainter<C, U> implements IDesktopIconPainter<C, U>
+public final class AdaptiveDesktopIconPainter<E extends JInternalFrame.JDesktopIcon, U extends WebDesktopIconUI>
+        extends AdaptivePainter<E, U> implements IDesktopIconPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveDesktopIconPainter} for the specified painter.
+     * Constructs new AdaptiveDesktopIconPainter for the specified painter.
      *
      * @param painter painter to adapt
      */

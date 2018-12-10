@@ -30,7 +30,8 @@ import java.util.Properties;
  *
  * @author Mikle Garin
  */
-public final class VersionUpdater
+
+public class VersionUpdater
 {
     /**
      * File separator.
@@ -52,7 +53,6 @@ public final class VersionUpdater
      * Increments library build version and updates build date.
      *
      * @param args arguments
-     * @throws IOException when fails to access some of the files
      */
     public static void main ( final String[] args ) throws IOException
     {
@@ -72,7 +72,7 @@ public final class VersionUpdater
      * Performs version updates.
      *
      * @param change version change amount
-     * @throws IOException when fails to access some of the files
+     * @throws IOException
      */
     private static void updateVersion ( final int change ) throws IOException
     {

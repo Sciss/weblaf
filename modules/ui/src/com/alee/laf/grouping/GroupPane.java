@@ -2,7 +2,6 @@ package com.alee.laf.grouping;
 
 import com.alee.laf.panel.WebPanel;
 import com.alee.managers.style.StyleId;
-import com.alee.utils.swing.UnselectableButtonGroup;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,16 +13,9 @@ import java.awt.*;
  *
  * @author Mikle Garin
  */
+
 public class GroupPane extends WebPanel implements SwingConstants
 {
-    /**
-     * Constructs new group pane.
-     */
-    public GroupPane ()
-    {
-        this ( StyleId.auto );
-    }
-
     /**
      * Constructs new group pane with specified components inside.
      *
@@ -31,7 +23,7 @@ public class GroupPane extends WebPanel implements SwingConstants
      */
     public GroupPane ( final Component... components )
     {
-        this ( StyleId.auto, components );
+        this ( StyleId.grouppane, SwingConstants.HORIZONTAL, Integer.MAX_VALUE, 1, components );
     }
 
     /**
@@ -42,7 +34,7 @@ public class GroupPane extends WebPanel implements SwingConstants
      */
     public GroupPane ( final int orientation, final Component... components )
     {
-        this ( StyleId.auto, orientation, components );
+        this ( StyleId.grouppane, orientation, Integer.MAX_VALUE, 1, components );
     }
 
     /**
@@ -54,7 +46,7 @@ public class GroupPane extends WebPanel implements SwingConstants
      */
     public GroupPane ( final int columns, final int rows, final Component... components )
     {
-        this ( StyleId.auto, columns, rows, components );
+        this ( StyleId.grouppane, SwingConstants.HORIZONTAL, columns, rows, components );
     }
 
     /**
@@ -67,7 +59,7 @@ public class GroupPane extends WebPanel implements SwingConstants
      */
     public GroupPane ( final int orientation, final int columns, final int rows, final Component... components )
     {
-        this ( StyleId.auto, orientation, columns, rows, components );
+        this ( StyleId.grouppane, orientation, columns, rows, components );
     }
 
     /**
@@ -117,52 +109,7 @@ public class GroupPane extends WebPanel implements SwingConstants
      */
     public GroupPane ( final StyleId id, final int orientation, final int columns, final int rows, final Component... components )
     {
-        this ( id, true, orientation, columns, rows, components );
-    }
-
-    /**
-     * Constructs new group pane with specified components inside.
-     *
-     * @param groupButtons whether or not should group toggle state elements
-     */
-    public GroupPane ( final boolean groupButtons )
-    {
-        this ( StyleId.auto, groupButtons, SwingConstants.HORIZONTAL, Integer.MAX_VALUE, 1 );
-    }
-
-    /**
-     * Constructs new group pane with specified components inside.
-     *
-     * @param id           style ID
-     * @param groupButtons whether or not should group toggle state elements
-     */
-    public GroupPane ( final StyleId id, final boolean groupButtons )
-    {
-        this ( id, groupButtons, SwingConstants.HORIZONTAL, Integer.MAX_VALUE, 1 );
-    }
-
-    /**
-     * Constructs new group pane with specified components inside.
-     *
-     * @param id           style ID
-     * @param groupButtons whether or not should group toggle state elements
-     * @param orientation  components flow orientation
-     * @param columns      amount of columns used to place components
-     * @param rows         amount of rows used to place components
-     * @param components   components to group
-     */
-    public GroupPane ( final StyleId id, final boolean groupButtons, final int orientation, final int columns, final int rows,
-                       final Component... components )
-    {
-        super ( id, new GroupPaneLayout ( orientation, columns, rows ) );
-        setGroupButtons ( groupButtons );
-        add ( components );
-    }
-
-    @Override
-    public StyleId getDefaultStyleId ()
-    {
-        return StyleId.grouppane;
+        super ( id, new GroupPaneLayout ( orientation, columns, rows ), components );
     }
 
     /**
@@ -234,31 +181,11 @@ public class GroupPane extends WebPanel implements SwingConstants
     }
 
     /**
-     * Returns whether or not this button group should allow empty selection state.
-     *
-     * @return true if this button group should allow empty selection state, false otherwise
-     */
-    public boolean isUnselectableGrouping ()
-    {
-        return getLayout ().isUnselectableGrouping ();
-    }
-
-    /**
-     * Sets whether or not this button group should allow empty selection state.
-     *
-     * @param unselectable whether or not this button group should allow empty selection state
-     */
-    public void setUnselectableGrouping ( final boolean unselectable )
-    {
-        getLayout ().setUnselectableGrouping ( unselectable );
-    }
-
-    /**
      * Returns button group used to group toggle state elements placed within this group pane.
      *
      * @return button group used to group toggle state elements placed within this group pane
      */
-    public UnselectableButtonGroup getButtonGroup ()
+    public ButtonGroup getButtonGroup ()
     {
         return getLayout ().getButtonGroup ();
     }

@@ -23,20 +23,15 @@ import com.alee.painter.Painter;
 import com.alee.utils.ReflectUtils;
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
 import com.thoughtworks.xstream.io.HierarchicalStreamReader;
-import com.thoughtworks.xstream.mapper.CannotResolveClassException;
-import com.thoughtworks.xstream.mapper.Mapper;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Map;
 
 /**
- * Set of utilities for serializing and deserializing style files.
- *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
- * @see com.alee.managers.style.StyleManager
  */
+
 public final class StyleConverterUtils
 {
     /**
@@ -47,20 +42,19 @@ public final class StyleConverterUtils
     /**
      * Read properties for the specified class into the provided properties map.
      *
-     * @param reader     {@link HierarchicalStreamReader}
-     * @param context    {@link UnmarshallingContext}
-     * @param mapper     {@link Mapper}
+     * @param reader     {@link com.thoughtworks.xstream.io.HierarchicalStreamReader}
+     * @param context    {@link com.thoughtworks.xstream.converters.UnmarshallingContext}
      * @param properties map to read properties into
      * @param clazz      class to read properties for, it will be used to retrieve properties field types
      * @param styleId    component style ID, might be used to report problems
      */
-    public static void readProperties ( final HierarchicalStreamReader reader, final UnmarshallingContext context, final Mapper mapper,
+    public static void readProperties ( final HierarchicalStreamReader reader, final UnmarshallingContext context,
                                         final Map<String, Object> properties, final Class clazz, final String styleId )
     {
         while ( reader.hasMoreChildren () )
         {
             reader.moveDown ();
-            readProperty ( reader, context, mapper, styleId, properties, clazz, reader.getNodeName () );
+            readProperty ( reader, context, styleId, properties, clazz, reader.getNodeName () );
             reader.moveUp ();
         }
     }
@@ -68,20 +62,18 @@ public final class StyleConverterUtils
     /**
      * Parses single style property into properties map.
      *
-     * @param reader        {@link HierarchicalStreamReader}
-     * @param context       {@link UnmarshallingContext}
-     * @param mapper        {@link Mapper}
+     * @param reader        {@link com.thoughtworks.xstream.io.HierarchicalStreamReader}
+     * @param context       {@link com.thoughtworks.xstream.converters.UnmarshallingContext}
      * @param styleId       component style ID, might be used to report problems
      * @param properties    map to read property into
      * @param propertyClass class to read property for, it will be used to retrieve property field type
      * @param propertyName  property name
      */
-    private static void readProperty ( final HierarchicalStreamReader reader, final UnmarshallingContext context, final Mapper mapper,
-                                       final String styleId, final Map<String, Object> properties, final Class propertyClass,
-                                       final String propertyName )
+    public static void readProperty ( final HierarchicalStreamReader reader, final UnmarshallingContext context, final String styleId,
+                                      final Map<String, Object> properties, final Class propertyClass, final String propertyName )
     {
         final String ignored = reader.getAttribute ( IGNORED_ATTRIBUTE );
-        if ( Boolean.parseBoolean ( ignored ) )
+        if ( ignored != null && Boolean.parseBoolean ( ignored ) )
         {
             // Adding special value that will be ignored when values are applied
             // This is generally a tricky way to provide
@@ -89,31 +81,8 @@ public final class StyleConverterUtils
         }
         else
         {
-            // Retrieving field class
-            final Class fieldClass;
-            final String classAttribute = reader.getAttribute ( "class" );
-            if ( classAttribute != null )
-            {
-                try
-                {
-                    // This would be the case for interface implementations as they cannot be instantiated directly
-                    // We also rethrow appropriate exception here in case unknown type have been specified
-                    fieldClass = mapper.realClass ( classAttribute );
-                }
-                catch ( final CannotResolveClassException e )
-                {
-                    final String msg = "Component property '%s' value from style '%s' has unknown type: %s";
-                    throw new StyleException ( String.format ( msg, propertyName, styleId, classAttribute ), e );
-                }
-            }
-            else
-            {
-                // Trying to retrieve field type by its name
-                // This would be the case for common types like String or int
-                fieldClass = ReflectUtils.getFieldTypeSafely ( propertyClass, propertyName );
-            }
-
-            // Reading property value
+            // Trying to retrieve field type by its name
+            final Class fieldClass = ReflectUtils.getFieldTypeSafely ( propertyClass, propertyName );
             if ( fieldClass != null )
             {
                 try
@@ -121,10 +90,10 @@ public final class StyleConverterUtils
                     // Reading property using field type
                     properties.put ( propertyName, context.convertAnother ( properties, fieldClass ) );
                 }
-                catch ( final Exception e )
+                catch ( final Throwable e )
                 {
-                    final String msg = "Component property '%s' value from style '%s' cannot be read";
-                    throw new StyleException ( String.format ( msg, propertyName, styleId ), e );
+                    throw new StyleException ( "Component property \"" + propertyName + "\" value from style \"" + styleId +
+                            "\" cannot be read", e );
                 }
             }
             else
@@ -139,17 +108,16 @@ public final class StyleConverterUtils
                         final Class<?> rClass = getter.getReturnType ();
                         properties.put ( propertyName, context.convertAnother ( properties, rClass ) );
                     }
-                    catch ( final Exception e )
+                    catch ( final Throwable e )
                     {
-                        final String msg = "Component property '%s' value from style '%s' cannot be read";
-                        throw new StyleException ( String.format ( msg, propertyName, styleId ), e );
+                        throw new StyleException ( "Component property \"" + propertyName + "\" value from style \"" + styleId +
+                                "\" cannot be read", e );
                     }
                 }
                 else
                 {
-                    final String msg = "Component property '%s' type from style '%s' cannot be determined. " +
-                            "Make sure it points to existing field or getter method";
-                    throw new StyleException ( String.format ( msg, propertyName, styleId ) );
+                    throw new StyleException ( "Component property \"" + propertyName + "\" type from style \"" + styleId +
+                            "\" cannot be determined! Make sure it points to existing field or getter method" );
                 }
             }
         }
@@ -164,10 +132,10 @@ public final class StyleConverterUtils
      */
     public static Class<? extends Painter> getDefaultPainter ( final Class inClass, final String field )
     {
-        // Checking class existence
+        // Checking class existance
         if ( inClass != null )
         {
-            // Checking field existence
+            // Checking field existance
             final Field painterField = ReflectUtils.getFieldSafely ( inClass, field );
             painterField.setAccessible ( true );
             if ( painterField != null )
@@ -183,8 +151,8 @@ public final class StyleConverterUtils
             else
             {
                 // Since this is a major issue that we try a wrong field we will throw exception
-                final String msg = "Unable to find painter field '%s' in class '%s' for default painter class retrieval";
-                throw new StyleException ( String.format ( msg, field, inClass ) );
+                throw new StyleException (
+                        "Unable to find painter field \"" + field + "\" in class \"" + inClass + "\" for default painter class retrieval" );
             }
         }
         return null;

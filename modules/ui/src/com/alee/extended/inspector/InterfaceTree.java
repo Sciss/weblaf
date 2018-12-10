@@ -18,44 +18,23 @@
 package com.alee.extended.inspector;
 
 import com.alee.extended.tree.WebExTree;
-import com.alee.managers.hotkey.Hotkey;
+import com.alee.managers.glasspane.GlassPaneManager;
+import com.alee.managers.glasspane.WebGlassPane;
 import com.alee.managers.style.StyleId;
-import com.alee.utils.CoreSwingUtils;
-import com.alee.utils.compare.Filter;
 import com.alee.utils.swing.HoverListener;
-import com.alee.utils.swing.extensions.KeyEventRunnable;
 
-import javax.swing.event.TreeSelectionEvent;
-import javax.swing.event.TreeSelectionListener;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
- * {@link WebExTree} representing Swing components structure.
- * It displays and dynamically updates Swing components strcuture for the specified root {@link Component}.
- *
- * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
- * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
- *
  * @author Mikle Garin
- * @see InterfaceInspector
- * @see WebExTree
  */
-public class InterfaceTree extends WebExTree<InterfaceTreeNode>
-        implements HoverListener<InterfaceTreeNode>, TreeSelectionListener, Filter<Component>
+
+public class InterfaceTree extends WebExTree<InterfaceTreeNode> implements HoverListener<InterfaceTreeNode>
 {
     /**
-     * Highlighter for hovered tree element.
+     * Component inspector used to highlight hover elements.
      */
-    protected ComponentHighlighter hoverHighlighter;
-
-    /**
-     * Highlighters for selected tree elements.
-     */
-    protected Map<Component, ComponentHighlighter> selectedHighlighters;
+    protected ComponentInspector hoverInspector;
 
     /**
      * Constructs new interface tree.
@@ -64,7 +43,7 @@ public class InterfaceTree extends WebExTree<InterfaceTreeNode>
      */
     public InterfaceTree ( final Component root )
     {
-        this ( StyleId.auto, root );
+        this ( null, root );
     }
 
     /**
@@ -82,111 +61,24 @@ public class InterfaceTree extends WebExTree<InterfaceTreeNode>
         setDataProvider ( new InterfaceTreeDataProvider ( this, root ) );
 
         // Nodes hover listener
-        this.hoverHighlighter = new ComponentHighlighter ();
+        this.hoverInspector = new ComponentInspector ();
         addHoverListener ( this );
-
-        // Nodes selection listener
-        this.selectedHighlighters = new HashMap<Component, ComponentHighlighter> ( 0 );
-        addTreeSelectionListener ( this );
-
-        // Simple selection clearing
-        onKeyPress ( Hotkey.ESCAPE, new KeyEventRunnable ()
-        {
-            @Override
-            public void run ( final KeyEvent e )
-            {
-                clearSelection ();
-            }
-        } );
-    }
-
-    @Override
-    public StyleId getDefaultStyleId ()
-    {
-        return StyleId.interfacetree;
-    }
-
-    @Override
-    public boolean accept ( final Component component )
-    {
-        return ( ( InterfaceTreeDataProvider ) super.getDataProvider () ).accept ( component );
     }
 
     @Override
     public void hoverChanged ( final InterfaceTreeNode previous, final InterfaceTreeNode current )
     {
-        // Separating action from the tree hover makes UI more responsive
-        CoreSwingUtils.invokeLater ( new Runnable ()
+        final WebGlassPane glassPane = GlassPaneManager.getGlassPane ( getRootComponent () );
+        if ( hoverInspector.isShowing () )
         {
-            @Override
-            public void run ()
-            {
-                if ( hoverHighlighter.isShowing () )
-                {
-                    hoverHighlighter.uninstall ();
-                }
-                if ( current != null && canHighlight ( current.getUserObject () ) )
-                {
-                    hoverHighlighter.install ( current.getUserObject () );
-                }
-            }
-        } );
-    }
-
-    @Override
-    public void valueChanged ( final TreeSelectionEvent e )
-    {
-        // Separating action from the tree selection makes UI more responsive
-        CoreSwingUtils.invokeLater ( new Runnable ()
+            glassPane.hideComponent ( hoverInspector );
+            hoverInspector.uninstall ();
+        }
+        if ( current != null && current.getComponent () != null && current.getComponent ().isShowing () )
         {
-            @Override
-            public void run ()
-            {
-                // Selected nodes
-                final List<InterfaceTreeNode> selected = getSelectedNodes ();
-
-                // Previous and current highlighters
-                final Map<Component, ComponentHighlighter> prevHighlighters = selectedHighlighters;
-                selectedHighlighters = new HashMap<Component, ComponentHighlighter> ( selected.size () );
-
-                // Updating displayed highlighters
-                for ( final InterfaceTreeNode node : selected )
-                {
-                    final Component component = node.getUserObject ();
-                    final ComponentHighlighter prevHighlighter = prevHighlighters.get ( component );
-                    if ( prevHighlighter != null )
-                    {
-                        // Preserving existing highlighter
-                        selectedHighlighters.put ( component, prevHighlighter );
-                        prevHighlighters.remove ( component );
-                    }
-                    else if ( canHighlight ( component ) )
-                    {
-                        // Adding new highlighter
-                        final ComponentHighlighter newHighlighter = new ComponentHighlighter ();
-                        selectedHighlighters.put ( component, newHighlighter );
-                        newHighlighter.install ( component );
-                    }
-                }
-
-                // Removing redundant highlighters
-                for ( final Map.Entry<Component, ComponentHighlighter> entry : prevHighlighters.entrySet () )
-                {
-                    entry.getValue ().uninstall ();
-                }
-            }
-        } );
-    }
-
-    /**
-     * Returns whether or not component can be highlighted.
-     *
-     * @param component component to be highlighted
-     * @return {@code true} if component can be highlighted, {@code false} otherwise
-     */
-    public boolean canHighlight ( final Component component )
-    {
-        return component != null && component.isShowing () && !( component instanceof Window );
+            hoverInspector.install ( current.getComponent () );
+            glassPane.showComponent ( hoverInspector );
+        }
     }
 
     /**
@@ -196,7 +88,7 @@ public class InterfaceTree extends WebExTree<InterfaceTreeNode>
      */
     public Component getRootComponent ()
     {
-        return getDataProvider ().getRoot ().getUserObject ();
+        return getDataProvider ().getRoot ().getComponent ();
     }
 
     /**
@@ -207,36 +99,5 @@ public class InterfaceTree extends WebExTree<InterfaceTreeNode>
     public void setRootComponent ( final Component root )
     {
         setDataProvider ( new InterfaceTreeDataProvider ( this, root ) );
-    }
-
-    /**
-     * Navigates tree to the specified component.
-     *
-     * @param component component to navigate to
-     */
-    public void navigate ( final Component component )
-    {
-        final String nodeId = Integer.toString ( component.hashCode () );
-        final InterfaceTreeNode node = findNode ( nodeId );
-        if ( node != null )
-        {
-            expandNode ( node );
-            setSelectedNode ( node );
-            scrollToNode ( node, true );
-        }
-    }
-
-    /**
-     * Expands tree to the specified component.
-     *
-     * @param component component to expand to
-     */
-    public void expand ( final Component component )
-    {
-        final InterfaceTreeNode node = findNode ( Integer.toString ( component.hashCode () ) );
-        if ( node != null )
-        {
-            expandNode ( node );
-        }
     }
 }

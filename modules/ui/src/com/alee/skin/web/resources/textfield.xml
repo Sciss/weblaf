@@ -1,4 +1,4 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.laf.text.WebTextField -->
 
@@ -8,7 +8,7 @@
             <opaque>false</opaque>
             <foreground>black</foreground>
             <selectedTextColor>black</selectedTextColor>
-            <selectionColor>154,178,206</selectionColor>
+            <selectionColor>210,210,210</selectionColor>
             <caretColor>gray</caretColor>
         </component>
         <painter>
@@ -35,25 +35,12 @@
         </painter>
     </style>
 
-    <!-- Non-opaque text field -->
-    <style type="textfield" id="non-opaque">
-        <component>
-            <opaque>false</opaque>
-        </component>
+    <!-- Text field undecorated -->
+    <style type="textfield" id="undecorated">
         <painter>
-            <decorations overwrite="true">
-                <decoration>
-                    <BoundsShape />
-                    <ColorBackground color="white" />
-                </decoration>
+            <decorations>
+                <decoration visible="false" />
             </decorations>
-        </painter>
-    </style>
-
-    <!-- Transparent text field -->
-    <style type="textfield" id="transparent" extends="non-opaque">
-        <painter>
-            <decorations overwrite="true" />
         </painter>
     </style>
 

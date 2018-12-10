@@ -18,31 +18,19 @@
 package com.alee.managers.language.updaters;
 
 import com.alee.extended.dock.WebDockableFrame;
-import com.alee.managers.language.Language;
+import com.alee.managers.language.data.Value;
 
 /**
- * Custom {@link LanguageUpdater} for {@link WebDockableFrame}.
+ * This class provides language default updates for WebDockableFrame component.
  *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-LanguageManager">How to use LanguageManager</a>
- * @see com.alee.managers.language.LanguageManager
  */
-public class WebDockableFrameLU extends ToolTipLU<WebDockableFrame>
+
+public class WebDockableFrameLU extends DefaultLanguageUpdater<WebDockableFrame>
 {
     @Override
-    public Class getComponentClass ()
+    public void update ( final WebDockableFrame c, final String key, final Value value, final Object... data )
     {
-        return WebDockableFrame.class;
-    }
-
-    @Override
-    public void update ( final WebDockableFrame component, final Language language, final String key, final Object... data )
-    {
-        super.update ( component, language, key, data );
-
-        if ( language.containsText ( key ) )
-        {
-            component.setTitle ( language.get ( key, data ) );
-        }
+        c.setTitle ( getDefaultText ( value, data ) );
     }
 }

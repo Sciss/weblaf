@@ -17,7 +17,6 @@
 
 package com.alee.painter.common;
 
-import com.alee.managers.style.Bounds;
 import com.alee.painter.AbstractPainter;
 import com.alee.utils.GraphicsUtils;
 
@@ -30,31 +29,30 @@ import java.awt.geom.RoundRectangle2D;
 
 /**
  * Simple border painter.
- * This painter might be used instead of {@link javax.swing.border.LineBorder} in any component that supports painters.
+ * This painter might be used instead of LineBorder in any component that supports painters.
  *
- * @param <C> component type
- * @param <U> component UI type
+ * @param <E> component type
  * @author Mikle Garin
- * @see AbstractPainter
+ * @see com.alee.painter.AbstractPainter
  * @see com.alee.painter.Painter
  */
 
-public class BorderPainter<C extends JComponent, U extends ComponentUI> extends AbstractPainter<C, U>
+public class BorderPainter<E extends JComponent, U extends ComponentUI> extends AbstractPainter<E, U>
 {
     /**
      * Border round.
      */
-    protected Integer round;
-
-    /**
-     * Border stroke.
-     */
-    protected Stroke stroke;
+    protected int round;
 
     /**
      * Border color.
      */
     protected Color color;
+
+    /**
+     * Border stroke.
+     */
+    protected Stroke stroke;
 
     /**
      * Constructs default border painter.
@@ -82,7 +80,7 @@ public class BorderPainter<C extends JComponent, U extends ComponentUI> extends 
      */
     public int getRound ()
     {
-        return round != null ? round : 0;
+        return round;
     }
 
     /**
@@ -94,37 +92,7 @@ public class BorderPainter<C extends JComponent, U extends ComponentUI> extends 
     public void setRound ( final int round )
     {
         this.round = round;
-    }
-
-    /**
-     * Returns border stroke.
-     *
-     * @return border stroke
-     */
-    public Stroke getStroke ()
-    {
-        return stroke;
-    }
-
-    /**
-     * Returns stroke width.
-     *
-     * @return stroke width
-     */
-    protected int getStrokeWidth ()
-    {
-        final Stroke stroke = getStroke ();
-        return stroke != null && stroke instanceof BasicStroke ? Math.round ( ( ( BasicStroke ) stroke ).getLineWidth () ) : 1;
-    }
-
-    /**
-     * Sets border stroke.
-     *
-     * @param stroke new border stroke
-     */
-    public void setStroke ( final Stroke stroke )
-    {
-        this.stroke = stroke;
+        repaint ();
     }
 
     /**
@@ -145,26 +113,78 @@ public class BorderPainter<C extends JComponent, U extends ComponentUI> extends 
     public void setColor ( final Color color )
     {
         this.color = color;
+        repaint ();
     }
 
+    /**
+     * Returns border stroke.
+     *
+     * @return border stroke
+     */
+    public Stroke getStroke ()
+    {
+        return stroke;
+    }
+
+    /**
+     * Sets border stroke.
+     *
+     * @param stroke new border stroke
+     */
+    public void setStroke ( final Stroke stroke )
+    {
+        this.stroke = stroke;
+        repaint ();
+    }
+
+    /**
+     * Returns stroke width.
+     *
+     * @return stroke width
+     */
+    public int getStrokeWidth ()
+    {
+        final Stroke stroke = getStroke ();
+        return stroke != null && stroke instanceof BasicStroke ? Math.round ( ( ( BasicStroke ) stroke ).getLineWidth () ) : 0;
+    }
+
+    /**
+     * Returns margin required for visual data provided by this painter.
+     * This margin is usually added to component's margin when the final component border is calculated.
+     *
+     * @return margin required for visual data provided by this painter
+     */
     @Override
-    protected Insets getBorder ()
+    public Insets getBorders ()
     {
         final int width = getStrokeWidth ();
-        return new Insets ( width, width, width, width );
+        return i ( width, width, width, width );
     }
 
+    /**
+     * Paints visual data onto the component graphics.
+     * Provided graphics and component are taken directly from component UI paint method.
+     * Provided bounds are usually fake (zero location, component size) but in some cases it might be specified by componentUI.
+     *
+     * @param g2d    component graphics
+     * @param bounds bounds for painter visual data
+     * @param c      component to process
+     * @param ui     component UI
+     */
     @Override
-    public void paint ( final Graphics2D g2d, final C c, final U ui, final Bounds bounds )
+    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
     {
-        final Object aa = GraphicsUtils.setupAntialias ( g2d );
-        final Stroke os = GraphicsUtils.setupStroke ( g2d, stroke, stroke != null );
+        if ( stroke != null && color != null )
+        {
+            final Object aa = GraphicsUtils.setupAntialias ( g2d );
+            final Stroke os = GraphicsUtils.setupStroke ( g2d, stroke, stroke != null );
 
-        g2d.setPaint ( color );
-        g2d.draw ( getBorderShape ( bounds.get () ) );
+            g2d.setPaint ( color );
+            g2d.draw ( getBorderShape ( bounds ) );
 
-        GraphicsUtils.restoreStroke ( g2d, os, stroke != null );
-        GraphicsUtils.restoreAntialias ( g2d, aa );
+            GraphicsUtils.restoreStroke ( g2d, os, stroke != null );
+            GraphicsUtils.restoreAntialias ( g2d, aa );
+        }
     }
 
     /**
@@ -175,7 +195,6 @@ public class BorderPainter<C extends JComponent, U extends ComponentUI> extends 
      */
     protected RectangularShape getBorderShape ( final Rectangle bounds )
     {
-        final int round = getRound ();
         final int width = getStrokeWidth ();
         final double shear = width == 1 ? 0 : ( double ) width / 2;
         if ( round > 0 )
@@ -190,6 +209,12 @@ public class BorderPainter<C extends JComponent, U extends ComponentUI> extends 
         }
     }
 
+    /**
+     * Returns preferred size required for proper painting of visual data provided by this painter.
+     * This should not take into account any sizes not related to this painter settings (for example text size on button).
+     *
+     * @return preferred size required for proper painting of visual data provided by this painter
+     */
     @Override
     public Dimension getPreferredSize ()
     {

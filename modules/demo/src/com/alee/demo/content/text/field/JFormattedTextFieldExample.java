@@ -17,9 +17,7 @@
 
 package com.alee.demo.content.text.field;
 
-import com.alee.demo.api.example.*;
-import com.alee.demo.api.example.wiki.OracleWikiPage;
-import com.alee.demo.api.example.wiki.WikiPage;
+import com.alee.demo.api.*;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
@@ -31,7 +29,8 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-public class JFormattedTextFieldExample extends AbstractStylePreviewExample
+
+public class JFormattedTextFieldExample extends AbstractExample
 {
     @Override
     public String getId ()
@@ -52,19 +51,12 @@ public class JFormattedTextFieldExample extends AbstractStylePreviewExample
     }
 
     @Override
-    public WikiPage getWikiPage ()
-    {
-        return new OracleWikiPage ( "How to Use Formatted Text Fields", "formattedtextfield" );
-    }
-
-    @Override
     protected List<Preview> createPreviews ()
     {
-        return CollectionUtils.<Preview>asList (
-                new BasicFormattedField ( "currency", StyleId.formattedtextfield, "####$", 1024 ),
-                new BasicFormattedField ( "phone", StyleId.formattedtextfield, "# (###) ###-##-##", null ),
-                new BasicFormattedField ( "fraction", StyleId.formattedtextfield, "##.##", 77.77 )
-        );
+        final BasicFormattedField e1 = new BasicFormattedField ( "currency", StyleId.formattedtextfield, "####$", 1024 );
+        final BasicFormattedField e2 = new BasicFormattedField ( "phone", StyleId.formattedtextfield, "# (###) ###-##-##", null );
+        final BasicFormattedField e3 = new BasicFormattedField ( "fraction", StyleId.formattedtextfield, "##.##", 77.77 );
+        return CollectionUtils.<Preview>asList ( e1, e2, e3 );
     }
 
     /**
@@ -94,7 +86,7 @@ public class JFormattedTextFieldExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final JFormattedTextField textField = new JFormattedTextField ( createFormatter ( mask ) );
             textField.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );

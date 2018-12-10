@@ -17,54 +17,58 @@
 
 package com.alee.extended.tree;
 
-import com.alee.api.jdk.Function;
+import com.alee.extended.image.WebImage;
 import com.alee.laf.WebLookAndFeel;
-import com.alee.laf.button.WebButton;
 import com.alee.laf.menu.WebCheckBoxMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.text.WebTextField;
 import com.alee.laf.tree.TreeState;
-import com.alee.laf.tree.TreeUtils;
 import com.alee.laf.tree.UniqueNode;
+import com.alee.laf.tree.WebTree;
 import com.alee.managers.hotkey.Hotkey;
-import com.alee.managers.icon.Icons;
 import com.alee.managers.style.StyleId;
-import com.alee.utils.swing.extensions.DocumentEventRunnable;
-import com.alee.utils.swing.extensions.KeyEventRunnable;
+import com.alee.utils.compare.Filter;
+import com.alee.utils.swing.StringDocumentChangeListener;
+import com.alee.utils.text.TextProvider;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.text.Document;
-import javax.swing.tree.TreeModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
+import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.lang.ref.WeakReference;
 
 /**
- * Special filter field that can be attached to any {@link WebExTree} or {@link WebAsyncTree}.
+ * Special filter field that can be attached to any WebExTree or WebAsyncTree.
  *
- * @param <N> {@link UniqueNode} type
+ * @param <E> filtered node type
  * @author Mikle Garin
  */
-public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
+
+public class WebTreeFilterField<E extends UniqueNode> extends WebTextField
 {
     /**
-     * {@link JTree} to which this field should apply filtering.
+     * Used icons.
      */
-    protected JTree tree;
+    public static final ImageIcon settingsIcon = new ImageIcon ( WebTreeFilterField.class.getResource ( "icons/filter/settings.png" ) );
+    public static final ImageIcon matchCaseIcon = new ImageIcon ( WebTreeFilterField.class.getResource ( "icons/filter/matchCase.png" ) );
+    public static final ImageIcon useSpaceAsSeparatorIcon =
+            new ImageIcon ( WebTreeFilterField.class.getResource ( "icons/filter/useSpaceAsSeparator.png" ) );
+    public static final ImageIcon searchFromStartIcon =
+            new ImageIcon ( WebTreeFilterField.class.getResource ( "icons/filter/searchFromStart.png" ) );
 
     /**
-     * {@link TreeModel} that implements {@link FilterableNodes} and currently used in the {@link JTree}.
+     * Async tree to which this field should apply filtering.
      */
-    protected TreeModel model;
+    protected WeakReference<WebTree<E>> tree;
 
     /**
      * Nodes filter used by this field.
      */
-    protected StructuredTreeNodesFilter<N> filter;
+    protected StructuredTreeNodesFilter<E> filter;
 
     /**
      * Currently listened field document.
@@ -72,25 +76,35 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
     protected Document document;
 
     /**
-     * {@link TreeModel} change listener.
+     * Special document listener that notifies about filter changes.
      */
-    protected PropertyChangeListener treeModelChangeListener;
+    protected DocumentListener documentListener;
+
+    /**
+     * Data provider change listener.
+     */
+    protected PropertyChangeListener dataProviderChangeListener;
+
+    /**
+     * Tree filter change listener.
+     */
+    protected PropertyChangeListener filterChangeListener;
 
     /**
      * Whether should automatically handle tree state on filter changes or not.
      */
-    protected boolean defaultTreeStateBehavior;
+    protected boolean defaultTreeStateBehavior = true;
 
     /**
      * Last saved tree state.
      */
-    protected TreeState treeState;
-    protected Rectangle visibleRect;
+    protected TreeState treeState = null;
+    protected Rectangle visibleRect = null;
 
     /**
      * UI elements.
      */
-    protected WebButton filterIcon;
+    protected WebImage filterIcon;
     protected WebPopupMenu settingsMenu;
     protected WebCheckBoxMenuItem matchCaseItem;
     protected WebCheckBoxMenuItem useSpaceAsSeparatorItem;
@@ -101,38 +115,7 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
      */
     public WebTreeFilterField ()
     {
-        this ( StyleId.auto, null, null );
-    }
-
-    /**
-     * Constructs new tree filter field.
-     *
-     * @param tree tree to which this field applies filtering
-     */
-    public WebTreeFilterField ( final JTree tree )
-    {
-        this ( StyleId.auto, tree, null );
-    }
-
-    /**
-     * Constructs new tree filter field.
-     *
-     * @param textProvider node text provider
-     */
-    public WebTreeFilterField ( final Function<N, String> textProvider )
-    {
-        this ( StyleId.auto, null, textProvider );
-    }
-
-    /**
-     * Constructs new tree filter field.
-     *
-     * @param tree         tree to which this field applies filtering
-     * @param textProvider node text provider
-     */
-    public WebTreeFilterField ( final JTree tree, final Function<N, String> textProvider )
-    {
-        this ( StyleId.auto, tree, textProvider );
+        this ( StyleId.treefilterfield, null, null );
     }
 
     /**
@@ -148,12 +131,32 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
     /**
      * Constructs new tree filter field.
      *
+     * @param tree tree to which this field applies filtering
+     */
+    public WebTreeFilterField ( final WebTree<E> tree )
+    {
+        this ( StyleId.treefilterfield, tree, null );
+    }
+
+    /**
+     * Constructs new tree filter field.
+     *
      * @param id   style ID
      * @param tree tree to which this field applies filtering
      */
-    public WebTreeFilterField ( final StyleId id, final JTree tree )
+    public WebTreeFilterField ( final StyleId id, final WebTree<E> tree )
     {
         this ( id, tree, null );
+    }
+
+    /**
+     * Constructs new tree filter field.
+     *
+     * @param textProvider node text provider
+     */
+    public WebTreeFilterField ( final TextProvider<E> textProvider )
+    {
+        this ( StyleId.treefilterfield, null, textProvider );
     }
 
     /**
@@ -162,9 +165,20 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
      * @param id           style ID
      * @param textProvider node text provider
      */
-    public WebTreeFilterField ( final StyleId id, final Function<N, String> textProvider )
+    public WebTreeFilterField ( final StyleId id, final TextProvider<E> textProvider )
     {
         this ( id, null, textProvider );
+    }
+
+    /**
+     * Constructs new tree filter field.
+     *
+     * @param tree         tree to which this field applies filtering
+     * @param textProvider node text provider
+     */
+    public WebTreeFilterField ( final WebTree<E> tree, final TextProvider<E> textProvider )
+    {
+        this ( StyleId.treefilterfield, tree, textProvider );
     }
 
     /**
@@ -174,23 +188,30 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
      * @param tree         tree to which this field applies filtering
      * @param textProvider node text provider
      */
-    public WebTreeFilterField ( final StyleId id, final JTree tree, final Function<N, String> textProvider )
+    public WebTreeFilterField ( final StyleId id, final WebTree<E> tree, final TextProvider<E> textProvider )
     {
         super ( id );
         setLanguage ( "weblaf.ex.treefilter.inputprompt" );
+        checkTree ( tree );
         initDefaultFilter ();
+        setTree ( tree );
+        setTextProvider ( textProvider );
         initFilterIcon ();
         initSettingsMenu ();
         initListeners ();
-        setDefaultTreeStateBehavior ( true );
-        setTextProvider ( textProvider );
-        setTree ( tree );
     }
 
-    @Override
-    public StyleId getDefaultStyleId ()
+    /**
+     * Checks whether provided tree type is correct or not.
+     *
+     * @param tree tree to check
+     */
+    protected void checkTree ( final WebTree<E> tree )
     {
-        return StyleId.treefilterfield;
+        if ( !( tree instanceof WebAsyncTree || tree instanceof WebExTree ) )
+        {
+            throw new RuntimeException ( "WebTreeFilterField is only usable with WebAsyncTree and WebExTree" );
+        }
     }
 
     /**
@@ -206,14 +227,15 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
      */
     protected void initFilterIcon ()
     {
-        filterIcon = new WebButton ( StyleId.treefilterfieldSettings.at ( this ), Icons.filter, Icons.filterHover );
+        filterIcon = new WebImage ( WebTreeFilterField.class, "icons/filter/settings.png" );
+        filterIcon.setMargin ( 0, 2, 0, 2 );
         filterIcon.setCursor ( Cursor.getDefaultCursor () );
-        filterIcon.addActionListener ( new ActionListener ()
+        filterIcon.addMouseListener ( new MouseAdapter ()
         {
             @Override
-            public void actionPerformed ( final ActionEvent e )
+            public void mousePressed ( final MouseEvent e )
             {
-                settingsMenu.showBelowStart ( filterIcon );
+                settingsMenu.showBelowMiddle ( filterIcon );
             }
         } );
         setLeadingComponent ( filterIcon );
@@ -226,7 +248,7 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
     {
         settingsMenu = new WebPopupMenu ();
 
-        matchCaseItem = new WebCheckBoxMenuItem ();
+        matchCaseItem = new WebCheckBoxMenuItem ( matchCaseIcon );
         matchCaseItem.setLanguage ( "weblaf.filter.matchcase" );
         matchCaseItem.addActionListener ( new ActionListener ()
         {
@@ -239,7 +261,7 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
         } );
         settingsMenu.add ( matchCaseItem );
 
-        useSpaceAsSeparatorItem = new WebCheckBoxMenuItem ();
+        useSpaceAsSeparatorItem = new WebCheckBoxMenuItem ( useSpaceAsSeparatorIcon );
         useSpaceAsSeparatorItem.setLanguage ( "weblaf.filter.spaceseparator" );
         useSpaceAsSeparatorItem.addActionListener ( new ActionListener ()
         {
@@ -252,7 +274,7 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
         } );
         settingsMenu.add ( useSpaceAsSeparatorItem );
 
-        searchFromStartItem = new WebCheckBoxMenuItem ();
+        searchFromStartItem = new WebCheckBoxMenuItem ( searchFromStartIcon );
         searchFromStartItem.setLanguage ( "weblaf.filter.frombeginning" );
         searchFromStartItem.addActionListener ( new ActionListener ()
         {
@@ -271,107 +293,112 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
      */
     protected void initListeners ()
     {
-        // Updating filtering on text change
-        onChange ( new DocumentEventRunnable<WebTextField> ()
+        // Field changes listener
+        documentListener = new StringDocumentChangeListener ()
         {
             @Override
-            public void run ( final WebTextField component, final DocumentEvent event )
+            public void documentChanged ( final String newValue, final DocumentEvent e )
             {
-                filter.setSearchText ( component.getText () );
+                filter.setSearchText ( newValue );
                 updateFiltering ();
             }
-        } );
+        };
+        updateDocumentListener ();
 
-        // Clearing filter field on ESCAPE press
-        onKeyPress ( Hotkey.ESCAPE, new KeyEventRunnable ()
+        // Field document change listener
+        addPropertyChangeListener ( WebLookAndFeel.DOCUMENT_PROPERTY, new PropertyChangeListener ()
         {
             @Override
-            public void run ( final KeyEvent e )
+            public void propertyChange ( final PropertyChangeEvent e )
             {
-                clear ();
+                updateDocumentListener ();
             }
         } );
 
-        // Model listener for carrying custom filter over to new model
-        treeModelChangeListener = new PropertyChangeListener ()
+        // Field clear listener
+        addKeyListener ( new KeyAdapter ()
+        {
+            @Override
+            public void keyPressed ( final KeyEvent e )
+            {
+                if ( Hotkey.ESCAPE.isTriggered ( e ) )
+                {
+                    // Clearing filter field on ESCAPE press
+                    clear ();
+                }
+            }
+        } );
+
+        // Model change listener to properly update field filter
+        dataProviderChangeListener = new PropertyChangeListener ()
         {
             @Override
             public void propertyChange ( final PropertyChangeEvent evt )
             {
-                // Checking model support
-                final TreeModel newModel = ( TreeModel ) evt.getNewValue ();
-                checkTreeModel ( tree, newModel );
-
-                // Removing filter from the old model
-                removeFieldFilter ();
-
-                // Clearing tree state as it might not be applicable to the new model data
-                clearState ();
-
-                // Saving reference to the new model
-                model = newModel;
-
-                // Saving tree state before applying the filter
-                saveState ();
-
-                // Applying filter to the new model
+                // Reapplying field filter on model change
                 applyFieldFilter ();
             }
         };
-    }
+        getTree ().addPropertyChangeListener ( WebTree.TREE_DATA_PROVIDER_PROPERTY, dataProviderChangeListener );
 
-    /**
-     * Sets {@link JTree} to which this field applies filtering.
-     *
-     * @param tree {@link JTree} to which this field applies filtering
-     */
-    public void setTree ( final JTree tree )
-    {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Checking tree and model support
-        checkTreeModel ( tree, tree.getModel () );
-
-        // Removing filter from the tree we are detaching from
-        removeFieldFilter ();
-
-        // Restoring state for the tree we are detaching from this filter field
-        restoreState ();
-
-        // Saving reference to new tree and its model
-        this.tree = tree;
-        this.model = tree.getModel ();
-
-        // Saving initial state for the new attached tree before we apply filtering
-        saveState ();
-
-        // Installing filter into the new attached tree
-        applyFieldFilter ();
-    }
-
-    /**
-     * Checks {@link JTree} and {@link TreeModel} support.
-     *
-     * @param tree  {@link JTree} to check
-     * @param model {@link TreeModel} to check
-     */
-    protected void checkTreeModel ( final JTree tree, final TreeModel model )
-    {
-        if ( tree == null || !( model instanceof FilterableNodes ) )
+        // Filter change listener to properly update field filter
+        filterChangeListener = new PropertyChangeListener ()
         {
-            throw new RuntimeException ( "WebTreeFilterField only supports tree models that implements FilterableNodes" );
-        }
+            @Override
+            public void propertyChange ( final PropertyChangeEvent evt )
+            {
+                // Reapplying field filter on filter change
+                applyFieldFilter ();
+            }
+        };
+        getTree ().addPropertyChangeListener ( WebTree.TREE_FILTER_PROPERTY, dataProviderChangeListener );
     }
 
     /**
-     * Returns {@link TreeModel} that implements {@link FilterableNodes}.
-     *
-     * @return {@link TreeModel} that implements {@link FilterableNodes}
+     * Updates field document listener.
      */
-    public FilterableNodes<N> getFilterableModel ()
+    protected void updateDocumentListener ()
     {
-        return ( FilterableNodes<N> ) model;
+        // Removing listener from old document
+        if ( document != null )
+        {
+            document.removeDocumentListener ( documentListener );
+        }
+
+        // Adding listener to new document
+        document = getDocument ();
+        document.addDocumentListener ( documentListener );
+    }
+
+    /**
+     * Sets tree to which this field applies filtering.
+     *
+     * @param tree tree to which this field applies filtering
+     */
+    public void setTree ( final WebTree<E> tree )
+    {
+        // Cleanup the mess we made in previous tree
+        final WebTree<E> previousTree = getTree ();
+        if ( previousTree != null )
+        {
+            // Removing listener from previous tree
+            previousTree.removePropertyChangeListener ( WebTree.TREE_MODEL_PROPERTY, dataProviderChangeListener );
+
+            // Removing filter from previous tree
+            removeFieldFilter ();
+        }
+
+        // Installing filtering into new tree
+        {
+            // Saving reference to new tree
+            this.tree = new WeakReference<WebTree<E>> ( tree );
+
+            // Updating filter in current tree
+            applyFieldFilter ();
+
+            // Adding listener into current tree
+            tree.addPropertyChangeListener ( WebTree.TREE_MODEL_PROPERTY, dataProviderChangeListener );
+        }
     }
 
     /**
@@ -379,7 +406,7 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
      *
      * @return nodes filter
      */
-    public StructuredTreeNodesFilter<N> getFilter ()
+    public StructuredTreeNodesFilter<E> getFilter ()
     {
         return filter;
     }
@@ -389,25 +416,11 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
      *
      * @param filter new nodes filter
      */
-    public void setFilter ( final StructuredTreeNodesFilter<N> filter )
+    public void setFilter ( final StructuredTreeNodesFilter<E> filter )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Saving tree state before applying the filter
-        saveState ();
-
-        // Removing old filter
         removeFieldFilter ();
-
-        // Saving reference to new filter
         this.filter = filter;
-
-        // Applying new filter
         applyFieldFilter ();
-
-        // Restoring tree state after applying the filter
-        restoreState ();
     }
 
     /**
@@ -416,13 +429,41 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
     protected void applyFieldFilter ()
     {
         // Updating tree filter if possible
+        final WebTree<E> tree = getTree ();
         if ( tree != null )
         {
-            // Updating tree model filter
-            getFilterableModel ().setFilter ( filter );
+            if ( tree instanceof WebAsyncTree )
+            {
+                final WebAsyncTree asyncTree = ( WebAsyncTree ) tree;
 
-            // Adding listeners into current tree
-            tree.addPropertyChangeListener ( JTree.TREE_MODEL_PROPERTY, treeModelChangeListener );
+                // Cleaning up filter cache
+                filter.clearCache ();
+
+                // Saving original filter
+                // Note that we have to check whether field filter is already installed or not here
+                final Filter originalFilter = asyncTree.getFilter ();
+                filter.setOriginalFilter ( originalFilter instanceof StructuredTreeNodesFilter ?
+                        ( ( StructuredTreeNodesFilter ) originalFilter ).getOriginalFilter () : originalFilter );
+
+                // Updating field tree filter
+                asyncTree.setFilter ( filter );
+            }
+            else if ( tree instanceof WebExTree )
+            {
+                final WebExTree exTree = ( WebExTree ) tree;
+
+                // Cleaning up filter cache
+                filter.clearCache ();
+
+                // Saving original filter
+                // Note that we have to check whether field filter is already installed or not here
+                final Filter originalFilter = exTree.getFilter ();
+                filter.setOriginalFilter ( originalFilter instanceof StructuredTreeNodesFilter ?
+                        ( ( StructuredTreeNodesFilter ) originalFilter ).getOriginalFilter () : originalFilter );
+
+                // Updating field tree filter
+                exTree.setFilter ( filter );
+            }
         }
     }
 
@@ -431,16 +472,19 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
      */
     protected void removeFieldFilter ()
     {
+        final WebTree<E> tree = getTree ();
         if ( tree != null )
         {
-            // Removing listeners from current tree
-            tree.removePropertyChangeListener ( JTree.TREE_MODEL_PROPERTY, treeModelChangeListener );
-
-            // Removing tree model filter
-            getFilterableModel ().clearFilter ();
-
-            // Cleaning up filter cache
-            filter.clearCache ();
+            final Filter<E> originalFilter = filter.getOriginalFilter ();
+            if ( tree instanceof WebAsyncTree )
+            {
+                ( ( WebAsyncTree ) tree ).setFilter ( originalFilter );
+            }
+            else if ( tree instanceof WebExTree )
+            {
+                ( ( WebExTree ) tree ).setFilter ( originalFilter );
+            }
+            filter.setOriginalFilter ( null );
         }
     }
 
@@ -449,7 +493,7 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
      *
      * @return node text provider
      */
-    public Function<N, String> getTextProvider ()
+    public TextProvider<E> getTextProvider ()
     {
         return filter.getTextProvider ();
     }
@@ -459,15 +503,9 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
      *
      * @param textProvider new node text provider
      */
-    public void setTextProvider ( final Function<N, String> textProvider )
+    public void setTextProvider ( final TextProvider<E> textProvider )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Updating filter's text provider
         filter.setTextProvider ( textProvider );
-
-        // Updating filtering
         updateFiltering ();
     }
 
@@ -492,107 +530,115 @@ public class WebTreeFilterField<N extends UniqueNode> extends WebTextField
     }
 
     /**
-     * Updates {@link JTree} filtering on all levels.
+     * Updates tree filtering.
      */
     public void updateFiltering ()
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
         // Updating tree filtering if possible
+        final WebTree<E> tree = getTree ();
         if ( tree != null )
         {
-            // Saving tree state before filtering
-            saveState ();
-
-            // Cleaning up filter cache
-            filter.clearCache ();
-
-            // Updating tree filtering
-            getFilterableModel ().filter ();
-
-            // Updating tree nodes state after filtering
-            if ( !isEmpty () )
+            if ( tree instanceof WebAsyncTree )
             {
-                expandToFilteredNodes ();
+                // todo Restore/expand behavior
+
+                // Cleaning up filter cache
+                filter.clearCache ();
+
+                // Updating tree filtering
+                ( ( WebAsyncTree ) tree ).updateSortingAndFiltering ();
             }
-            else
+            else if ( tree instanceof WebExTree )
             {
-                restoreState ();
+                // Save tree state before filtering
+                if ( defaultTreeStateBehavior )
+                {
+                    if ( !isEmpty () && treeState == null )
+                    {
+                        treeState = tree.getTreeState ();
+                        visibleRect = tree.getVisibleRect ();
+                    }
+                }
+
+                // Cleaning up filter cache
+                filter.clearCache ();
+
+                // Updating tree filtering
+                ( ( WebExTree ) tree ).updateSortingAndFiltering ();
+
+                // Restore tree state or expand tree
+                if ( defaultTreeStateBehavior )
+                {
+                    if ( isEmpty () )
+                    {
+                        // Restore tree state
+                        if ( treeState != null )
+                        {
+                            tree.setTreeState ( treeState );
+                            tree.scrollRectToVisible ( visibleRect );
+                            treeState = null;
+                            visibleRect = null;
+                        }
+                    }
+                    else
+                    {
+                        // Expand all
+                        tree.expandAll ();
+                    }
+                }
             }
         }
     }
 
     /**
-     * Saves current {@link TreeState} and visible area {@link Rectangle} if {@link JTree} is attached to this field,
-     * default behavior is enabled, filter text is not empty and there is no stored state yet.
-     */
-    protected void saveState ()
-    {
-        if ( tree != null && defaultTreeStateBehavior && !isEmpty () && treeState == null )
-        {
-            treeState = TreeUtils.getTreeState ( tree );
-            visibleRect = tree.getVisibleRect ();
-        }
-    }
-
-    /**
-     * Restores previous {@link TreeState} and visible area {@link Rectangle} if {@link JTree} is attached to this field,
-     * default behavior is enabled and there is a stored state.
-     */
-    protected void restoreState ()
-    {
-        if ( tree != null && defaultTreeStateBehavior && treeState != null )
-        {
-            TreeUtils.setTreeState ( tree, treeState );
-            tree.scrollRectToVisible ( visibleRect );
-            treeState = null;
-            visibleRect = null;
-        }
-    }
-
-    /**
-     * Clears stored {@link TreeState} and visible area {@link Rectangle}.
-     */
-    protected void clearState ()
-    {
-        if ( tree != null && defaultTreeStateBehavior && treeState != null )
-        {
-            treeState = null;
-            visibleRect = null;
-        }
-    }
-
-    /**
-     * Expands tree to display all {@link UniqueNode}s remaining after filtering.
-     */
-    protected void expandToFilteredNodes ()
-    {
-        if ( defaultTreeStateBehavior )
-        {
-            TreeUtils.expandLoaded ( tree );
-        }
-    }
-
-    /**
-     * Performs {@link UniqueNode} acceptance re-check.
+     * Performs node acceptance re-check.
      * Might be useful if external tree updates are applied.
      *
-     * @param node {@link UniqueNode} that should be re-checked
+     * @param node node that should be re-checked
      */
-    public void clearNodeCache ( final N node )
+    public void updateNodeAcceptance ( final E node )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
         // Updating tree filtering
+        final WebTree<E> tree = getTree ();
         if ( tree != null )
         {
-            // Cleaning up filter cache
-            filter.clearCache ( node );
+            if ( tree instanceof WebAsyncTree )
+            {
+                // Cleaning up filter cache
+                filter.clearCache ( node );
 
-            // Updating tree node filtering
-            getFilterableModel ().filter ( ( N ) node.getParent () );
+                // Updating tree node filtering
+                ( ( WebAsyncTree ) tree ).updateSortingAndFiltering ( ( AsyncUniqueNode ) node.getParent () );
+            }
+            else if ( tree instanceof WebExTree )
+            {
+                // Cleaning up filter cache
+                filter.clearCache ( node );
+
+                // Updating tree node filtering
+                ( ( WebExTree ) tree ).updateSortingAndFiltering ( node.getParent () );
+            }
         }
+    }
+
+    /**
+     * Returns tree to which this field applies filtering.
+     *
+     * @return tree to which this field applies filtering
+     */
+    public WebTree<E> getTree ()
+    {
+        return tree != null ? tree.get () : null;
+    }
+
+    /**
+     * Returns whether this tree filter field is empty or not.
+     *
+     * @return true if this tree filter field is empty, false otherwise
+     */
+    public boolean isEmpty ()
+    {
+        final String text = getText ();
+        return text == null || text.equals ( "" );
     }
 }

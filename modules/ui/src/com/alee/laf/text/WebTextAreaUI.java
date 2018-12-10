@@ -17,31 +17,27 @@
 
 package com.alee.laf.text;
 
-import com.alee.api.jdk.Consumer;
-import com.alee.api.jdk.Objects;
 import com.alee.managers.style.*;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
+import com.alee.utils.CompareUtils;
 import com.alee.utils.ReflectUtils;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
+import javax.swing.plaf.basic.BasicTextAreaUI;
 import java.awt.*;
 
 /**
- * Custom UI for {@link JTextArea} component.
- *
  * @author Mikle Garin
  * @author Alexandr Zernov
  */
-public class WebTextAreaUI extends WTextAreaUI implements ShapeSupport, MarginSupport, PaddingSupport
-{
-    /**
-     * Input prompt text.
-     */
-    protected String inputPrompt;
 
+public class WebTextAreaUI extends BasicTextAreaUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+{
     /**
      * Component painter.
      */
@@ -49,86 +45,106 @@ public class WebTextAreaUI extends WTextAreaUI implements ShapeSupport, MarginSu
     protected ITextAreaPainter painter;
 
     /**
-     * Runtime variables.
+     * Input prompt text.
      */
-    protected transient JTextArea textArea = null;
+    protected String inputPrompt;
 
     /**
-     * Returns an instance of the {@link WebTextAreaUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Runtime variables.
+     */
+    protected JTextArea textArea = null;
+    protected Insets margin = null;
+    protected Insets padding = null;
+
+    /**
+     * Returns an instance of the WebTextAreaUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebTextAreaUI}
+     * @return instance of the WebTextAreaUI
      */
+    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebTextAreaUI ();
     }
 
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
+        super.installUI ( c );
+
         // Saving text field reference
         textArea = ( JTextArea ) c;
-
-        super.installUI ( c );
 
         // Applying skin
         StyleManager.installSkin ( textArea );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( textArea );
 
-        super.uninstallUI ( c );
-
         // Removing text area reference
         textArea = null;
+
+        super.uninstallUI ( c );
     }
 
     @Override
-    public Shape getShape ()
+    public StyleId getStyleId ()
+    {
+        return StyleManager.getStyleId ( textArea );
+    }
+
+    @Override
+    public StyleId setStyleId ( final StyleId id )
+    {
+        return StyleManager.setStyleId ( textArea, id );
+    }
+
+    @Override
+    public Shape provideShape ()
     {
         return PainterSupport.getShape ( textArea, painter );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return PainterSupport.isShapeDetectionEnabled ( textArea, painter );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        PainterSupport.setShapeDetectionEnabled ( textArea, painter, enabled );
-    }
-
-    @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( textArea );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( textArea, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( textArea );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( textArea, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -138,7 +154,7 @@ public class WebTextAreaUI extends WTextAreaUI implements ShapeSupport, MarginSu
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -149,36 +165,38 @@ public class WebTextAreaUI extends WTextAreaUI implements ShapeSupport, MarginSu
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( textArea, new Consumer<ITextAreaPainter> ()
+        PainterSupport.setPainter ( textArea, new DataRunnable<ITextAreaPainter> ()
         {
             @Override
-            public void accept ( final ITextAreaPainter newPainter )
+            public void run ( final ITextAreaPainter newPainter )
             {
                 WebTextAreaUI.this.painter = newPainter;
             }
         }, this.painter, painter, ITextAreaPainter.class, AdaptiveTextAreaPainter.class );
     }
 
-    @Override
+    /**
+     * Returns input prompt text.
+     *
+     * @return input prompt text
+     */
     public String getInputPrompt ()
     {
         return inputPrompt;
     }
 
-    @Override
+    /**
+     * Sets input prompt text.
+     *
+     * @param text input prompt text
+     */
     public void setInputPrompt ( final String text )
     {
-        if ( Objects.notEquals ( text, this.inputPrompt ) )
+        if ( !CompareUtils.equals ( text, this.inputPrompt ) )
         {
             this.inputPrompt = text;
             textArea.repaint ();
         }
-    }
-
-    @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
-    {
-        return PainterSupport.contains ( c, this, painter, x, y );
     }
 
     @Override
@@ -192,7 +210,7 @@ public class WebTextAreaUI extends WTextAreaUI implements ShapeSupport, MarginSu
 
             // Painting text component
             final JComponent c = getComponent ();
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
     }
 

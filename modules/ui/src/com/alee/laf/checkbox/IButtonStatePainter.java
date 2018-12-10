@@ -20,19 +20,16 @@ package com.alee.laf.checkbox;
 import com.alee.painter.SectionPainter;
 
 import javax.swing.*;
-import javax.swing.plaf.ButtonUI;
+import javax.swing.plaf.basic.BasicButtonUI;
 
 /**
  * Base interface for various state button painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Mikle Garin
  */
 
-public interface IButtonStatePainter<C extends AbstractButton, U extends ButtonUI> extends SectionPainter<C, U>
+public interface IButtonStatePainter<E extends AbstractButton, U extends BasicButtonUI> extends SectionPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

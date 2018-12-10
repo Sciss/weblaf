@@ -26,16 +26,18 @@ import com.alee.laf.button.WebButton;
 import com.alee.laf.colorchooser.ColorChooserListener;
 import com.alee.laf.colorchooser.WebColorChooserPanel;
 import com.alee.laf.label.WebLabel;
+import com.alee.laf.rootpane.WebWindow;
 import com.alee.laf.text.WebTextField;
-import com.alee.laf.window.WebWindow;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.managers.hotkey.HotkeyManager;
 import com.alee.managers.hotkey.HotkeyRunnable;
-import com.alee.managers.style.BoundsType;
+import com.alee.managers.log.Log;
 import com.alee.managers.style.StyleId;
-import com.alee.utils.*;
+import com.alee.managers.style.Bounds;
+import com.alee.utils.ColorUtils;
+import com.alee.utils.ImageUtils;
+import com.alee.utils.SwingUtils;
 import com.alee.utils.swing.ChooserListener;
-import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
@@ -255,11 +257,11 @@ public class WebColorChooserField extends WebTextField
             try
             {
                 final boolean hex = colorDisplayType.equals ( ColorDisplayType.hex );
-                Color newColor = hex ? ColorUtils.fromHex ( current ) : ColorUtils.fromRGB ( current );
+                Color newColor = hex ? ColorUtils.parseHexColor ( current ) : ColorUtils.parseRgbColor ( current );
                 if ( newColor != null )
                 {
                     // todo Ignoring alpha for now
-                    newColor = ColorUtils.opaque ( newColor );
+                    newColor = ColorUtils.removeAlpha ( newColor );
 
                     // Apply new value
                     setColorImpl ( newColor );
@@ -270,7 +272,7 @@ public class WebColorChooserField extends WebTextField
                     updateViewFromColor ();
                 }
             }
-            catch ( final Exception e )
+            catch ( final Throwable e )
             {
                 // Restore old value
                 updateViewFromColor ();
@@ -301,7 +303,7 @@ public class WebColorChooserField extends WebTextField
     protected String getColorText ( final Color color )
     {
         final boolean hex = colorDisplayType.equals ( ColorDisplayType.hex );
-        return hex ? ColorUtils.toHex ( color ) : color.getRed () + "," + color.getGreen () + "," + color.getBlue ();
+        return hex ? ColorUtils.getHexColor ( color ) : color.getRed () + "," + color.getGreen () + "," + color.getBlue ();
     }
 
     //    protected void updateMargin ()
@@ -341,7 +343,7 @@ public class WebColorChooserField extends WebTextField
             }
             catch ( final AWTException e )
             {
-                LoggerFactory.getLogger ( WebColorChooserField.class ).error ( e.toString (), e );
+                Log.error ( this, e );
             }
             if ( robot != null )
             {
@@ -421,7 +423,7 @@ public class WebColorChooserField extends WebTextField
                                 {
                                     if ( screen != null )
                                     {
-                                        final Point p = CoreSwingUtils.getMouseLocation ();
+                                        final Point p = MouseInfo.getPointerInfo ().getLocation ();
                                         screenshot = robot.createScreenCapture (
                                                 new Rectangle ( p.x - eyedropperImageSide / 2, p.y - eyedropperImageSide / 2,
                                                         eyedropperImageSide, eyedropperImageSide ) );
@@ -429,14 +431,7 @@ public class WebColorChooserField extends WebTextField
                                         if ( screen != null )
                                         {
                                             screen.repaint ();
-                                            CoreSwingUtils.invokeLater ( new Runnable ()
-                                            {
-                                                @Override
-                                                public void run ()
-                                                {
-                                                    info.setText ( getColorText ( color ) );
-                                                }
-                                            } );
+                                            info.setText ( getColorText ( color ) );
                                         }
                                         else
                                         {
@@ -488,7 +483,7 @@ public class WebColorChooserField extends WebTextField
                                 if ( window.isShowing () && robot != null )
                                 {
                                     final Graphics2D g2d = ( Graphics2D ) g;
-                                    final Rectangle bounds = BoundsType.margin.bounds ( this );
+                                    final Rectangle bounds = Bounds.margin.of ( this );
 
                                     // Screen
                                     g2d.drawImage ( screenshot, bounds.x + 2, bounds.y + 2, bounds.width - 4, bounds.height - 4, null );
@@ -582,8 +577,8 @@ public class WebColorChooserField extends WebTextField
 
                     private void updateWindowLocation ()
                     {
-                        final Point p = CoreSwingUtils.getMouseLocation ();
-                        final Rectangle b = SystemUtils.getDeviceBounds ( p, true );
+                        final Point p = MouseInfo.getPointerInfo ().getLocation ();
+                        final Rectangle b = window.getGraphicsConfiguration ().getDevice ().getDefaultConfiguration ().getBounds ();
                         final int ww = window.getWidth ();
                         final int wh = window.getHeight ();
                         final int x = p.x + 20 + ww < b.x + b.width ? p.x + 20 : p.x - 20 - ww;
@@ -627,7 +622,7 @@ public class WebColorChooserField extends WebTextField
         // Create popup if it doesn't exist
         if ( popup == null || colorChooserPanel == null )
         {
-            final Window ancestor = CoreSwingUtils.getWindowAncestor ( this );
+            final Window ancestor = SwingUtils.getWindowAncestor ( this );
 
             // Popup window
             popup = new WebPopOver ( ancestor );
@@ -715,8 +710,8 @@ public class WebColorChooserField extends WebTextField
 
     protected void updatePopupLocation ()
     {
-        final Point los = CoreSwingUtils.locationOnScreen ( WebColorChooserField.this );
-        final Rectangle gb = SystemUtils.getDeviceBounds ( popup.getGraphicsConfiguration (), true );
+        final Point los = WebColorChooserField.this.getLocationOnScreen ();
+        final Rectangle gb = popup.getGraphicsConfiguration ().getBounds ();
         final int shadeWidth = /*isDrawBorder () ? getShadeWidth () :*/ 0; // todo check shade width
         final boolean ltr = WebColorChooserField.this.getComponentOrientation ().isLeftToRight ();
         final int w = WebColorChooserField.this.getWidth ();
@@ -749,11 +744,11 @@ public class WebColorChooserField extends WebTextField
         final int y;
         if ( los.y + h + popup.getHeight () <= gb.y + gb.height )
         {
-            y = los.y + h; // + ( isDrawBorder () ? 0 : 1 );
+            y = los.y + h + ( /*isDrawBorder () ?*/ 0 /*: 1*/ );
         }
         else
         {
-            y = los.y - popup.getHeight (); // - ( isDrawBorder () ? 0 : 1 );
+            y = los.y - popup.getHeight () - ( /*isDrawBorder () ?*/ 0 /*: 1*/ );
         }
 
         popup.setLocation ( x, y );

@@ -17,243 +17,163 @@
 
 package com.alee.laf.toolbar;
 
-import com.alee.api.jdk.BiConsumer;
-import com.alee.managers.hotkey.HotkeyData;
-import com.alee.managers.language.*;
-import com.alee.managers.language.updaters.LanguageUpdater;
-import com.alee.managers.settings.Configuration;
-import com.alee.managers.settings.SettingsMethods;
-import com.alee.managers.settings.SettingsProcessor;
-import com.alee.managers.settings.UISettingsManager;
+import com.alee.extended.layout.ToolbarLayout;
+import com.alee.laf.WebLookAndFeel;
+import com.alee.managers.language.LanguageContainerMethods;
+import com.alee.managers.language.LanguageManager;
+import com.alee.managers.log.Log;
 import com.alee.managers.style.*;
-import com.alee.managers.tooltip.ToolTipMethods;
-import com.alee.managers.tooltip.TooltipManager;
-import com.alee.managers.tooltip.TooltipWay;
-import com.alee.managers.tooltip.WebCustomTooltip;
+import com.alee.managers.style.Skin;
+import com.alee.managers.style.Skinnable;
+import com.alee.managers.style.StyleListener;
 import com.alee.painter.Paintable;
 import com.alee.painter.Painter;
-import com.alee.utils.swing.MouseButton;
-import com.alee.utils.swing.extensions.*;
+import com.alee.utils.ReflectUtils;
+import com.alee.utils.SizeUtils;
+import com.alee.utils.swing.SizeMethods;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.FocusAdapter;
-import java.awt.event.KeyAdapter;
-import java.awt.event.MouseAdapter;
 import java.util.List;
+import java.util.Map;
 
 /**
- * {@link JToolBar} extension class.
- * It contains various useful methods to simplify core component usage.
- *
- * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
- * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
- *
  * @author Mikle Garin
- * @see JToolBar
- * @see WebToolBarUI
- * @see ToolBarPainter
  */
-public class WebToolBar extends JToolBar implements Styleable, Paintable, ShapeMethods, MarginMethods, PaddingMethods,
-        ContainerMethods<WebToolBar>, EventMethods, ToolTipMethods, LanguageMethods, LanguageEventMethods, SettingsMethods,
-        FontMethods<WebToolBar>, SizeMethods<WebToolBar>
+
+public class WebToolBar extends JToolBar
+        implements Styleable, Skinnable, Paintable, ShapeProvider, MarginSupport, PaddingSupport, SizeMethods<WebToolBar>,
+        LanguageContainerMethods
 {
-    /**
-     * Constructs new toolbar.
-     */
     public WebToolBar ()
     {
-        this ( StyleId.auto );
+        super ();
     }
 
-    /**
-     * Constructs new toolbar.
-     *
-     * @param orientation toolbar orientation
-     */
     public WebToolBar ( final int orientation )
     {
-        this ( StyleId.auto, orientation );
+        super ( orientation );
     }
 
-    /**
-     * Constructs new toolbar.
-     *
-     * @param name toolbar name
-     */
     public WebToolBar ( final String name )
     {
-        this ( StyleId.auto, name );
+        super ( name );
     }
 
-    /**
-     * Constructs new toolbar.
-     *
-     * @param name        toolbar name
-     * @param orientation toolbar orientation
-     */
     public WebToolBar ( final String name, final int orientation )
     {
-        this ( StyleId.auto, name, orientation );
+        super ( name, orientation );
     }
 
-    /**
-     * Constructs new toolbar.
-     *
-     * @param id style ID
-     */
     public WebToolBar ( final StyleId id )
     {
-        this ( id, null, HORIZONTAL );
+        super ();
+        setStyleId ( id );
     }
 
-    /**
-     * Constructs new toolbar.
-     *
-     * @param id          style ID
-     * @param orientation toolbar orientation
-     */
     public WebToolBar ( final StyleId id, final int orientation )
     {
-        this ( id, null, orientation );
+        super ( orientation );
+        setStyleId ( id );
     }
 
-    /**
-     * Constructs new toolbar.
-     *
-     * @param id   style ID
-     * @param name toolbar name
-     */
     public WebToolBar ( final StyleId id, final String name )
     {
-        this ( id, name, HORIZONTAL );
+        super ( name );
+        setStyleId ( id );
     }
 
-    /**
-     * Constructs new toolbar.
-     *
-     * @param id          style ID
-     * @param name        toolbar name
-     * @param orientation toolbar orientation
-     */
     public WebToolBar ( final StyleId id, final String name, final int orientation )
     {
         super ( name, orientation );
         setStyleId ( id );
     }
 
-    /**
-     * Adds specified {@link Component} under {@link ToolbarLayout#MIDDLE} constraints.
-     *
-     * @param component {@link Component} to add
-     */
     public void addToMiddle ( final Component component )
     {
         add ( component, ToolbarLayout.MIDDLE );
     }
 
-    /**
-     * Adds specified {@link Component} under {@link ToolbarLayout#FILL} constraints.
-     *
-     * @param component {@link Component} to add
-     */
     public void addFill ( final Component component )
     {
         add ( component, ToolbarLayout.FILL );
     }
 
-    /**
-     * Adds specified {@link Component} under {@link ToolbarLayout#END} constraints.
-     *
-     * @param component {@link Component} to add
-     */
     public void addToEnd ( final Component component )
     {
         add ( component, ToolbarLayout.END );
     }
 
-    /**
-     * Adds new {@link WebToolBarSeparator} under {@link ToolbarLayout#START} constraints.
-     */
     @Override
     public void addSeparator ()
     {
         addSeparator ( ToolbarLayout.START );
     }
 
-    /**
-     * Adds new {@link WebToolBarSeparator} under {@link ToolbarLayout#MIDDLE} constraints.
-     *
-     * @return added {@link WebToolBarSeparator}
-     */
-    public WebToolBarSeparator addSeparatorToMiddle ()
-    {
-        return addSeparator ( ToolbarLayout.MIDDLE );
-    }
-
-    /**
-     * Adds new {@link WebToolBarSeparator} under {@link ToolbarLayout#END} constraints.
-     *
-     * @return added {@link WebToolBarSeparator}
-     */
     public WebToolBarSeparator addSeparatorToEnd ()
     {
         return addSeparator ( ToolbarLayout.END );
     }
 
-    /**
-     * Adds new {@link WebToolBarSeparator} under specified constraints.
-     *
-     * @param constraints constraints for {@link WebToolBarSeparator}
-     * @return added {@link WebToolBarSeparator}
-     */
-    public WebToolBarSeparator addSeparator ( final String constraints )
+    public WebToolBarSeparator addSeparator ( final String constrain )
     {
-        return addSeparator ( constraints, StyleId.toolbarseparator );
+        return addSeparator ( constrain, StyleId.toolbarseparator );
     }
 
-    /**
-     * Adds new {@link WebToolBarSeparator} with the specified {@link StyleId} under {@link ToolbarLayout#START} constraints.
-     *
-     * @param id {@link StyleId} for {@link WebToolBarSeparator}
-     * @return added {@link WebToolBarSeparator}
-     */
     public WebToolBarSeparator addSeparator ( final StyleId id )
     {
         return addSeparator ( ToolbarLayout.START, id );
     }
 
-    /**
-     * Adds new {@link WebToolBarSeparator} with the specified {@link StyleId} under {@link ToolbarLayout#END} constraints.
-     *
-     * @param id {@link StyleId} for {@link WebToolBarSeparator}
-     * @return added {@link WebToolBarSeparator}
-     */
     public WebToolBarSeparator addSeparatorToEnd ( final StyleId id )
     {
         return addSeparator ( ToolbarLayout.END, id );
     }
 
-    /**
-     * Adds new {@link WebToolBarSeparator} with the specified {@link StyleId} under the specified constraints.
-     *
-     * @param constraints constraints for {@link WebToolBarSeparator}
-     * @param id          {@link StyleId} for {@link WebToolBarSeparator}
-     * @return added {@link WebToolBarSeparator}
-     */
-    public WebToolBarSeparator addSeparator ( final String constraints, final StyleId id )
+    public WebToolBarSeparator addSeparator ( final String constrain, final StyleId id )
     {
         final WebToolBarSeparator separator = new WebToolBarSeparator ( id );
-        add ( separator, constraints );
+        add ( separator, constrain );
         return separator;
     }
 
-    /**
-     * Adds {@link List} of {@link Component}s under the specified constraints.
-     *
-     * @param components  {@link List} of {@link Component}s to add
-     * @param constraints constraints to add {@link Component}s under
-     */
+    public void addSpacing ()
+    {
+        addSpacing ( 2 );
+    }
+
+    public void addSpacing ( final int spacing )
+    {
+        addSpacing ( spacing, ToolbarLayout.START );
+    }
+
+    public void addSpacingToEnd ()
+    {
+        addSpacingToEnd ( 2 );
+    }
+
+    public void addSpacingToEnd ( final int spacing )
+    {
+        addSpacing ( spacing, ToolbarLayout.END );
+    }
+
+    public void addSpacing ( final int spacing, final String constrain )
+    {
+        // todo Add layout implementation instead of wasted component
+        add ( new WhiteSpace ( spacing ), constrain );
+    }
+
+    public void add ( final List<? extends Component> components, final int index )
+    {
+        if ( components != null )
+        {
+            for ( int i = 0; i < components.size (); i++ )
+            {
+                add ( components.get ( i ), index + i );
+            }
+        }
+    }
+
     public void add ( final List<? extends Component> components, final String constraints )
     {
         if ( components != null )
@@ -265,12 +185,17 @@ public class WebToolBar extends JToolBar implements Styleable, Paintable, ShapeM
         }
     }
 
-    /**
-     * Adds {@link Component}s at the specified Z-index.
-     *
-     * @param index      Z-index to add {@link Component}s at
-     * @param components {@link Component}s to add
-     */
+    public void add ( final List<? extends Component> components )
+    {
+        if ( components != null )
+        {
+            for ( final Component component : components )
+            {
+                add ( component );
+            }
+        }
+    }
+
     public void add ( final int index, final Component... components )
     {
         if ( components != null && components.length > 0 )
@@ -282,12 +207,6 @@ public class WebToolBar extends JToolBar implements Styleable, Paintable, ShapeM
         }
     }
 
-    /**
-     * Adds {@link Component}s under the specified constraints.
-     *
-     * @param constraints constraints to add {@link Component}s under
-     * @param components  {@link Component}s to add
-     */
     public void add ( final String constraints, final Component... components )
     {
         if ( components != null && components.length > 0 )
@@ -299,76 +218,51 @@ public class WebToolBar extends JToolBar implements Styleable, Paintable, ShapeM
         }
     }
 
-    /**
-     * Adds spacing between components.
-     */
-    public void addSpacing ()
+    public void add ( final Component... components )
     {
-        addSpacing ( 2 );
+        if ( components != null && components.length > 0 )
+        {
+            for ( final Component component : components )
+            {
+                add ( component );
+            }
+        }
     }
 
-    /**
-     * Adds spacing between components.
-     *
-     * @param spacing spacing size
-     */
-    public void addSpacing ( final int spacing )
+    public Component getFirstComponent ()
     {
-        addSpacing ( spacing, ToolbarLayout.START );
+        if ( getComponentCount () > 0 )
+        {
+            return getComponent ( 0 );
+        }
+        else
+        {
+            return null;
+        }
     }
 
-    /**
-     * Adds spacing between components at the end.
-     */
-    public void addSpacingToEnd ()
+    public Component getLastComponent ()
     {
-        addSpacingToEnd ( 2 );
-    }
-
-    /**
-     * Adds spacing between components at the end.
-     *
-     * @param spacing spacing size
-     */
-    public void addSpacingToEnd ( final int spacing )
-    {
-        addSpacing ( spacing, ToolbarLayout.END );
-    }
-
-    /**
-     * Adds spacing between components at the specified constraints.
-     *
-     * @param spacing     spacing size
-     * @param constraints layout constraints
-     */
-    public void addSpacing ( final int spacing, final String constraints )
-    {
-        // todo Add layout implementation instead of wasted component
-        add ( new WhiteSpace ( spacing ), constraints );
-    }
-
-    @Override
-    public StyleId getDefaultStyleId ()
-    {
-        return StyleId.toolbar;
+        if ( getComponentCount () > 0 )
+        {
+            return getComponent ( getComponentCount () - 1 );
+        }
+        else
+        {
+            return null;
+        }
     }
 
     @Override
     public StyleId getStyleId ()
     {
-        return StyleManager.getStyleId ( this );
+        return getWebUI ().getStyleId ();
     }
 
     @Override
     public StyleId setStyleId ( final StyleId id )
     {
-        return StyleManager.setStyleId ( this, id );
-    }
-
-    @Override
-    public StyleId resetStyleId ()
-    {
-        return StyleManager.resetStyleId ( this );
+        return getWebUI ().setStyleId ( id );
     }
 
     @Override
@@ -390,9 +284,9 @@ public class WebToolBar extends JToolBar implements Styleable, Paintable, ShapeM
     }
 
     @Override
-    public Skin resetSkin ()
+    public Skin restoreSkin ()
     {
-        return StyleManager.resetSkin ( this );
+        return StyleManager.restoreSkin ( this );
     }
 
     @Override
@@ -408,9 +302,21 @@ public class WebToolBar extends JToolBar implements Styleable, Paintable, ShapeM
     }
 
     @Override
+    public Map<String, Painter> getCustomPainters ()
+    {
+        return StyleManager.getCustomPainters ( this );
+    }
+
+    @Override
     public Painter getCustomPainter ()
     {
         return StyleManager.getCustomPainter ( this );
+    }
+
+    @Override
+    public Painter getCustomPainter ( final String id )
+    {
+        return StyleManager.getCustomPainter ( this, id );
     }
 
     @Override
@@ -420,773 +326,217 @@ public class WebToolBar extends JToolBar implements Styleable, Paintable, ShapeM
     }
 
     @Override
-    public boolean resetCustomPainter ()
+    public Painter setCustomPainter ( final String id, final Painter painter )
     {
-        return StyleManager.resetCustomPainter ( this );
+        return StyleManager.setCustomPainter ( this, id, painter );
     }
 
     @Override
-    public Shape getShape ()
+    public boolean restoreDefaultPainters ()
     {
-        return ShapeMethodsImpl.getShape ( this );
+        return StyleManager.restoreDefaultPainters ( this );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
+    public Shape provideShape ()
     {
-        return ShapeMethodsImpl.isShapeDetectionEnabled ( this );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        ShapeMethodsImpl.setShapeDetectionEnabled ( this, enabled );
+        return getWebUI ().provideShape ();
     }
 
     @Override
     public Insets getMargin ()
     {
-        return MarginMethodsImpl.getMargin ( this );
+        return getWebUI ().getMargin ();
     }
 
-    @Override
+    /**
+     * Sets new margin.
+     *
+     * @param margin new margin
+     */
     public void setMargin ( final int margin )
     {
-        MarginMethodsImpl.setMargin ( this, margin );
+        setMargin ( margin, margin, margin, margin );
     }
 
-    @Override
+    /**
+     * Sets new margin.
+     *
+     * @param top    new top margin
+     * @param left   new left margin
+     * @param bottom new bottom margin
+     * @param right  new right margin
+     */
     public void setMargin ( final int top, final int left, final int bottom, final int right )
     {
-        MarginMethodsImpl.setMargin ( this, top, left, bottom, right );
+        setMargin ( new Insets ( top, left, bottom, right ) );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        MarginMethodsImpl.setMargin ( this, margin );
+        getWebUI ().setMargin ( margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PaddingMethodsImpl.getPadding ( this );
+        return getWebUI ().getPadding ();
     }
 
-    @Override
+    /**
+     * Sets new padding.
+     *
+     * @param padding new padding
+     */
     public void setPadding ( final int padding )
     {
-        PaddingMethodsImpl.setPadding ( this, padding );
+        setPadding ( padding, padding, padding, padding );
     }
 
-    @Override
+    /**
+     * Sets new padding.
+     *
+     * @param top    new top padding
+     * @param left   new left padding
+     * @param bottom new bottom padding
+     * @param right  new right padding
+     */
     public void setPadding ( final int top, final int left, final int bottom, final int right )
     {
-        PaddingMethodsImpl.setPadding ( this, top, left, bottom, right );
+        setPadding ( new Insets ( top, left, bottom, right ) );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PaddingMethodsImpl.setPadding ( this, padding );
-    }
-
-    @Override
-    public boolean contains ( final Component component )
-    {
-        return ContainerMethodsImpl.contains ( this, component );
-    }
-
-    @Override
-    public WebToolBar add ( final List<? extends Component> components )
-    {
-        return ContainerMethodsImpl.add ( this, components );
-    }
-
-    @Override
-    public WebToolBar add ( final List<? extends Component> components, final int index )
-    {
-        return ContainerMethodsImpl.add ( this, components, index );
-    }
-
-    @Override
-    public WebToolBar add ( final List<? extends Component> components, final Object constraints )
-    {
-        return ContainerMethodsImpl.add ( this, components, constraints );
-    }
-
-    @Override
-    public WebToolBar add ( final Component component1, final Component component2 )
-    {
-        return ContainerMethodsImpl.add ( this, component1, component2 );
-    }
-
-    @Override
-    public WebToolBar add ( final Component... components )
-    {
-        return ContainerMethodsImpl.add ( this, components );
-    }
-
-    @Override
-    public WebToolBar remove ( final List<? extends Component> components )
-    {
-        return ContainerMethodsImpl.remove ( this, components );
-    }
-
-    @Override
-    public WebToolBar remove ( final Component... components )
-    {
-        return ContainerMethodsImpl.remove ( this, components );
-    }
-
-    @Override
-    public WebToolBar removeAll ( final Class<? extends Component> componentClass )
-    {
-        return ContainerMethodsImpl.removeAll ( this, componentClass );
-    }
-
-    @Override
-    public Component getFirstComponent ()
-    {
-        return ContainerMethodsImpl.getFirstComponent ( this );
-    }
-
-    @Override
-    public Component getLastComponent ()
-    {
-        return ContainerMethodsImpl.getLastComponent ( this );
-    }
-
-    @Override
-    public WebToolBar equalizeComponentsWidth ()
-    {
-        return ContainerMethodsImpl.equalizeComponentsWidth ( this );
-    }
-
-    @Override
-    public WebToolBar equalizeComponentsHeight ()
-    {
-        return ContainerMethodsImpl.equalizeComponentsHeight ( this );
-    }
-
-    @Override
-    public WebToolBar equalizeComponentsSize ()
-    {
-        return ContainerMethodsImpl.equalizeComponentsSize ( this );
-    }
-
-    @Override
-    public <T extends Component> WebToolBar forEach ( final BiConsumer<Integer, T> consumer )
-    {
-        return ContainerMethodsImpl.forEach ( this, consumer );
-    }
-
-    @Override
-    public MouseAdapter onMousePress ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMousePress ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMousePress ( final MouseButton mouseButton, final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMousePress ( this, mouseButton, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseEnter ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseEnter ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseExit ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseExit ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseDrag ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseDrag ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseDrag ( final MouseButton mouseButton, final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseDrag ( this, mouseButton, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseClick ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseClick ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseClick ( final MouseButton mouseButton, final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseClick ( this, mouseButton, runnable );
-    }
-
-    @Override
-    public MouseAdapter onDoubleClick ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onDoubleClick ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMenuTrigger ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMenuTrigger ( this, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyType ( final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyType ( this, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyType ( final HotkeyData hotkey, final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyType ( this, hotkey, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyPress ( final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyPress ( this, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyPress ( final HotkeyData hotkey, final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyPress ( this, hotkey, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyRelease ( final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyRelease ( this, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyRelease ( final HotkeyData hotkey, final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyRelease ( this, hotkey, runnable );
-    }
-
-    @Override
-    public FocusAdapter onFocusGain ( final FocusEventRunnable runnable )
-    {
-        return EventMethodsImpl.onFocusGain ( this, runnable );
-    }
-
-    @Override
-    public FocusAdapter onFocusLoss ( final FocusEventRunnable runnable )
-    {
-        return EventMethodsImpl.onFocusLoss ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onDragStart ( final int shift, final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onDragStart ( this, shift, runnable );
-    }
-
-    @Override
-    public MouseAdapter onDragStart ( final int shift, final MouseButton mouseButton, final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onDragStart ( this, shift, mouseButton, runnable );
-    }
-
-    @Override
-    public WebCustomTooltip setToolTip ( final String tooltip )
-    {
-        return TooltipManager.setTooltip ( this, tooltip );
-    }
-
-    @Override
-    public WebCustomTooltip setToolTip ( final Icon icon, final String tooltip )
-    {
-        return TooltipManager.setTooltip ( this, icon, tooltip );
-    }
-
-    @Override
-    public WebCustomTooltip setToolTip ( final String tooltip, final TooltipWay tooltipWay )
-    {
-        return TooltipManager.setTooltip ( this, tooltip, tooltipWay );
-    }
-
-    @Override
-    public WebCustomTooltip setToolTip ( final Icon icon, final String tooltip, final TooltipWay tooltipWay )
-    {
-        return TooltipManager.setTooltip ( this, icon, tooltip, tooltipWay );
-    }
-
-    @Override
-    public WebCustomTooltip setToolTip ( final String tooltip, final TooltipWay tooltipWay, final int delay )
-    {
-        return TooltipManager.setTooltip ( this, tooltip, tooltipWay, delay );
-    }
-
-    @Override
-    public WebCustomTooltip setToolTip ( final Icon icon, final String tooltip, final TooltipWay tooltipWay, final int delay )
-    {
-        return TooltipManager.setTooltip ( this, icon, tooltip, tooltipWay, delay );
-    }
-
-    @Override
-    public WebCustomTooltip setToolTip ( final JComponent tooltip )
-    {
-        return TooltipManager.setTooltip ( this, tooltip );
-    }
-
-    @Override
-    public WebCustomTooltip setToolTip ( final JComponent tooltip, final int delay )
-    {
-        return TooltipManager.setTooltip ( this, tooltip, delay );
-    }
-
-    @Override
-    public WebCustomTooltip setToolTip ( final JComponent tooltip, final TooltipWay tooltipWay )
-    {
-        return TooltipManager.setTooltip ( this, tooltip, tooltipWay );
-    }
-
-    @Override
-    public WebCustomTooltip setToolTip ( final JComponent tooltip, final TooltipWay tooltipWay, final int delay )
-    {
-        return TooltipManager.setTooltip ( this, tooltip, tooltipWay, delay );
-    }
-
-    @Override
-    public WebCustomTooltip addToolTip ( final String tooltip )
-    {
-        return TooltipManager.addTooltip ( this, tooltip );
-    }
-
-    @Override
-    public WebCustomTooltip addToolTip ( final Icon icon, final String tooltip )
-    {
-        return TooltipManager.addTooltip ( this, icon, tooltip );
-    }
-
-    @Override
-    public WebCustomTooltip addToolTip ( final String tooltip, final TooltipWay tooltipWay )
-    {
-        return TooltipManager.addTooltip ( this, tooltip, tooltipWay );
-    }
-
-    @Override
-    public WebCustomTooltip addToolTip ( final Icon icon, final String tooltip, final TooltipWay tooltipWay )
-    {
-        return TooltipManager.addTooltip ( this, icon, tooltip, tooltipWay );
-    }
-
-    @Override
-    public WebCustomTooltip addToolTip ( final String tooltip, final TooltipWay tooltipWay, final int delay )
-    {
-        return TooltipManager.addTooltip ( this, tooltip, tooltipWay, delay );
-    }
-
-    @Override
-    public WebCustomTooltip addToolTip ( final Icon icon, final String tooltip, final TooltipWay tooltipWay, final int delay )
-    {
-        return TooltipManager.addTooltip ( this, icon, tooltip, tooltipWay, delay );
-    }
-
-    @Override
-    public WebCustomTooltip addToolTip ( final JComponent tooltip )
-    {
-        return TooltipManager.addTooltip ( this, tooltip );
-    }
-
-    @Override
-    public WebCustomTooltip addToolTip ( final JComponent tooltip, final int delay )
-    {
-        return TooltipManager.addTooltip ( this, tooltip, delay );
-    }
-
-    @Override
-    public WebCustomTooltip addToolTip ( final JComponent tooltip, final TooltipWay tooltipWay )
-    {
-        return TooltipManager.addTooltip ( this, tooltip, tooltipWay );
-    }
-
-    @Override
-    public WebCustomTooltip addToolTip ( final JComponent tooltip, final TooltipWay tooltipWay, final int delay )
-    {
-        return TooltipManager.addTooltip ( this, tooltip, tooltipWay, delay );
-    }
-
-    @Override
-    public void removeToolTip ( final WebCustomTooltip tooltip )
-    {
-        TooltipManager.removeTooltip ( this, tooltip );
-    }
-
-    @Override
-    public void removeToolTips ()
-    {
-        TooltipManager.removeTooltips ( this );
-    }
-
-    @Override
-    public void removeToolTips ( final WebCustomTooltip... tooltips )
-    {
-        TooltipManager.removeTooltips ( this, tooltips );
-    }
-
-    @Override
-    public void removeToolTips ( final List<WebCustomTooltip> tooltips )
-    {
-        TooltipManager.removeTooltips ( this, tooltips );
-    }
-
-    @Override
-    public String getLanguage ()
-    {
-        return UILanguageManager.getComponentKey ( this );
-    }
-
-    @Override
-    public void setLanguage ( final String key, final Object... data )
-    {
-        UILanguageManager.registerComponent ( this, key, data );
-    }
-
-    @Override
-    public void updateLanguage ( final Object... data )
-    {
-        UILanguageManager.updateComponent ( this, data );
-    }
-
-    @Override
-    public void updateLanguage ( final String key, final Object... data )
-    {
-        UILanguageManager.updateComponent ( this, key, data );
-    }
-
-    @Override
-    public void removeLanguage ()
-    {
-        UILanguageManager.unregisterComponent ( this );
-    }
-
-    @Override
-    public boolean isLanguageSet ()
-    {
-        return UILanguageManager.isRegisteredComponent ( this );
-    }
-
-    @Override
-    public void setLanguageUpdater ( final LanguageUpdater updater )
-    {
-        UILanguageManager.registerLanguageUpdater ( this, updater );
-    }
-
-    @Override
-    public void removeLanguageUpdater ()
-    {
-        UILanguageManager.unregisterLanguageUpdater ( this );
-    }
-
-    @Override
-    public void addLanguageListener ( final LanguageListener listener )
-    {
-        UILanguageManager.addLanguageListener ( this, listener );
-    }
-
-    @Override
-    public void removeLanguageListener ( final LanguageListener listener )
-    {
-        UILanguageManager.removeLanguageListener ( this, listener );
-    }
-
-    @Override
-    public void removeLanguageListeners ()
-    {
-        UILanguageManager.removeLanguageListeners ( this );
-    }
-
-    @Override
-    public void addDictionaryListener ( final DictionaryListener listener )
-    {
-        UILanguageManager.addDictionaryListener ( this, listener );
-    }
-
-    @Override
-    public void removeDictionaryListener ( final DictionaryListener listener )
-    {
-        UILanguageManager.removeDictionaryListener ( this, listener );
-    }
-
-    @Override
-    public void removeDictionaryListeners ()
-    {
-        UILanguageManager.removeDictionaryListeners ( this );
-    }
-
-    @Override
-    public void registerSettings ( final Configuration configuration )
-    {
-        UISettingsManager.registerComponent ( this, configuration );
-    }
-
-    @Override
-    public void registerSettings ( final SettingsProcessor processor )
-    {
-        UISettingsManager.registerComponent ( this, processor );
-    }
-
-    @Override
-    public void unregisterSettings ()
-    {
-        UISettingsManager.unregisterComponent ( this );
-    }
-
-    @Override
-    public void loadSettings ()
-    {
-        UISettingsManager.loadSettings ( this );
-    }
-
-    @Override
-    public void saveSettings ()
-    {
-        UISettingsManager.saveSettings ( this );
-    }
-
-    @Override
-    public WebToolBar setPlainFont ()
-    {
-        return FontMethodsImpl.setPlainFont ( this );
-    }
-
-    @Override
-    public WebToolBar setPlainFont ( final boolean apply )
-    {
-        return FontMethodsImpl.setPlainFont ( this, apply );
-    }
-
-    @Override
-    public boolean isPlainFont ()
-    {
-        return FontMethodsImpl.isPlainFont ( this );
-    }
-
-    @Override
-    public WebToolBar setBoldFont ()
-    {
-        return FontMethodsImpl.setBoldFont ( this );
-    }
-
-    @Override
-    public WebToolBar setBoldFont ( final boolean apply )
-    {
-        return FontMethodsImpl.setBoldFont ( this, apply );
-    }
-
-    @Override
-    public boolean isBoldFont ()
-    {
-        return FontMethodsImpl.isBoldFont ( this );
-    }
-
-    @Override
-    public WebToolBar setItalicFont ()
-    {
-        return FontMethodsImpl.setItalicFont ( this );
-    }
-
-    @Override
-    public WebToolBar setItalicFont ( final boolean apply )
-    {
-        return FontMethodsImpl.setItalicFont ( this, apply );
-    }
-
-    @Override
-    public boolean isItalicFont ()
-    {
-        return FontMethodsImpl.isItalicFont ( this );
-    }
-
-    @Override
-    public WebToolBar setFontStyle ( final boolean bold, final boolean italic )
-    {
-        return FontMethodsImpl.setFontStyle ( this, bold, italic );
-    }
-
-    @Override
-    public WebToolBar setFontStyle ( final int style )
-    {
-        return FontMethodsImpl.setFontStyle ( this, style );
-    }
-
-    @Override
-    public WebToolBar setFontSize ( final int fontSize )
-    {
-        return FontMethodsImpl.setFontSize ( this, fontSize );
-    }
-
-    @Override
-    public WebToolBar changeFontSize ( final int change )
-    {
-        return FontMethodsImpl.changeFontSize ( this, change );
-    }
-
-    @Override
-    public int getFontSize ()
-    {
-        return FontMethodsImpl.getFontSize ( this );
-    }
-
-    @Override
-    public WebToolBar setFontSizeAndStyle ( final int fontSize, final boolean bold, final boolean italic )
-    {
-        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, bold, italic );
-    }
-
-    @Override
-    public WebToolBar setFontSizeAndStyle ( final int fontSize, final int style )
-    {
-        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, style );
-    }
-
-    @Override
-    public WebToolBar setFontName ( final String fontName )
-    {
-        return FontMethodsImpl.setFontName ( this, fontName );
-    }
-
-    @Override
-    public String getFontName ()
-    {
-        return FontMethodsImpl.getFontName ( this );
-    }
-
-    @Override
-    public int getPreferredWidth ()
-    {
-        return SizeMethodsImpl.getPreferredWidth ( this );
-    }
-
-    @Override
-    public WebToolBar setPreferredWidth ( final int preferredWidth )
-    {
-        return SizeMethodsImpl.setPreferredWidth ( this, preferredWidth );
-    }
-
-    @Override
-    public int getPreferredHeight ()
-    {
-        return SizeMethodsImpl.getPreferredHeight ( this );
-    }
-
-    @Override
-    public WebToolBar setPreferredHeight ( final int preferredHeight )
-    {
-        return SizeMethodsImpl.setPreferredHeight ( this, preferredHeight );
-    }
-
-    @Override
-    public int getMinimumWidth ()
-    {
-        return SizeMethodsImpl.getMinimumWidth ( this );
-    }
-
-    @Override
-    public WebToolBar setMinimumWidth ( final int minimumWidth )
-    {
-        return SizeMethodsImpl.setMinimumWidth ( this, minimumWidth );
-    }
-
-    @Override
-    public int getMinimumHeight ()
-    {
-        return SizeMethodsImpl.getMinimumHeight ( this );
-    }
-
-    @Override
-    public WebToolBar setMinimumHeight ( final int minimumHeight )
-    {
-        return SizeMethodsImpl.setMinimumHeight ( this, minimumHeight );
-    }
-
-    @Override
-    public int getMaximumWidth ()
-    {
-        return SizeMethodsImpl.getMaximumWidth ( this );
-    }
-
-    @Override
-    public WebToolBar setMaximumWidth ( final int maximumWidth )
-    {
-        return SizeMethodsImpl.setMaximumWidth ( this, maximumWidth );
-    }
-
-    @Override
-    public int getMaximumHeight ()
-    {
-        return SizeMethodsImpl.getMaximumHeight ( this );
-    }
-
-    @Override
-    public WebToolBar setMaximumHeight ( final int maximumHeight )
-    {
-        return SizeMethodsImpl.setMaximumHeight ( this, maximumHeight );
-    }
-
-    @Override
-    public Dimension getPreferredSize ()
-    {
-        return SizeMethodsImpl.getPreferredSize ( this, super.getPreferredSize () );
-    }
-
-    @Override
-    public Dimension getOriginalPreferredSize ()
-    {
-        return SizeMethodsImpl.getOriginalPreferredSize ( this, super.getPreferredSize () );
-    }
-
-    @Override
-    public WebToolBar setPreferredSize ( final int width, final int height )
-    {
-        return SizeMethodsImpl.setPreferredSize ( this, width, height );
+        getWebUI ().setPadding ( padding );
     }
 
     /**
-     * Returns the look and feel (LaF) object that renders this component.
+     * Returns Web-UI applied to this class.
      *
-     * @return the {@link WebToolBarUI} object that renders this component
+     * @return Web-UI applied to this class
      */
-    @Override
-    public WebToolBarUI getUI ()
+    public WebToolBarUI getWebUI ()
     {
-        return ( WebToolBarUI ) super.getUI ();
-    }
-
-    /**
-     * Sets the LaF object that renders this component.
-     *
-     * @param ui {@link WebToolBarUI}
-     */
-    public void setUI ( final WebToolBarUI ui )
-    {
-        super.setUI ( ui );
+        return ( WebToolBarUI ) getUI ();
     }
 
     @Override
     public void updateUI ()
     {
-        StyleManager.getDescriptor ( this ).updateUI ( this );
+        if ( getUI () == null || !( getUI () instanceof WebToolBarUI ) )
+        {
+            try
+            {
+                setUI ( ( WebToolBarUI ) ReflectUtils.createInstance ( WebLookAndFeel.toolBarUI ) );
+            }
+            catch ( final Throwable e )
+            {
+                Log.error ( this, e );
+                setUI ( new WebToolBarUI () );
+            }
+        }
+        else
+        {
+            setUI ( getUI () );
+        }
     }
 
     @Override
-    public String getUIClassID ()
+    public int getPreferredWidth ()
     {
-        return StyleManager.getDescriptor ( this ).getUIClassId ();
+        return SizeUtils.getPreferredWidth ( this );
+    }
+
+    @Override
+    public WebToolBar setPreferredWidth ( final int preferredWidth )
+    {
+        return SizeUtils.setPreferredWidth ( this, preferredWidth );
+    }
+
+    @Override
+    public int getPreferredHeight ()
+    {
+        return SizeUtils.getPreferredHeight ( this );
+    }
+
+    @Override
+    public WebToolBar setPreferredHeight ( final int preferredHeight )
+    {
+        return SizeUtils.setPreferredHeight ( this, preferredHeight );
+    }
+
+    @Override
+    public int getMinimumWidth ()
+    {
+        return SizeUtils.getMinimumWidth ( this );
+    }
+
+    @Override
+    public WebToolBar setMinimumWidth ( final int minimumWidth )
+    {
+        return SizeUtils.setMinimumWidth ( this, minimumWidth );
+    }
+
+    @Override
+    public int getMinimumHeight ()
+    {
+        return SizeUtils.getMinimumHeight ( this );
+    }
+
+    @Override
+    public WebToolBar setMinimumHeight ( final int minimumHeight )
+    {
+        return SizeUtils.setMinimumHeight ( this, minimumHeight );
+    }
+
+    @Override
+    public int getMaximumWidth ()
+    {
+        return SizeUtils.getMaximumWidth ( this );
+    }
+
+    @Override
+    public WebToolBar setMaximumWidth ( final int maximumWidth )
+    {
+        return SizeUtils.setMaximumWidth ( this, maximumWidth );
+    }
+
+    @Override
+    public int getMaximumHeight ()
+    {
+        return SizeUtils.getMaximumHeight ( this );
+    }
+
+    @Override
+    public WebToolBar setMaximumHeight ( final int maximumHeight )
+    {
+        return SizeUtils.setMaximumHeight ( this, maximumHeight );
+    }
+
+    @Override
+    public WebToolBar setPreferredSize ( final int width, final int height )
+    {
+        return SizeUtils.setPreferredSize ( this, width, height );
+    }
+
+    @Override
+    public void setLanguageContainerKey ( final String key )
+    {
+        LanguageManager.registerLanguageContainer ( this, key );
+    }
+
+    @Override
+    public void removeLanguageContainerKey ()
+    {
+        LanguageManager.unregisterLanguageContainer ( this );
+    }
+
+    @Override
+    public String getLanguageContainerKey ()
+    {
+        return LanguageManager.getLanguageContainerKey ( this );
     }
 }

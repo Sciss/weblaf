@@ -20,36 +20,27 @@ package com.alee.extended.tab;
 import java.awt.*;
 
 /**
- * Base interface for visual parts within {@link com.alee.extended.tab.WebDocumentPane}.
+ * Base interface for visual parts within WebDocumentPane.
  *
- * @param <T> {@link DocumentData} type
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
  * @see com.alee.extended.tab.WebDocumentPane
  */
+
 public interface StructureData<T extends DocumentData>
 {
     /**
-     * Returns actual {@link Component} behind this {@link StructureData}.
+     * Returns actual component behind this structure element.
      *
-     * @return actual {@link Component} behind this {@link StructureData}
+     * @return actual component behind this structure element
      */
     public Component getComponent ();
 
     /**
-     * Returns closest {@link PaneData}.
-     * It is most commonly used to select default active {@link PaneData}.
+     * Returns closest PaneData.
+     * Used to provide default active pane.
      *
-     * @return closest {@link PaneData}
+     * @return closest PaneData
      */
     public PaneData<T> findClosestPane ();
-
-    /**
-     * Returns current {@link DocumentPaneState} for this {@link StructureData}.
-     * Might return {@code null} when last side's document is dragged or moved or something is splitted/merged.
-     *
-     * @return current {@link DocumentPaneState} for this {@link StructureData}
-     * @see DocumentPaneState
-     */
-    public DocumentPaneState getDocumentPaneState ();
 }

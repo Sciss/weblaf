@@ -17,42 +17,46 @@
 
 package com.alee.painter.decoration.layout;
 
+import com.alee.api.Identifiable;
+import com.alee.api.Mergeable;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.decoration.IDecoration;
 import com.alee.painter.decoration.content.IContent;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.Serializable;
 import java.util.List;
 
 /**
  * This interface is a base for any custom component content layout.
- * Content layout is optional and will handle layout of {@link com.alee.painter.decoration.content.IContent} placed in it.
+ * Content layout is optional and will handle layout of {@link com.alee.painter.decoration.content.IContent} placed in decoration.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <D> decoration type
  * @param <I> layout type
  * @author Mikle Garin
  */
-public interface IContentLayout<C extends JComponent, D extends IDecoration<C, D>, I extends IContentLayout<C, D, I>>
-        extends IContent<C, D, I>
+
+public interface IContentLayout<E extends JComponent, D extends IDecoration<E, D>, I extends IContentLayout<E, D, I>>
+        extends Serializable, Cloneable, Mergeable<I>, Identifiable
 {
     /**
-     * Returns all contents of this layout.
+     * Returns layout bounds type.
+     * Will affect bounds provided into "layout" method.
      *
-     * @param c painted component
-     * @param d painted decoration state
-     * @return all contents of this layout
+     * @return content bounds type
      */
-    public List<IContent> getContents ( C c, D d );
+    public Bounds getBoundsType ();
 
     /**
-     * Returns {@link ContentLayoutData} containing bounds for each of the layout constraints.
-     * It should return bounds only for constraints that contain at least one visible content element.
+     * Returns contents painting bounds.
      *
-     * @param c      painted component
-     * @param d      painted decoration state
-     * @param bounds painting bounds
-     * @return {@link ContentLayoutData} containing bounds for each of the layout constraints
+     * @param bounds   painting bounds
+     * @param c        painted component
+     * @param d        painted decoration state
+     * @param contents painted contents
+     * @return contents painting bounds
      */
-    public ContentLayoutData layoutContent ( C c, D d, Rectangle bounds );
+    public List<Rectangle> layout ( Rectangle bounds, E c, D d, List<? extends IContent> contents );
 }

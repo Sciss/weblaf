@@ -22,16 +22,17 @@ import com.alee.painter.decoration.IDecoration;
 import javax.swing.*;
 
 /**
- * Basic painter for {@link JLabel} component.
- * It is used as {@link WLabelUI} default painter.
+ * Basic painter for JLabel component.
+ * It is used as WebLabelUI default painter.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @param <D> decoration type
  * @author Mikle Garin
  */
-public class LabelPainter<C extends JLabel, U extends WLabelUI<C>, D extends IDecoration<C, D>>
-        extends AbstractLabelPainter<C, U, D> implements ILabelPainter<C, U>
+
+public class LabelPainter<E extends JLabel, U extends WebLabelUI, D extends IDecoration<E, D>> extends AbstractLabelPainter<E, U, D>
+        implements ILabelPainter<E, U>
 {
     /**
      * Implementation is used completely from {@link AbstractLabelPainter}.

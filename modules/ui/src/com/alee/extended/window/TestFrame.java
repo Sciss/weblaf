@@ -20,6 +20,8 @@ package com.alee.extended.window;
 import com.alee.extended.layout.HorizontalFlowLayout;
 import com.alee.extended.layout.VerticalFlowLayout;
 import com.alee.laf.WebLookAndFeel;
+import com.alee.laf.panel.WebPanel;
+import com.alee.laf.rootpane.WebFrame;
 import com.alee.managers.version.VersionManager;
 import com.alee.utils.ReflectUtils;
 import com.alee.utils.SystemUtils;
@@ -33,12 +35,13 @@ import java.awt.*;
  *
  * @author Mikle Garin
  */
-public class TestFrame extends JFrame
+
+public class TestFrame extends WebFrame
 {
     /**
      * Main components container.
      */
-    protected final JPanel container;
+    protected final WebPanel container;
 
     /**
      * Displays and returns test frame with the specified content and settings.
@@ -195,8 +198,8 @@ public class TestFrame extends JFrame
      * @param right     container right margin
      * @return displayed test frame
      */
-    public static TestFrame show ( final LayoutManager layout, final Component component,
-                                   final int top, final int left, final int bottom, final int right )
+    public static TestFrame show ( final LayoutManager layout, final Component component, final int top, final int left, final int bottom,
+                                   final int right )
     {
         return new TestFrame ( layout, component, top, left, bottom, right ).displayFrame ();
     }
@@ -211,8 +214,8 @@ public class TestFrame extends JFrame
      * @param bottom    container bottom margin
      * @param right     container right margin
      */
-    public TestFrame ( final LayoutManager layout, final Component component,
-                       final int top, final int left, final int bottom, final int right )
+    public TestFrame ( final LayoutManager layout, final Component component, final int top, final int left, final int bottom,
+                       final int right )
     {
         this ( layout, component, new Insets ( top, left, bottom, right ) );
     }
@@ -269,10 +272,10 @@ public class TestFrame extends JFrame
         super ( getFrameTitle ( component ) );
         setLayout ( new BorderLayout () );
 
-        container = new JPanel ( layout );
+        container = new WebPanel ( layout );
         if ( margin != null )
         {
-            container.setBorder ( BorderFactory.createEmptyBorder ( margin.top, margin.left, margin.bottom, margin.right ) );
+            container.setMargin ( margin );
         }
         if ( constraints != null )
         {
@@ -615,15 +618,9 @@ public class TestFrame extends JFrame
         super ( getFrameTitle ( null ) );
         setLayout ( new BorderLayout () );
 
-        container = new JPanel ( layout );
-        if ( margin != null )
-        {
-            container.setBorder ( BorderFactory.createEmptyBorder ( margin.top, margin.left, margin.bottom, margin.right ) );
-        }
-        for ( final Component component : components )
-        {
-            container.add ( component );
-        }
+        container = new WebPanel ( layout );
+        container.setMargin ( margin != null ? margin : new Insets ( 0, 0, 0, 0 ) );
+        container.add ( components );
         add ( container, BorderLayout.CENTER );
 
         configureFrame ();
@@ -637,6 +634,8 @@ public class TestFrame extends JFrame
         setIconImages ( WebLookAndFeel.getImages () );
         setDefaultCloseOperation ( JFrame.DISPOSE_ON_CLOSE );
         setResizable ( true );
+        pack ();
+        center ();
     }
 
     /**
@@ -644,11 +643,16 @@ public class TestFrame extends JFrame
      *
      * @param c background color
      */
-    public void setContentBackground ( final Color c )
+    @Override
+    public void setBackground ( final Color c )
     {
         if ( container != null )
         {
             container.setBackground ( c );
+        }
+        else
+        {
+            super.setBackground ( c );
         }
     }
 
@@ -659,8 +663,6 @@ public class TestFrame extends JFrame
      */
     public TestFrame displayFrame ()
     {
-        pack ();
-        setLocationRelativeTo ( null );
         setVisible ( true );
         return this;
     }
@@ -682,7 +684,7 @@ public class TestFrame extends JFrame
         {
             libVersion = "[ " + VersionManager.getLibraryVersion ().toString () + " ] ";
         }
-        catch ( final Exception ignored )
+        catch ( final Throwable e )
         {
             // Cannot load version now
         }

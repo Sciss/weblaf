@@ -17,14 +17,14 @@
 
 package com.alee.utils.swing.menu;
 
-import com.alee.laf.menu.WebPopupMenu;
 import com.alee.managers.style.StyleId;
+import com.alee.laf.menu.WebPopupMenu;
 
 /**
- * Special generator that simplifies and shortens {@link WebPopupMenu} creation code.
+ * Special generator that simplifies and shortens popup menu creation code.
  *
  * @author Mikle Garin
- * @see AbstractMenuGenerator
+ * @see com.alee.utils.swing.menu.AbstractMenuGenerator
  */
 
 public class PopupMenuGenerator extends AbstractMenuGenerator<WebPopupMenu>
@@ -34,17 +34,17 @@ public class PopupMenuGenerator extends AbstractMenuGenerator<WebPopupMenu>
      */
     public PopupMenuGenerator ()
     {
-        this ( new WebPopupMenu () );
+        super ( new WebPopupMenu () );
     }
 
     /**
      * Constructs new popup menu generator using default popup menu using the specified style ID.
      *
-     * @param id popup menu style ID
+     * @param id style ID
      */
     public PopupMenuGenerator ( final StyleId id )
     {
-        this ( new WebPopupMenu ( id ) );
+        super ( new WebPopupMenu ( id ) );
     }
 
     /**

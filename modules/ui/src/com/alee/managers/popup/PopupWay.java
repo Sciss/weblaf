@@ -22,6 +22,7 @@ package com.alee.managers.popup;
  *
  * @author Mikle Garin
  */
+
 public enum PopupWay
 {
     upCenter,

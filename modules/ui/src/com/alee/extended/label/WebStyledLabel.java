@@ -17,23 +17,28 @@
 
 package com.alee.extended.label;
 
-import com.alee.managers.hotkey.HotkeyData;
-import com.alee.managers.language.*;
-import com.alee.managers.language.updaters.LanguageUpdater;
-import com.alee.managers.settings.Configuration;
-import com.alee.managers.settings.SettingsMethods;
-import com.alee.managers.settings.SettingsProcessor;
-import com.alee.managers.settings.UISettingsManager;
-import com.alee.managers.style.*;
-import com.alee.managers.tooltip.ToolTipMethods;
-import com.alee.managers.tooltip.TooltipManager;
-import com.alee.managers.tooltip.TooltipWay;
-import com.alee.managers.tooltip.WebCustomTooltip;
 import com.alee.painter.Paintable;
 import com.alee.painter.Painter;
+import com.alee.laf.WebLookAndFeel;
+import com.alee.managers.hotkey.HotkeyData;
+import com.alee.managers.language.LanguageManager;
+import com.alee.managers.language.LanguageMethods;
+import com.alee.managers.language.LanguageUtils;
+import com.alee.managers.language.data.TooltipWay;
+import com.alee.managers.language.updaters.LanguageUpdater;
+import com.alee.managers.log.Log;
+import com.alee.managers.style.*;
+import com.alee.managers.style.Skin;
+import com.alee.managers.style.StyleListener;
+import com.alee.managers.style.Skinnable;
+import com.alee.managers.tooltip.ToolTipMethods;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.managers.tooltip.WebCustomTooltip;
 import com.alee.utils.CollectionUtils;
-import com.alee.utils.swing.MouseButton;
-import com.alee.utils.swing.extensions.*;
+import com.alee.utils.EventUtils;
+import com.alee.utils.ReflectUtils;
+import com.alee.utils.SwingUtils;
+import com.alee.utils.swing.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -43,39 +48,23 @@ import java.awt.event.MouseAdapter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
- * {@link JLabel} component extension that can render styled text.
- * Its rendering speed is far superior to HTML rendering within common {@link JLabel}.
- * In addition to customizable style ranges text in this label also supports custom styling syntax.
- * You can find styling syntax description in {@link StyleRanges} class JavaDoc.
- *
- * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
- * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
+ * Custom label component that quickly renders multi-styled text.
+ * Its rendering speed is superior to HTML rendering within simple JLabel and its usage is preferred.
  *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebStyledLabel">How to use WebStyledLabel</a>
- * @see StyleSettings
- * @see StyledLabelDescriptor
- * @see WStyledLabelUI
- * @see WebStyledLabelUI
- * @see IStyledLabelPainter
- * @see StyledLabelPainter
- * @see JLabel
  */
-public class WebStyledLabel extends JLabel implements Styleable, Paintable, ShapeMethods, MarginMethods, PaddingMethods, EventMethods,
-        ToolTipMethods, LanguageMethods, LanguageEventMethods, SettingsMethods, FontMethods<WebStyledLabel>, SizeMethods<WebStyledLabel>
+
+public class WebStyledLabel extends JLabel
+        implements Styleable, Skinnable, Paintable, ShapeProvider, MarginSupport, PaddingSupport, EventMethods, ToolTipMethods,
+        LanguageMethods, FontMethods<WebStyledLabel>
 {
     /**
      * Component properties.
      */
-    public static final String STYLE_RANGES_PROPERTY = "styleRanges";
-    public static final String WRAP_PROPERTY = "wrap";
-    public static final String ROWS_PROPERTY = "rows";
-    public static final String MAXIMUM_ROWS_PROPERTY = "maximumRows";
-    public static final String MINIMUM_ROWS_PROPERTY = "minimumRows";
-    public static final String HORIZONTAL_TEXT_ALIGNMENT_PROPERTY = "horizontalTextAlignment";
-    public static final String VERTICAL_TEXT_ALIGNMENT_PROPERTY = "verticalTextAlignment";
+    public static final String PROPERTY_STYLE_RANGE = "styleRange";
 
     /**
      * StyleRange list.
@@ -83,19 +72,9 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     protected List<StyleRange> styleRanges;
 
     /**
-     * Text wrapping type.
+     * Whether or not should enable line wrap.
      */
-    protected TextWrap wrap;
-
-    /**
-     * Horizontal text alignment.
-     */
-    protected int horizontalTextAlignment;
-
-    /**
-     * Vertical text alignment.
-     */
-    protected int verticalTextAlignment;
+    protected boolean lineWrap;
 
     /**
      * Amount of rows used to wrap label text.
@@ -113,11 +92,21 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     protected int minimumRows;
 
     /**
+     * Preferred width.
+     */
+    protected int preferredWidth;
+
+    /**
+     * Gap between rows.
+     */
+    protected int rowGap;
+
+    /**
      * Constructs empty label.
      */
     public WebStyledLabel ()
     {
-        this ( StyleId.auto );
+        super ();
     }
 
     /**
@@ -127,7 +116,7 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public WebStyledLabel ( final Icon icon )
     {
-        this ( StyleId.auto, icon );
+        super ( icon );
     }
 
     /**
@@ -137,7 +126,8 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public WebStyledLabel ( final int horizontalAlignment )
     {
-        this ( StyleId.auto, horizontalAlignment );
+        super ();
+        setHorizontalAlignment ( horizontalAlignment );
     }
 
     /**
@@ -148,17 +138,19 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public WebStyledLabel ( final Icon icon, final int horizontalAlignment )
     {
-        this ( StyleId.auto, icon, horizontalAlignment );
+        super ( icon, horizontalAlignment );
     }
 
     /**
      * Constructs label with the specified preferences.
      *
      * @param text text or translation key
+     * @param data language data, may not be passed
      */
-    public WebStyledLabel ( final String text )
+    public WebStyledLabel ( final String text, final Object... data )
     {
-        this ( StyleId.auto, text );
+        super ( LanguageUtils.getInitialText ( text, data ) );
+        LanguageUtils.registerInitialLanguage ( this, text, data );
     }
 
     /**
@@ -170,7 +162,8 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public WebStyledLabel ( final String text, final int horizontalAlignment, final Object... data )
     {
-        this ( StyleId.auto, text, horizontalAlignment, data );
+        super ( LanguageUtils.getInitialText ( text, data ), horizontalAlignment );
+        LanguageUtils.registerInitialLanguage ( this, text, data );
     }
 
     /**
@@ -178,10 +171,12 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      *
      * @param text text or translation key
      * @param icon label icon
+     * @param data language data, may not be passed
      */
-    public WebStyledLabel ( final String text, final Icon icon )
+    public WebStyledLabel ( final String text, final Icon icon, final Object... data )
     {
-        this ( StyleId.auto, text, icon );
+        super ( LanguageUtils.getInitialText ( text, data ), icon, LEADING );
+        LanguageUtils.registerInitialLanguage ( this, text, data );
     }
 
     /**
@@ -194,7 +189,8 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public WebStyledLabel ( final String text, final Icon icon, final int horizontalAlignment, final Object... data )
     {
-        this ( StyleId.auto, text, icon, horizontalAlignment, data );
+        super ( LanguageUtils.getInitialText ( text, data ), icon, horizontalAlignment );
+        LanguageUtils.registerInitialLanguage ( this, text, data );
     }
 
     /**
@@ -204,7 +200,8 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public WebStyledLabel ( final StyleId id )
     {
-        this ( id, null, null, LEADING, LM.emptyData );
+        super ();
+        setStyleId ( id );
     }
 
     /**
@@ -215,7 +212,8 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public WebStyledLabel ( final StyleId id, final Icon icon )
     {
-        this ( id, null, icon, LEADING, LM.emptyData );
+        super ( icon );
+        setStyleId ( id );
     }
 
     /**
@@ -226,7 +224,9 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public WebStyledLabel ( final StyleId id, final int horizontalAlignment )
     {
-        this ( id, null, null, horizontalAlignment, LM.emptyData );
+        super ();
+        setHorizontalAlignment ( horizontalAlignment );
+        setStyleId ( id );
     }
 
     /**
@@ -238,7 +238,8 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public WebStyledLabel ( final StyleId id, final Icon icon, final int horizontalAlignment )
     {
-        this ( id, null, icon, horizontalAlignment, LM.emptyData );
+        super ( icon, horizontalAlignment );
+        setStyleId ( id );
     }
 
     /**
@@ -246,10 +247,13 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      *
      * @param id   style ID
      * @param text text or translation key
+     * @param data language data, may not be passed
      */
-    public WebStyledLabel ( final StyleId id, final String text )
+    public WebStyledLabel ( final StyleId id, final String text, final Object... data )
     {
-        this ( id, text, null, LEADING );
+        super ( LanguageUtils.getInitialText ( text, data ) );
+        LanguageUtils.registerInitialLanguage ( this, text, data );
+        setStyleId ( id );
     }
 
     /**
@@ -262,7 +266,9 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public WebStyledLabel ( final StyleId id, final String text, final int horizontalAlignment, final Object... data )
     {
-        this ( id, text, null, horizontalAlignment, data );
+        super ( LanguageUtils.getInitialText ( text, data ), horizontalAlignment );
+        LanguageUtils.registerInitialLanguage ( this, text, data );
+        setStyleId ( id );
     }
 
     /**
@@ -271,10 +277,13 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      * @param id   style ID
      * @param text text or translation key
      * @param icon label icon
+     * @param data language data, may not be passed
      */
-    public WebStyledLabel ( final StyleId id, final String text, final Icon icon )
+    public WebStyledLabel ( final StyleId id, final String text, final Icon icon, final Object... data )
     {
-        this ( id, text, icon, LEADING );
+        super ( LanguageUtils.getInitialText ( text, data ), icon, LEADING );
+        LanguageUtils.registerInitialLanguage ( this, text, data );
+        setStyleId ( id );
     }
 
     /**
@@ -288,34 +297,30 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public WebStyledLabel ( final StyleId id, final String text, final Icon icon, final int horizontalAlignment, final Object... data )
     {
-        super ( UILanguageManager.getInitialText ( text, data ), icon, horizontalAlignment );
-        UILanguageManager.registerInitialLanguage ( this, text, data );
+        super ( LanguageUtils.getInitialText ( text, data ), icon, horizontalAlignment );
+        LanguageUtils.registerInitialLanguage ( this, text, data );
         setStyleId ( id );
     }
 
     @Override
     public void setText ( final String text )
     {
-        // Parsing styles
-        final IStyleRanges styleRanges = getStyleRanges ( text );
+        // Parse styles
+        final ArrayList<StyleRange> styles = new ArrayList<StyleRange> ();
+        final String plainText = StyledLabelUtils.getPlainText ( text, styles );
 
         // Update text
-        super.setText ( styleRanges.getPlainText () );
+        super.setText ( plainText );
 
-        // Update styles
-        setStyleRanges ( styleRanges.getStyleRanges () );
-    }
-
-    /**
-     * Returns style ranges implementation used to parse style syntax.
-     * You can override this method to provide a customized {@link IStyleRanges} implementation.
-     *
-     * @param text text containing style syntax
-     * @return style ranges implementation used to parse style syntax
-     */
-    protected IStyleRanges getStyleRanges ( final String text )
-    {
-        return new StyleRanges ( text );
+        // Set styles only if they are actually found in text
+        if ( styles.size () > 0 )
+        {
+            setStyleRanges ( styles );
+        }
+        else
+        {
+            clearStyleRanges ();
+        }
     }
 
     /**
@@ -335,8 +340,8 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public void addStyleRange ( final StyleRange styleRange )
     {
-        addStyleRangeImpl ( styleRange );
-        firePropertyChange ( STYLE_RANGES_PROPERTY, null, styleRange );
+        final StyleRange removed = addStyleRangeImpl ( styleRange );
+        firePropertyChange ( PROPERTY_STYLE_RANGE, removed, styleRange );
     }
 
     /**
@@ -347,7 +352,7 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     public void addStyleRanges ( final List<StyleRange> styleRanges )
     {
         addStyleRangesImpl ( styleRanges );
-        firePropertyChange ( STYLE_RANGES_PROPERTY, null, styleRanges );
+        firePropertyChange ( PROPERTY_STYLE_RANGE, null, styleRanges );
     }
 
     /**
@@ -358,7 +363,7 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     public void removeStyleRange ( final StyleRange styleRange )
     {
         removeStyleRangeImpl ( styleRange );
-        firePropertyChange ( STYLE_RANGES_PROPERTY, styleRange, null );
+        firePropertyChange ( PROPERTY_STYLE_RANGE, styleRange, null );
     }
 
     /**
@@ -369,7 +374,7 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     public void removeStyleRanges ( final List<StyleRange> styleRanges )
     {
         removeStyleRangesImpl ( styleRanges );
-        firePropertyChange ( STYLE_RANGES_PROPERTY, styleRanges, null );
+        firePropertyChange ( PROPERTY_STYLE_RANGE, styleRanges, null );
     }
 
     /**
@@ -381,7 +386,7 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     {
         clearStyleRangesImpl ();
         addStyleRangesImpl ( styleRanges );
-        firePropertyChange ( STYLE_RANGES_PROPERTY, null, styleRanges );
+        firePropertyChange ( PROPERTY_STYLE_RANGE, null, styleRanges );
     }
 
     /**
@@ -390,7 +395,7 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     public void clearStyleRanges ()
     {
         clearStyleRangesImpl ();
-        firePropertyChange ( STYLE_RANGES_PROPERTY, null, null );
+        firePropertyChange ( PROPERTY_STYLE_RANGE, null, null );
     }
 
     /**
@@ -411,10 +416,13 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      * Adds style range into this label.
      *
      * @param styleRange new style range
+     * @return removed style range
      */
-    protected void addStyleRangeImpl ( final StyleRange styleRange )
+    protected StyleRange addStyleRangeImpl ( final StyleRange styleRange )
     {
+        final StyleRange removed = clearSimilarRangeImpl ( styleRange.getStartIndex (), styleRange.getLength () );
         getStyleRangesImpl ().add ( styleRange );
+        return removed;
     }
 
     /**
@@ -424,7 +432,7 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     protected void addStyleRangesImpl ( final List<StyleRange> styleRanges )
     {
-        if ( CollectionUtils.notEmpty ( styleRanges ) )
+        if ( styleRanges != null )
         {
             for ( final StyleRange styleRange : styleRanges )
             {
@@ -449,6 +457,7 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
                 if ( range.getStartIndex () == styleRange.getStartIndex () && range.getLength () == styleRange.getLength () )
                 {
                     iterator.remove ();
+                    return;
                 }
             }
         }
@@ -479,69 +488,45 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     }
 
     /**
-     * Returns text wrapping type.
+     * Removes any style range found in the same range as the specified one.
      *
-     * @return text wrapping type
+     * @param start  range start
+     * @param length range length
+     * @return removed style range
      */
-    public TextWrap getWrap ()
+    protected StyleRange clearSimilarRangeImpl ( final int start, final int length )
     {
-        return wrap != null ? wrap : TextWrap.none;
+        final Iterator<StyleRange> iterator = getStyleRangesImpl ().iterator ();
+        while ( iterator.hasNext () )
+        {
+            final StyleRange range = iterator.next ();
+            if ( range.getStartIndex () == start && range.getLength () == length )
+            {
+                iterator.remove ();
+                return range;
+            }
+        }
+        return null;
     }
 
     /**
-     * Sets text wrapping type.
+     * Returns whether text lines should be wrapped or not.
      *
-     * @param wrap text wrapping type
+     * @return true if text lines should be wrapped, false otherwise
      */
-    public void setWrap ( final TextWrap wrap )
+    public boolean isLineWrap ()
     {
-        final TextWrap old = this.wrap;
-        this.wrap = wrap;
-        firePropertyChange ( WRAP_PROPERTY, old, wrap );
+        return lineWrap;
     }
 
     /**
-     * Returns horizontal text alignment.
+     * Sets whether text lines should be wrapped or not.
      *
-     * @return horizontal text alignment
+     * @param wrap whether text lines should be wrapped or not
      */
-    public int getHorizontalTextAlignment ()
+    public void setLineWrap ( final boolean wrap )
     {
-        return horizontalTextAlignment != -1 ? horizontalTextAlignment : getHorizontalAlignment ();
-    }
-
-    /**
-     * Sets horizontal text alignment.
-     *
-     * @param alignment horizontal text alignment
-     */
-    public void setHorizontalTextAlignment ( final int alignment )
-    {
-        final int old = this.horizontalTextAlignment;
-        this.horizontalTextAlignment = alignment;
-        firePropertyChange ( HORIZONTAL_TEXT_ALIGNMENT_PROPERTY, old, alignment );
-    }
-
-    /**
-     * Returns vertical text alignment.
-     *
-     * @return vertical text alignment
-     */
-    public int getVerticalTextAlignment ()
-    {
-        return verticalTextAlignment != -1 ? verticalTextAlignment : getVerticalAlignment ();
-    }
-
-    /**
-     * Sets vertical text alignment.
-     *
-     * @param alignment vertical text alignment
-     */
-    public void setVerticalTextAlignment ( final int alignment )
-    {
-        final int old = this.verticalTextAlignment;
-        this.verticalTextAlignment = alignment;
-        firePropertyChange ( VERTICAL_TEXT_ALIGNMENT_PROPERTY, old, alignment );
+        this.lineWrap = wrap;
     }
 
     /**
@@ -557,7 +542,7 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     /**
      * Sets amount of rows used to wrap label text.
      * By default it is set to zero.
-     * <p/>
+     * <p>
      * Note that it has lower priority than preferred width.
      * If preferred width is set this value is ignored.
      *
@@ -565,9 +550,27 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public void setRows ( final int rows )
     {
-        final int old = this.rows;
         this.rows = rows;
-        firePropertyChange ( ROWS_PROPERTY, old, rows );
+    }
+
+    /**
+     * Returns gap between text rows in pixels.
+     *
+     * @return gap between text rows in pixels
+     */
+    public int getRowGap ()
+    {
+        return rowGap;
+    }
+
+    /**
+     * Sets gap between text rows in pixels.
+     *
+     * @param gap gap between text rows in pixels
+     */
+    public void setRowGap ( final int gap )
+    {
+        this.rowGap = gap;
     }
 
     /**
@@ -588,9 +591,7 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public void setMaximumRows ( final int maximumRows )
     {
-        final int old = this.maximumRows;
         this.maximumRows = maximumRows;
-        firePropertyChange ( MAXIMUM_ROWS_PROPERTY, old, maximumRows );
     }
 
     /**
@@ -611,33 +612,19 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
      */
     public void setMinimumRows ( final int minimumRows )
     {
-        final int old = this.minimumRows;
         this.minimumRows = minimumRows;
-        firePropertyChange ( MINIMUM_ROWS_PROPERTY, old, minimumRows );
-    }
-
-    @Override
-    public StyleId getDefaultStyleId ()
-    {
-        return StyleId.styledlabel;
     }
 
     @Override
     public StyleId getStyleId ()
     {
-        return StyleManager.getStyleId ( this );
+        return getWebUI ().getStyleId ();
     }
 
     @Override
     public StyleId setStyleId ( final StyleId id )
     {
-        return StyleManager.setStyleId ( this, id );
-    }
-
-    @Override
-    public StyleId resetStyleId ()
-    {
-        return StyleManager.resetStyleId ( this );
+        return getWebUI ().setStyleId ( id );
     }
 
     @Override
@@ -659,9 +646,9 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     }
 
     @Override
-    public Skin resetSkin ()
+    public Skin restoreSkin ()
     {
-        return StyleManager.resetSkin ( this );
+        return StyleManager.restoreSkin ( this );
     }
 
     @Override
@@ -677,9 +664,21 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     }
 
     @Override
+    public Map<String, Painter> getCustomPainters ()
+    {
+        return StyleManager.getCustomPainters ( this );
+    }
+
+    @Override
     public Painter getCustomPainter ()
     {
         return StyleManager.getCustomPainter ( this );
+    }
+
+    @Override
+    public Painter getCustomPainter ( final String id )
+    {
+        return StyleManager.getCustomPainter ( this, id );
     }
 
     @Override
@@ -689,195 +688,236 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     }
 
     @Override
-    public boolean resetCustomPainter ()
+    public Painter setCustomPainter ( final String id, final Painter painter )
     {
-        return StyleManager.resetCustomPainter ( this );
+        return StyleManager.setCustomPainter ( this, id, painter );
     }
 
     @Override
-    public Shape getShape ()
+    public boolean restoreDefaultPainters ()
     {
-        return ShapeMethodsImpl.getShape ( this );
+        return StyleManager.restoreDefaultPainters ( this );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
+    public Shape provideShape ()
     {
-        return ShapeMethodsImpl.isShapeDetectionEnabled ( this );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        ShapeMethodsImpl.setShapeDetectionEnabled ( this, enabled );
+        return getWebUI ().provideShape ();
     }
 
     @Override
     public Insets getMargin ()
     {
-        return MarginMethodsImpl.getMargin ( this );
+        return getWebUI ().getMargin ();
     }
 
-    @Override
+    /**
+     * Sets new margin.
+     *
+     * @param margin new margin
+     */
     public void setMargin ( final int margin )
     {
-        MarginMethodsImpl.setMargin ( this, margin );
+        setMargin ( margin, margin, margin, margin );
     }
 
-    @Override
+    /**
+     * Sets new margin.
+     *
+     * @param top    new top margin
+     * @param left   new left margin
+     * @param bottom new bottom margin
+     * @param right  new right margin
+     */
     public void setMargin ( final int top, final int left, final int bottom, final int right )
     {
-        MarginMethodsImpl.setMargin ( this, top, left, bottom, right );
+        setMargin ( new Insets ( top, left, bottom, right ) );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        MarginMethodsImpl.setMargin ( this, margin );
+        getWebUI ().setMargin ( margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PaddingMethodsImpl.getPadding ( this );
+        return getWebUI ().getPadding ();
     }
 
-    @Override
+    /**
+     * Sets new padding.
+     *
+     * @param padding new padding
+     */
     public void setPadding ( final int padding )
     {
-        PaddingMethodsImpl.setPadding ( this, padding );
+        setPadding ( padding, padding, padding, padding );
     }
 
-    @Override
+    /**
+     * Sets new padding.
+     *
+     * @param top    new top padding
+     * @param left   new left padding
+     * @param bottom new bottom padding
+     * @param right  new right padding
+     */
     public void setPadding ( final int top, final int left, final int bottom, final int right )
     {
-        PaddingMethodsImpl.setPadding ( this, top, left, bottom, right );
+        setPadding ( new Insets ( top, left, bottom, right ) );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PaddingMethodsImpl.setPadding ( this, padding );
+        getWebUI ().setPadding ( padding );
+    }
+
+    /**
+     * Returns Web-UI applied to this class.
+     *
+     * @return Web-UI applied to this class
+     */
+    private WebStyledLabelUI getWebUI ()
+    {
+        return ( WebStyledLabelUI ) getUI ();
+    }
+
+    @Override
+    public void updateUI ()
+    {
+        if ( getUI () == null || !( getUI () instanceof WebStyledLabelUI ) )
+        {
+            try
+            {
+                setUI ( ( WebStyledLabelUI ) ReflectUtils.createInstance ( WebLookAndFeel.styledLabelUI ) );
+            }
+            catch ( final Throwable e )
+            {
+                Log.error ( this, e );
+                setUI ( new WebStyledLabelUI () );
+            }
+        }
+        else
+        {
+            setUI ( getUI () );
+        }
+    }
+
+    @Override
+    public String getUIClassID ()
+    {
+        return StyleableComponent.styledlabel.getUIClassID ();
     }
 
     @Override
     public MouseAdapter onMousePress ( final MouseEventRunnable runnable )
     {
-        return EventMethodsImpl.onMousePress ( this, runnable );
+        return EventUtils.onMousePress ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMousePress ( final MouseButton mouseButton, final MouseEventRunnable runnable )
     {
-        return EventMethodsImpl.onMousePress ( this, mouseButton, runnable );
+        return EventUtils.onMousePress ( this, mouseButton, runnable );
     }
 
     @Override
     public MouseAdapter onMouseEnter ( final MouseEventRunnable runnable )
     {
-        return EventMethodsImpl.onMouseEnter ( this, runnable );
+        return EventUtils.onMouseEnter ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseExit ( final MouseEventRunnable runnable )
     {
-        return EventMethodsImpl.onMouseExit ( this, runnable );
+        return EventUtils.onMouseExit ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseDrag ( final MouseEventRunnable runnable )
     {
-        return EventMethodsImpl.onMouseDrag ( this, runnable );
+        return EventUtils.onMouseDrag ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseDrag ( final MouseButton mouseButton, final MouseEventRunnable runnable )
     {
-        return EventMethodsImpl.onMouseDrag ( this, mouseButton, runnable );
+        return EventUtils.onMouseDrag ( this, mouseButton, runnable );
     }
 
     @Override
     public MouseAdapter onMouseClick ( final MouseEventRunnable runnable )
     {
-        return EventMethodsImpl.onMouseClick ( this, runnable );
+        return EventUtils.onMouseClick ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseClick ( final MouseButton mouseButton, final MouseEventRunnable runnable )
     {
-        return EventMethodsImpl.onMouseClick ( this, mouseButton, runnable );
+        return EventUtils.onMouseClick ( this, mouseButton, runnable );
     }
 
     @Override
     public MouseAdapter onDoubleClick ( final MouseEventRunnable runnable )
     {
-        return EventMethodsImpl.onDoubleClick ( this, runnable );
+        return EventUtils.onDoubleClick ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMenuTrigger ( final MouseEventRunnable runnable )
     {
-        return EventMethodsImpl.onMenuTrigger ( this, runnable );
+        return EventUtils.onMenuTrigger ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyType ( final KeyEventRunnable runnable )
     {
-        return EventMethodsImpl.onKeyType ( this, runnable );
+        return EventUtils.onKeyType ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyType ( final HotkeyData hotkey, final KeyEventRunnable runnable )
     {
-        return EventMethodsImpl.onKeyType ( this, hotkey, runnable );
+        return EventUtils.onKeyType ( this, hotkey, runnable );
     }
 
     @Override
     public KeyAdapter onKeyPress ( final KeyEventRunnable runnable )
     {
-        return EventMethodsImpl.onKeyPress ( this, runnable );
+        return EventUtils.onKeyPress ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyPress ( final HotkeyData hotkey, final KeyEventRunnable runnable )
     {
-        return EventMethodsImpl.onKeyPress ( this, hotkey, runnable );
+        return EventUtils.onKeyPress ( this, hotkey, runnable );
     }
 
     @Override
     public KeyAdapter onKeyRelease ( final KeyEventRunnable runnable )
     {
-        return EventMethodsImpl.onKeyRelease ( this, runnable );
+        return EventUtils.onKeyRelease ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyRelease ( final HotkeyData hotkey, final KeyEventRunnable runnable )
     {
-        return EventMethodsImpl.onKeyRelease ( this, hotkey, runnable );
+        return EventUtils.onKeyRelease ( this, hotkey, runnable );
     }
 
     @Override
     public FocusAdapter onFocusGain ( final FocusEventRunnable runnable )
     {
-        return EventMethodsImpl.onFocusGain ( this, runnable );
+        return EventUtils.onFocusGain ( this, runnable );
     }
 
     @Override
     public FocusAdapter onFocusLoss ( final FocusEventRunnable runnable )
     {
-        return EventMethodsImpl.onFocusLoss ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onDragStart ( final int shift, final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onDragStart ( this, shift, runnable );
-    }
-
-    @Override
-    public MouseAdapter onDragStart ( final int shift, final MouseButton mouseButton, final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onDragStart ( this, shift, mouseButton, runnable );
+        return EventUtils.onFocusLoss ( this, runnable );
     }
 
     @Override
@@ -1027,357 +1067,182 @@ public class WebStyledLabel extends JLabel implements Styleable, Paintable, Shap
     @Override
     public Dimension getMinimumSize ()
     {
-        return getWrap () != TextWrap.none ? new Dimension ( 1, 1 ) : super.getMinimumSize ();
+        return isLineWrap () ? new Dimension ( 1, 1 ) : super.getMinimumSize ();
     }
 
     @Override
     public Dimension getMaximumSize ()
     {
-        return getWrap () != TextWrap.none ? new Dimension ( Integer.MAX_VALUE, Integer.MAX_VALUE ) : super.getMaximumSize ();
+        return isLineWrap () ? new Dimension ( Integer.MAX_VALUE, Integer.MAX_VALUE ) : super.getMaximumSize ();
     }
 
-    @Override
-    public String getLanguage ()
+    /**
+     * Sets preferred width of the label.
+     *
+     * @param width new preferred width of the label
+     */
+    public void setPreferredWidth ( final int width )
     {
-        return UILanguageManager.getComponentKey ( this );
+        this.preferredWidth = width;
+    }
+
+    /**
+     * Gets the preferred width of the styled label.
+     *
+     * @return the preferred width
+     */
+    public int getPreferredWidth ()
+    {
+        return preferredWidth;
     }
 
     @Override
     public void setLanguage ( final String key, final Object... data )
     {
-        UILanguageManager.registerComponent ( this, key, data );
+        LanguageManager.registerComponent ( this, key, data );
     }
 
     @Override
     public void updateLanguage ( final Object... data )
     {
-        UILanguageManager.updateComponent ( this, data );
+        LanguageManager.updateComponent ( this, data );
     }
 
     @Override
     public void updateLanguage ( final String key, final Object... data )
     {
-        UILanguageManager.updateComponent ( this, key, data );
+        LanguageManager.updateComponent ( this, key, data );
     }
 
     @Override
     public void removeLanguage ()
     {
-        UILanguageManager.unregisterComponent ( this );
+        LanguageManager.unregisterComponent ( this );
     }
 
     @Override
     public boolean isLanguageSet ()
     {
-        return UILanguageManager.isRegisteredComponent ( this );
+        return LanguageManager.isRegisteredComponent ( this );
     }
 
     @Override
     public void setLanguageUpdater ( final LanguageUpdater updater )
     {
-        UILanguageManager.registerLanguageUpdater ( this, updater );
+        LanguageManager.registerLanguageUpdater ( this, updater );
     }
 
     @Override
     public void removeLanguageUpdater ()
     {
-        UILanguageManager.unregisterLanguageUpdater ( this );
-    }
-
-    @Override
-    public void addLanguageListener ( final LanguageListener listener )
-    {
-        UILanguageManager.addLanguageListener ( getRootPane (), listener );
-    }
-
-    @Override
-    public void removeLanguageListener ( final LanguageListener listener )
-    {
-        UILanguageManager.removeLanguageListener ( getRootPane (), listener );
-    }
-
-    @Override
-    public void removeLanguageListeners ()
-    {
-        UILanguageManager.removeLanguageListeners ( getRootPane () );
-    }
-
-    @Override
-    public void addDictionaryListener ( final DictionaryListener listener )
-    {
-        UILanguageManager.addDictionaryListener ( getRootPane (), listener );
-    }
-
-    @Override
-    public void removeDictionaryListener ( final DictionaryListener listener )
-    {
-        UILanguageManager.removeDictionaryListener ( getRootPane (), listener );
-    }
-
-    @Override
-    public void removeDictionaryListeners ()
-    {
-        UILanguageManager.removeDictionaryListeners ( getRootPane () );
-    }
-
-    @Override
-    public void registerSettings ( final Configuration configuration )
-    {
-        UISettingsManager.registerComponent ( this, configuration );
-    }
-
-    @Override
-    public void registerSettings ( final SettingsProcessor processor )
-    {
-        UISettingsManager.registerComponent ( this, processor );
-    }
-
-    @Override
-    public void unregisterSettings ()
-    {
-        UISettingsManager.unregisterComponent ( this );
-    }
-
-    @Override
-    public void loadSettings ()
-    {
-        UISettingsManager.loadSettings ( this );
-    }
-
-    @Override
-    public void saveSettings ()
-    {
-        UISettingsManager.saveSettings ( this );
+        LanguageManager.unregisterLanguageUpdater ( this );
     }
 
     @Override
     public WebStyledLabel setPlainFont ()
     {
-        return FontMethodsImpl.setPlainFont ( this );
+        return SwingUtils.setPlainFont ( this );
     }
 
     @Override
     public WebStyledLabel setPlainFont ( final boolean apply )
     {
-        return FontMethodsImpl.setPlainFont ( this, apply );
+        return SwingUtils.setPlainFont ( this, apply );
     }
 
     @Override
     public boolean isPlainFont ()
     {
-        return FontMethodsImpl.isPlainFont ( this );
+        return SwingUtils.isPlainFont ( this );
     }
 
     @Override
     public WebStyledLabel setBoldFont ()
     {
-        return FontMethodsImpl.setBoldFont ( this );
+        return SwingUtils.setBoldFont ( this );
     }
 
     @Override
     public WebStyledLabel setBoldFont ( final boolean apply )
     {
-        return FontMethodsImpl.setBoldFont ( this, apply );
+        return SwingUtils.setBoldFont ( this, apply );
     }
 
     @Override
     public boolean isBoldFont ()
     {
-        return FontMethodsImpl.isBoldFont ( this );
+        return SwingUtils.isBoldFont ( this );
     }
 
     @Override
     public WebStyledLabel setItalicFont ()
     {
-        return FontMethodsImpl.setItalicFont ( this );
+        return SwingUtils.setItalicFont ( this );
     }
 
     @Override
     public WebStyledLabel setItalicFont ( final boolean apply )
     {
-        return FontMethodsImpl.setItalicFont ( this, apply );
+        return SwingUtils.setItalicFont ( this, apply );
     }
 
     @Override
     public boolean isItalicFont ()
     {
-        return FontMethodsImpl.isItalicFont ( this );
+        return SwingUtils.isItalicFont ( this );
     }
 
     @Override
     public WebStyledLabel setFontStyle ( final boolean bold, final boolean italic )
     {
-        return FontMethodsImpl.setFontStyle ( this, bold, italic );
+        return SwingUtils.setFontStyle ( this, bold, italic );
     }
 
     @Override
     public WebStyledLabel setFontStyle ( final int style )
     {
-        return FontMethodsImpl.setFontStyle ( this, style );
+        return SwingUtils.setFontStyle ( this, style );
     }
 
     @Override
     public WebStyledLabel setFontSize ( final int fontSize )
     {
-        return FontMethodsImpl.setFontSize ( this, fontSize );
+        return SwingUtils.setFontSize ( this, fontSize );
     }
 
     @Override
     public WebStyledLabel changeFontSize ( final int change )
     {
-        return FontMethodsImpl.changeFontSize ( this, change );
+        return SwingUtils.changeFontSize ( this, change );
     }
 
     @Override
     public int getFontSize ()
     {
-        return FontMethodsImpl.getFontSize ( this );
+        return SwingUtils.getFontSize ( this );
     }
 
     @Override
     public WebStyledLabel setFontSizeAndStyle ( final int fontSize, final boolean bold, final boolean italic )
     {
-        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, bold, italic );
+        return SwingUtils.setFontSizeAndStyle ( this, fontSize, bold, italic );
     }
 
     @Override
     public WebStyledLabel setFontSizeAndStyle ( final int fontSize, final int style )
     {
-        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, style );
+        return SwingUtils.setFontSizeAndStyle ( this, fontSize, style );
     }
 
     @Override
     public WebStyledLabel setFontName ( final String fontName )
     {
-        return FontMethodsImpl.setFontName ( this, fontName );
+        return SwingUtils.setFontName ( this, fontName );
     }
 
     @Override
     public String getFontName ()
     {
-        return FontMethodsImpl.getFontName ( this );
-    }
-
-    @Override
-    public int getPreferredWidth ()
-    {
-        return SizeMethodsImpl.getPreferredWidth ( this );
-    }
-
-    @Override
-    public WebStyledLabel setPreferredWidth ( final int preferredWidth )
-    {
-        return SizeMethodsImpl.setPreferredWidth ( this, preferredWidth );
-    }
-
-    @Override
-    public int getPreferredHeight ()
-    {
-        return SizeMethodsImpl.getPreferredHeight ( this );
-    }
-
-    @Override
-    public WebStyledLabel setPreferredHeight ( final int preferredHeight )
-    {
-        return SizeMethodsImpl.setPreferredHeight ( this, preferredHeight );
-    }
-
-    @Override
-    public int getMinimumWidth ()
-    {
-        return SizeMethodsImpl.getMinimumWidth ( this );
-    }
-
-    @Override
-    public WebStyledLabel setMinimumWidth ( final int minimumWidth )
-    {
-        return SizeMethodsImpl.setMinimumWidth ( this, minimumWidth );
-    }
-
-    @Override
-    public int getMinimumHeight ()
-    {
-        return SizeMethodsImpl.getMinimumHeight ( this );
-    }
-
-    @Override
-    public WebStyledLabel setMinimumHeight ( final int minimumHeight )
-    {
-        return SizeMethodsImpl.setMinimumHeight ( this, minimumHeight );
-    }
-
-    @Override
-    public int getMaximumWidth ()
-    {
-        return SizeMethodsImpl.getMaximumWidth ( this );
-    }
-
-    @Override
-    public WebStyledLabel setMaximumWidth ( final int maximumWidth )
-    {
-        return SizeMethodsImpl.setMaximumWidth ( this, maximumWidth );
-    }
-
-    @Override
-    public int getMaximumHeight ()
-    {
-        return SizeMethodsImpl.getMaximumHeight ( this );
-    }
-
-    @Override
-    public WebStyledLabel setMaximumHeight ( final int maximumHeight )
-    {
-        return SizeMethodsImpl.setMaximumHeight ( this, maximumHeight );
-    }
-
-    @Override
-    public Dimension getPreferredSize ()
-    {
-        return SizeMethodsImpl.getPreferredSize ( this, super.getPreferredSize () );
-    }
-
-    @Override
-    public Dimension getOriginalPreferredSize ()
-    {
-        return SizeMethodsImpl.getOriginalPreferredSize ( this, super.getPreferredSize () );
-    }
-
-    @Override
-    public WebStyledLabel setPreferredSize ( final int width, final int height )
-    {
-        return SizeMethodsImpl.setPreferredSize ( this, width, height );
-    }
-
-    /**
-     * Returns the look and feel (LaF) object that renders this component.
-     *
-     * @return the {@link WStyledLabelUI} object that renders this component
-     */
-    @Override
-    public WStyledLabelUI getUI ()
-    {
-        return ( WStyledLabelUI ) super.getUI ();
-    }
-
-    /**
-     * Sets the LaF object that renders this component.
-     *
-     * @param ui {@link WStyledLabelUI}
-     */
-    public void setUI ( final WStyledLabelUI ui )
-    {
-        super.setUI ( ui );
-    }
-
-    @Override
-    public void updateUI ()
-    {
-        StyleManager.getDescriptor ( this ).updateUI ( this );
-    }
-
-    @Override
-    public String getUIClassID ()
-    {
-        return StyleManager.getDescriptor ( this ).getUIClassId ();
+        return SwingUtils.getFontName ( this );
     }
 }

@@ -17,97 +17,66 @@
 
 package com.alee.laf.tabbedpane;
 
-import com.alee.managers.hotkey.HotkeyData;
-import com.alee.managers.language.*;
-import com.alee.managers.language.updaters.LanguageUpdater;
-import com.alee.managers.settings.Configuration;
-import com.alee.managers.settings.SettingsMethods;
-import com.alee.managers.settings.SettingsProcessor;
-import com.alee.managers.settings.UISettingsManager;
-import com.alee.managers.style.*;
 import com.alee.painter.Paintable;
 import com.alee.painter.Painter;
-import com.alee.utils.swing.MouseButton;
-import com.alee.utils.swing.extensions.*;
+import com.alee.laf.WebLookAndFeel;
+import com.alee.managers.language.LM;
+import com.alee.managers.language.LanguageContainerMethods;
+import com.alee.managers.language.LanguageManager;
+import com.alee.managers.language.LanguageMethods;
+import com.alee.managers.language.updaters.LanguageUpdater;
+import com.alee.managers.log.Log;
+import com.alee.managers.settings.DefaultValue;
+import com.alee.managers.settings.SettingsManager;
+import com.alee.managers.settings.SettingsMethods;
+import com.alee.managers.settings.SettingsProcessor;
+import com.alee.managers.style.*;
+import com.alee.managers.style.Skin;
+import com.alee.managers.style.StyleListener;
+import com.alee.managers.style.Skinnable;
+import com.alee.utils.ReflectUtils;
+import com.alee.utils.SwingUtils;
+import com.alee.utils.swing.FontMethods;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.FocusAdapter;
-import java.awt.event.KeyAdapter;
-import java.awt.event.MouseAdapter;
+import java.util.Map;
 
 /**
- * {@link JTabbedPane} extension class.
- * It contains various useful methods to simplify core component usage.
- *
- * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
- * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
- *
  * @author Mikle Garin
- * @see JTabbedPane
- * @see WebTabbedPaneUI
- * @see TabbedPanePainter
  */
-public class WebTabbedPane extends JTabbedPane implements Styleable, Paintable, ShapeMethods, MarginMethods, PaddingMethods, EventMethods,
-        LanguageMethods, LanguageEventMethods, SettingsMethods, FontMethods<WebTabbedPane>, SizeMethods<WebTabbedPane>
+
+public class WebTabbedPane extends JTabbedPane
+        implements Styleable, Skinnable, Paintable, ShapeProvider, MarginSupport, PaddingSupport, LanguageMethods, SettingsMethods,
+        FontMethods<WebTabbedPane>, LanguageContainerMethods
 {
-    /**
-     * Constructs new tabbed pane.
-     */
     public WebTabbedPane ()
     {
-        this ( StyleId.auto );
+        super ();
     }
 
-    /**
-     * Constructs new tabbed pane.
-     *
-     * @param tabPlacement the placement for the tabs relative to the content
-     */
     public WebTabbedPane ( final int tabPlacement )
     {
-        this ( StyleId.auto, tabPlacement );
+        super ( tabPlacement );
     }
 
-    /**
-     * Constructs new tabbed pane.
-     *
-     * @param tabPlacement    the placement for the tabs relative to the content
-     * @param tabLayoutPolicy the policy for laying out tabs when all tabs will not fit on one run
-     */
     public WebTabbedPane ( final int tabPlacement, final int tabLayoutPolicy )
     {
-        this ( StyleId.auto, tabPlacement, tabLayoutPolicy );
+        super ( tabPlacement, tabLayoutPolicy );
     }
 
-    /**
-     * Constructs new tabbed pane.
-     *
-     * @param id style ID
-     */
     public WebTabbedPane ( final StyleId id )
     {
-        this ( id, TOP, WRAP_TAB_LAYOUT );
+        super ();
+        setStyleId ( id );
     }
 
-    /**
-     * Constructs new tabbed pane.
-     *
-     * @param id           style ID
-     * @param tabPlacement the placement for the tabs relative to the content
-     */
     public WebTabbedPane ( final StyleId id, final int tabPlacement )
     {
-        this ( id, tabPlacement, WRAP_TAB_LAYOUT );
+        super ( tabPlacement );
+        setStyleId ( id );
     }
 
-    /**
-     * Constructs new tabbed pane.
-     *
-     * @param id              style ID
-     * @param tabPlacement    the placement for the tabs relative to the content
-     * @param tabLayoutPolicy the policy for laying out tabs when all tabs will not fit on one run
-     */
     public WebTabbedPane ( final StyleId id, final int tabPlacement, final int tabLayoutPolicy )
     {
         super ( tabPlacement, tabLayoutPolicy );
@@ -125,7 +94,6 @@ public class WebTabbedPane extends JTabbedPane implements Styleable, Paintable, 
     @Override
     public String getTitleAt ( final int index )
     {
-        // todo This looks like something that would cause a lot of problems
         return LM.get ( super.getTitleAt ( index ) );
     }
 
@@ -176,48 +144,106 @@ public class WebTabbedPane extends JTabbedPane implements Styleable, Paintable, 
         return index != -1 ? getBoundsAt ( index ) : null;
     }
 
+    public boolean isRotateTabInsets ()
+    {
+        return getWebUI ().isRotateTabInsets ();
+    }
+
+    public void setRotateTabInsets ( final boolean rotateTabInsets )
+    {
+        getWebUI ().setRotateTabInsets ( rotateTabInsets );
+    }
+
+    public Insets getContentInsets ()
+    {
+        return getWebUI ().getContentInsets ();
+    }
+
+    public void setContentInsets ( final Insets contentInsets )
+    {
+        getWebUI ().setContentInsets ( contentInsets );
+    }
+
+    public Insets getTabInsets ()
+    {
+        return getWebUI ().getTabInsets ();
+    }
+
+    public void setTabInsets ( final Insets tabInsets )
+    {
+        getWebUI ().setTabInsets ( tabInsets );
+    }
+
+    public void setSelectedForegroundAt ( final int tabIndex, final Color foreground )
+    {
+        getWebUI ().setSelectedForegroundAt ( tabIndex, foreground );
+    }
+
+    public Color getSelectedForegroundAt ( final int tabIndex )
+    {
+        return getWebUI ().getSelectedForegroundAt ( tabIndex );
+    }
+
+    public void setBackgroundPainterAt ( final int tabIndex, final Painter painter )
+    {
+        getWebUI ().setBackgroundPainterAt ( tabIndex, painter );
+    }
+
+    public Painter getBackgroundPainterAt ( final int tabIndex )
+    {
+        return getWebUI ().getBackgroundPainterAt ( tabIndex );
+    }
+
     public TabbedPaneStyle getTabbedPaneStyle ()
     {
-        return getUI ().getTabbedPaneStyle ();
+        return getWebUI ().getTabbedPaneStyle ();
     }
 
     public void setTabbedPaneStyle ( final TabbedPaneStyle tabbedPaneStyle )
     {
-        getUI ().setTabbedPaneStyle ( tabbedPaneStyle );
+        getWebUI ().setTabbedPaneStyle ( tabbedPaneStyle );
+    }
+
+    public int getTabRunIndent ()
+    {
+        return getWebUI ().getTabRunIndent ();
+    }
+
+    public void setTabRunIndent ( final int tabRunIndent )
+    {
+        getWebUI ().setTabRunIndent ( tabRunIndent );
+    }
+
+    public int getTabOverlay ()
+    {
+        return getWebUI ().getTabOverlay ();
+    }
+
+    public void setTabOverlay ( final int tabOverlay )
+    {
+        getWebUI ().setTabOverlay ( tabOverlay );
     }
 
     public TabStretchType getTabStretchType ()
     {
-        return getUI ().getTabStretchType ();
+        return getWebUI ().getTabStretchType ();
     }
 
     public void setTabStretchType ( final TabStretchType tabStretchType )
     {
-        getUI ().setTabStretchType ( tabStretchType );
-    }
-
-    @Override
-    public StyleId getDefaultStyleId ()
-    {
-        return StyleId.tabbedpane;
+        getWebUI ().setTabStretchType ( tabStretchType );
     }
 
     @Override
     public StyleId getStyleId ()
     {
-        return StyleManager.getStyleId ( this );
+        return getWebUI ().getStyleId ();
     }
 
     @Override
     public StyleId setStyleId ( final StyleId id )
     {
-        return StyleManager.setStyleId ( this, id );
-    }
-
-    @Override
-    public StyleId resetStyleId ()
-    {
-        return StyleManager.resetStyleId ( this );
+        return getWebUI ().setStyleId ( id );
     }
 
     @Override
@@ -239,9 +265,9 @@ public class WebTabbedPane extends JTabbedPane implements Styleable, Paintable, 
     }
 
     @Override
-    public Skin resetSkin ()
+    public Skin restoreSkin ()
     {
-        return StyleManager.resetSkin ( this );
+        return StyleManager.restoreSkin ( this );
     }
 
     @Override
@@ -257,9 +283,21 @@ public class WebTabbedPane extends JTabbedPane implements Styleable, Paintable, 
     }
 
     @Override
+    public Map<String, Painter> getCustomPainters ()
+    {
+        return StyleManager.getCustomPainters ( this );
+    }
+
+    @Override
     public Painter getCustomPainter ()
     {
         return StyleManager.getCustomPainter ( this );
+    }
+
+    @Override
+    public Painter getCustomPainter ( final String id )
+    {
+        return StyleManager.getCustomPainter ( this, id );
     }
 
     @Override
@@ -269,539 +307,386 @@ public class WebTabbedPane extends JTabbedPane implements Styleable, Paintable, 
     }
 
     @Override
-    public boolean resetCustomPainter ()
+    public Painter setCustomPainter ( final String id, final Painter painter )
     {
-        return StyleManager.resetCustomPainter ( this );
+        return StyleManager.setCustomPainter ( this, id, painter );
     }
 
     @Override
-    public Shape getShape ()
+    public boolean restoreDefaultPainters ()
     {
-        return ShapeMethodsImpl.getShape ( this );
+        return StyleManager.restoreDefaultPainters ( this );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
+    public Shape provideShape ()
     {
-        return ShapeMethodsImpl.isShapeDetectionEnabled ( this );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        ShapeMethodsImpl.setShapeDetectionEnabled ( this, enabled );
+        return getWebUI ().provideShape ();
     }
 
     @Override
     public Insets getMargin ()
     {
-        return MarginMethodsImpl.getMargin ( this );
+        return getWebUI ().getMargin ();
     }
 
-    @Override
+    /**
+     * Sets new margin.
+     *
+     * @param margin new margin
+     */
     public void setMargin ( final int margin )
     {
-        MarginMethodsImpl.setMargin ( this, margin );
+        setMargin ( margin, margin, margin, margin );
     }
 
-    @Override
+    /**
+     * Sets new margin.
+     *
+     * @param top    new top margin
+     * @param left   new left margin
+     * @param bottom new bottom margin
+     * @param right  new right margin
+     */
     public void setMargin ( final int top, final int left, final int bottom, final int right )
     {
-        MarginMethodsImpl.setMargin ( this, top, left, bottom, right );
+        setMargin ( new Insets ( top, left, bottom, right ) );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        MarginMethodsImpl.setMargin ( this, margin );
+        getWebUI ().setMargin ( margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PaddingMethodsImpl.getPadding ( this );
+        return getWebUI ().getPadding ();
     }
 
-    @Override
+    /**
+     * Sets new padding.
+     *
+     * @param padding new padding
+     */
     public void setPadding ( final int padding )
     {
-        PaddingMethodsImpl.setPadding ( this, padding );
+        setPadding ( padding, padding, padding, padding );
     }
 
-    @Override
+    /**
+     * Sets new padding.
+     *
+     * @param top    new top padding
+     * @param left   new left padding
+     * @param bottom new bottom padding
+     * @param right  new right padding
+     */
     public void setPadding ( final int top, final int left, final int bottom, final int right )
     {
-        PaddingMethodsImpl.setPadding ( this, top, left, bottom, right );
+        setPadding ( new Insets ( top, left, bottom, right ) );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PaddingMethodsImpl.setPadding ( this, padding );
+        getWebUI ().setPadding ( padding );
     }
 
-    @Override
-    public MouseAdapter onMousePress ( final MouseEventRunnable runnable )
+    /**
+     * Returns Web-UI applied to this class.
+     *
+     * @return Web-UI applied to this class
+     */
+    public WebTabbedPaneUI getWebUI ()
     {
-        return EventMethodsImpl.onMousePress ( this, runnable );
+        return ( WebTabbedPaneUI ) getUI ();
     }
 
+    /**
+     * Installs a Web-UI into this component.
+     */
     @Override
-    public MouseAdapter onMousePress ( final MouseButton mouseButton, final MouseEventRunnable runnable )
+    public void updateUI ()
     {
-        return EventMethodsImpl.onMousePress ( this, mouseButton, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseEnter ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseEnter ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseExit ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseExit ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseDrag ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseDrag ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseDrag ( final MouseButton mouseButton, final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseDrag ( this, mouseButton, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseClick ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseClick ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMouseClick ( final MouseButton mouseButton, final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMouseClick ( this, mouseButton, runnable );
-    }
-
-    @Override
-    public MouseAdapter onDoubleClick ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onDoubleClick ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onMenuTrigger ( final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onMenuTrigger ( this, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyType ( final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyType ( this, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyType ( final HotkeyData hotkey, final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyType ( this, hotkey, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyPress ( final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyPress ( this, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyPress ( final HotkeyData hotkey, final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyPress ( this, hotkey, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyRelease ( final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyRelease ( this, runnable );
-    }
-
-    @Override
-    public KeyAdapter onKeyRelease ( final HotkeyData hotkey, final KeyEventRunnable runnable )
-    {
-        return EventMethodsImpl.onKeyRelease ( this, hotkey, runnable );
-    }
-
-    @Override
-    public FocusAdapter onFocusGain ( final FocusEventRunnable runnable )
-    {
-        return EventMethodsImpl.onFocusGain ( this, runnable );
-    }
-
-    @Override
-    public FocusAdapter onFocusLoss ( final FocusEventRunnable runnable )
-    {
-        return EventMethodsImpl.onFocusLoss ( this, runnable );
-    }
-
-    @Override
-    public MouseAdapter onDragStart ( final int shift, final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onDragStart ( this, shift, runnable );
-    }
-
-    @Override
-    public MouseAdapter onDragStart ( final int shift, final MouseButton mouseButton, final MouseEventRunnable runnable )
-    {
-        return EventMethodsImpl.onDragStart ( this, shift, mouseButton, runnable );
-    }
-
-    @Override
-    public String getLanguage ()
-    {
-        return UILanguageManager.getComponentKey ( this );
+        if ( getUI () == null || !( getUI () instanceof WebTabbedPaneUI ) )
+        {
+            try
+            {
+                setUI ( ( WebTabbedPaneUI ) ReflectUtils.createInstance ( WebLookAndFeel.tabbedPaneUI ) );
+            }
+            catch ( final Throwable e )
+            {
+                Log.error ( this, e );
+                setUI ( new WebTabbedPaneUI () );
+            }
+        }
+        else
+        {
+            setUI ( getUI () );
+        }
     }
 
     @Override
     public void setLanguage ( final String key, final Object... data )
     {
-        UILanguageManager.registerComponent ( this, key, data );
+        LanguageManager.registerComponent ( this, key, data );
     }
 
     @Override
     public void updateLanguage ( final Object... data )
     {
-        UILanguageManager.updateComponent ( this, data );
+        LanguageManager.updateComponent ( this, data );
     }
 
     @Override
     public void updateLanguage ( final String key, final Object... data )
     {
-        UILanguageManager.updateComponent ( this, key, data );
+        LanguageManager.updateComponent ( this, key, data );
     }
 
     @Override
     public void removeLanguage ()
     {
-        UILanguageManager.unregisterComponent ( this );
+        LanguageManager.unregisterComponent ( this );
     }
 
     @Override
     public boolean isLanguageSet ()
     {
-        return UILanguageManager.isRegisteredComponent ( this );
+        return LanguageManager.isRegisteredComponent ( this );
     }
 
     @Override
     public void setLanguageUpdater ( final LanguageUpdater updater )
     {
-        UILanguageManager.registerLanguageUpdater ( this, updater );
+        LanguageManager.registerLanguageUpdater ( this, updater );
     }
 
     @Override
     public void removeLanguageUpdater ()
     {
-        UILanguageManager.unregisterLanguageUpdater ( this );
+        LanguageManager.unregisterLanguageUpdater ( this );
     }
 
     @Override
-    public void addLanguageListener ( final LanguageListener listener )
+    public void registerSettings ( final String key )
     {
-        UILanguageManager.addLanguageListener ( getRootPane (), listener );
+        SettingsManager.registerComponent ( this, key );
     }
 
     @Override
-    public void removeLanguageListener ( final LanguageListener listener )
+    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass )
     {
-        UILanguageManager.removeLanguageListener ( getRootPane (), listener );
+        SettingsManager.registerComponent ( this, key, defaultValueClass );
     }
 
     @Override
-    public void removeLanguageListeners ()
+    public void registerSettings ( final String key, final Object defaultValue )
     {
-        UILanguageManager.removeLanguageListeners ( getRootPane () );
+        SettingsManager.registerComponent ( this, key, defaultValue );
     }
 
     @Override
-    public void addDictionaryListener ( final DictionaryListener listener )
+    public void registerSettings ( final String group, final String key )
     {
-        UILanguageManager.addDictionaryListener ( getRootPane (), listener );
+        SettingsManager.registerComponent ( this, group, key );
     }
 
     @Override
-    public void removeDictionaryListener ( final DictionaryListener listener )
+    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass )
     {
-        UILanguageManager.removeDictionaryListener ( getRootPane (), listener );
+        SettingsManager.registerComponent ( this, group, key, defaultValueClass );
     }
 
     @Override
-    public void removeDictionaryListeners ()
+    public void registerSettings ( final String group, final String key, final Object defaultValue )
     {
-        UILanguageManager.removeDictionaryListeners ( getRootPane () );
+        SettingsManager.registerComponent ( this, group, key, defaultValue );
     }
 
     @Override
-    public void registerSettings ( final Configuration configuration )
+    public void registerSettings ( final String key, final boolean loadInitialSettings, final boolean applySettingsChanges )
     {
-        UISettingsManager.registerComponent ( this, configuration );
+        SettingsManager.registerComponent ( this, key, loadInitialSettings, applySettingsChanges );
     }
 
     @Override
-    public void registerSettings ( final SettingsProcessor processor )
+    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass,
+                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
     {
-        UISettingsManager.registerComponent ( this, processor );
+        SettingsManager.registerComponent ( this, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final String key, final Object defaultValue, final boolean loadInitialSettings,
+                                   final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, key, defaultValue, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass,
+                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final String group, final String key, final Object defaultValue, final boolean loadInitialSettings,
+                                   final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValue, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final SettingsProcessor settingsProcessor )
+    {
+        SettingsManager.registerComponent ( this, settingsProcessor );
     }
 
     @Override
     public void unregisterSettings ()
     {
-        UISettingsManager.unregisterComponent ( this );
+        SettingsManager.unregisterComponent ( this );
     }
 
     @Override
     public void loadSettings ()
     {
-        UISettingsManager.loadSettings ( this );
+        SettingsManager.loadComponentSettings ( this );
     }
 
     @Override
     public void saveSettings ()
     {
-        UISettingsManager.saveSettings ( this );
+        SettingsManager.saveComponentSettings ( this );
     }
 
     @Override
     public WebTabbedPane setPlainFont ()
     {
-        return FontMethodsImpl.setPlainFont ( this );
+        return SwingUtils.setPlainFont ( this );
     }
 
     @Override
     public WebTabbedPane setPlainFont ( final boolean apply )
     {
-        return FontMethodsImpl.setPlainFont ( this, apply );
+        return SwingUtils.setPlainFont ( this, apply );
     }
 
     @Override
     public boolean isPlainFont ()
     {
-        return FontMethodsImpl.isPlainFont ( this );
+        return SwingUtils.isPlainFont ( this );
     }
 
     @Override
     public WebTabbedPane setBoldFont ()
     {
-        return FontMethodsImpl.setBoldFont ( this );
+        return SwingUtils.setBoldFont ( this );
     }
 
     @Override
     public WebTabbedPane setBoldFont ( final boolean apply )
     {
-        return FontMethodsImpl.setBoldFont ( this, apply );
+        return SwingUtils.setBoldFont ( this, apply );
     }
 
     @Override
     public boolean isBoldFont ()
     {
-        return FontMethodsImpl.isBoldFont ( this );
+        return SwingUtils.isBoldFont ( this );
     }
 
     @Override
     public WebTabbedPane setItalicFont ()
     {
-        return FontMethodsImpl.setItalicFont ( this );
+        return SwingUtils.setItalicFont ( this );
     }
 
     @Override
     public WebTabbedPane setItalicFont ( final boolean apply )
     {
-        return FontMethodsImpl.setItalicFont ( this, apply );
+        return SwingUtils.setItalicFont ( this, apply );
     }
 
     @Override
     public boolean isItalicFont ()
     {
-        return FontMethodsImpl.isItalicFont ( this );
+        return SwingUtils.isItalicFont ( this );
     }
 
     @Override
     public WebTabbedPane setFontStyle ( final boolean bold, final boolean italic )
     {
-        return FontMethodsImpl.setFontStyle ( this, bold, italic );
+        return SwingUtils.setFontStyle ( this, bold, italic );
     }
 
     @Override
     public WebTabbedPane setFontStyle ( final int style )
     {
-        return FontMethodsImpl.setFontStyle ( this, style );
+        return SwingUtils.setFontStyle ( this, style );
     }
 
     @Override
     public WebTabbedPane setFontSize ( final int fontSize )
     {
-        return FontMethodsImpl.setFontSize ( this, fontSize );
+        return SwingUtils.setFontSize ( this, fontSize );
     }
 
     @Override
     public WebTabbedPane changeFontSize ( final int change )
     {
-        return FontMethodsImpl.changeFontSize ( this, change );
+        return SwingUtils.changeFontSize ( this, change );
     }
 
     @Override
     public int getFontSize ()
     {
-        return FontMethodsImpl.getFontSize ( this );
+        return SwingUtils.getFontSize ( this );
     }
 
     @Override
     public WebTabbedPane setFontSizeAndStyle ( final int fontSize, final boolean bold, final boolean italic )
     {
-        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, bold, italic );
+        return SwingUtils.setFontSizeAndStyle ( this, fontSize, bold, italic );
     }
 
     @Override
     public WebTabbedPane setFontSizeAndStyle ( final int fontSize, final int style )
     {
-        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, style );
+        return SwingUtils.setFontSizeAndStyle ( this, fontSize, style );
     }
 
     @Override
     public WebTabbedPane setFontName ( final String fontName )
     {
-        return FontMethodsImpl.setFontName ( this, fontName );
+        return SwingUtils.setFontName ( this, fontName );
     }
 
     @Override
     public String getFontName ()
     {
-        return FontMethodsImpl.getFontName ( this );
+        return SwingUtils.getFontName ( this );
     }
 
     @Override
-    public int getPreferredWidth ()
+    public void setLanguageContainerKey ( final String key )
     {
-        return SizeMethodsImpl.getPreferredWidth ( this );
+        LanguageManager.registerLanguageContainer ( this, key );
     }
 
     @Override
-    public WebTabbedPane setPreferredWidth ( final int preferredWidth )
+    public void removeLanguageContainerKey ()
     {
-        return SizeMethodsImpl.setPreferredWidth ( this, preferredWidth );
+        LanguageManager.unregisterLanguageContainer ( this );
     }
 
     @Override
-    public int getPreferredHeight ()
+    public String getLanguageContainerKey ()
     {
-        return SizeMethodsImpl.getPreferredHeight ( this );
-    }
-
-    @Override
-    public WebTabbedPane setPreferredHeight ( final int preferredHeight )
-    {
-        return SizeMethodsImpl.setPreferredHeight ( this, preferredHeight );
-    }
-
-    @Override
-    public int getMinimumWidth ()
-    {
-        return SizeMethodsImpl.getMinimumWidth ( this );
-    }
-
-    @Override
-    public WebTabbedPane setMinimumWidth ( final int minimumWidth )
-    {
-        return SizeMethodsImpl.setMinimumWidth ( this, minimumWidth );
-    }
-
-    @Override
-    public int getMinimumHeight ()
-    {
-        return SizeMethodsImpl.getMinimumHeight ( this );
-    }
-
-    @Override
-    public WebTabbedPane setMinimumHeight ( final int minimumHeight )
-    {
-        return SizeMethodsImpl.setMinimumHeight ( this, minimumHeight );
-    }
-
-    @Override
-    public int getMaximumWidth ()
-    {
-        return SizeMethodsImpl.getMaximumWidth ( this );
-    }
-
-    @Override
-    public WebTabbedPane setMaximumWidth ( final int maximumWidth )
-    {
-        return SizeMethodsImpl.setMaximumWidth ( this, maximumWidth );
-    }
-
-    @Override
-    public int getMaximumHeight ()
-    {
-        return SizeMethodsImpl.getMaximumHeight ( this );
-    }
-
-    @Override
-    public WebTabbedPane setMaximumHeight ( final int maximumHeight )
-    {
-        return SizeMethodsImpl.setMaximumHeight ( this, maximumHeight );
-    }
-
-    @Override
-    public Dimension getPreferredSize ()
-    {
-        return SizeMethodsImpl.getPreferredSize ( this, super.getPreferredSize () );
-    }
-
-    @Override
-    public Dimension getOriginalPreferredSize ()
-    {
-        return SizeMethodsImpl.getOriginalPreferredSize ( this, super.getPreferredSize () );
-    }
-
-    @Override
-    public WebTabbedPane setPreferredSize ( final int width, final int height )
-    {
-        return SizeMethodsImpl.setPreferredSize ( this, width, height );
-    }
-
-    /**
-     * Returns the look and feel (LaF) object that renders this component.
-     *
-     * @return the {@link WTabbedPaneUI} object that renders this component
-     */
-    @Override
-    public WTabbedPaneUI getUI ()
-    {
-        return ( WTabbedPaneUI ) super.getUI ();
-    }
-
-    /**
-     * Sets the LaF object that renders this component.
-     *
-     * @param ui {@link WTabbedPaneUI}
-     */
-    public void setUI ( final WTabbedPaneUI ui )
-    {
-        super.setUI ( ui );
-    }
-
-    @Override
-    public void updateUI ()
-    {
-        StyleManager.getDescriptor ( this ).updateUI ( this );
-    }
-
-    @Override
-    public String getUIClassID ()
-    {
-        return StyleManager.getDescriptor ( this ).getUIClassId ();
+        return LanguageManager.getLanguageContainerKey ( this );
     }
 }

@@ -17,8 +17,10 @@
 
 package com.alee.graphics.data;
 
+import com.thoughtworks.xstream.annotations.XStreamAlias;
+import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
+
 import java.awt.*;
-import java.io.Serializable;
 
 /**
  * This class represents a simple line data.
@@ -26,26 +28,31 @@ import java.io.Serializable;
  * @author Mikle Garin
  */
 
-public class Line implements Serializable
+@XStreamAlias ("Line")
+public class Line
 {
     /**
      * First X coordinate.
      */
+    @XStreamAsAttribute
     public int x1;
 
     /**
      * First Y coordinate.
      */
+    @XStreamAsAttribute
     public int y1;
 
     /**
      * Second X coordinate.
      */
+    @XStreamAsAttribute
     public int x2;
 
     /**
      * Second Y coordinate.
      */
+    @XStreamAsAttribute
     public int y2;
 
     /**

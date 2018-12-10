@@ -22,9 +22,8 @@ import java.awt.event.KeyEvent;
 
 /**
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-HotkeyManager">How to use HotkeyManager</a>
- * @see HotkeyManager
  */
+
 public class ButtonHotkeyRunnable implements HotkeyRunnable
 {
     private final AbstractButton button;

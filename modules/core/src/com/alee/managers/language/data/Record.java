@@ -17,82 +17,51 @@
 
 package com.alee.managers.language.data;
 
-import com.alee.api.jdk.Objects;
 import com.alee.utils.CollectionUtils;
+import com.alee.utils.CompareUtils;
+import com.alee.utils.MergeUtils;
 import com.alee.utils.TextUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 import com.thoughtworks.xstream.annotations.XStreamImplicit;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * {@link Record} can store multiple {@link Value}s for different {@link Locale}s.
- * It can also provide single and multiple {@link Value}s for any specific {@link Locale} if such exist.
- *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-LanguageManager">How to use LanguageManager</a>
- * @see com.alee.managers.language.LanguageManager
- * @see com.alee.managers.language.Language
- * @see Dictionary
- * @see Value
  */
-@XStreamAlias ( "record" )
-public final class Record implements Cloneable, Serializable
+
+@XStreamAlias ("record")
+public final class Record implements Serializable, Cloneable
 {
-    /**
-     * {@link Record} key within its {@link Dictionary}.
-     */
     @XStreamAsAttribute
     private String key;
 
-    /**
-     * {@link Value}s of this {@link Record}.
-     */
+    @XStreamAsAttribute
+    private String hotkey;
+
     @XStreamImplicit
     private List<Value> values;
 
-    /**
-     * {@link Map} containing {@link Value}s cached by {@link Locale} keys.
-     */
-    private transient Map<String, Value> valuesCache;
-
-    /**
-     * Constructs new {@link Record}.
-     */
     public Record ()
     {
         this ( null );
     }
 
-    /**
-     * Constructs new {@link Record}.
-     *
-     * @param key {@link Record} key within its {@link Dictionary}
-     */
     public Record ( final String key )
     {
-        this ( key, new ArrayList<Value> ( 0 ) );
+        this ( key, new ArrayList<Value> () );
     }
 
-    /**
-     * Constructs new {@link Record}.
-     *
-     * @param key    {@link Record} key within its {@link Dictionary}
-     * @param values {@link Value}s for new {@link Record}
-     */
     public Record ( final String key, final Value... values )
     {
-        this ( key, CollectionUtils.asList ( values ) );
+        super ();
+        setKey ( key );
+        setValues ( CollectionUtils.asList ( values ) );
     }
 
-    /**
-     * Constructs new {@link Record}.
-     *
-     * @param key    {@link Record} key within its {@link Dictionary}
-     * @param values {@link Value}s for new {@link Record}
-     */
     public Record ( final String key, final List<Value> values )
     {
         super ();
@@ -100,52 +69,52 @@ public final class Record implements Cloneable, Serializable
         setValues ( CollectionUtils.copy ( values ) );
     }
 
-    /**
-     * Returns {@link Record} key within its {@link Dictionary}.
-     *
-     * @return {@link Record} key within its {@link Dictionary}
-     */
+    public Record ( final String key, final String hotkey, final Value... values )
+    {
+        super ();
+        setKey ( key );
+        setHotkey ( hotkey );
+        setValues ( CollectionUtils.asList ( values ) );
+    }
+
+    public Record ( final String key, final String hotkey, final List<Value> values )
+    {
+        super ();
+        setKey ( key );
+        setHotkey ( hotkey );
+        setValues ( CollectionUtils.copy ( values ) );
+    }
+
     public String getKey ()
     {
         return key;
     }
 
-    /**
-     * Sets {@link Record} key within its {@link Dictionary}.
-     *
-     * @param key new {@link Record} key within its {@link Dictionary}
-     */
     public void setKey ( final String key )
     {
         this.key = key;
     }
 
-    /**
-     * Returns {@link Value}s of this {@link Record}.
-     *
-     * @return {@link Value}s of this {@link Record}
-     */
+    public String getHotkey ()
+    {
+        return hotkey;
+    }
+
+    public void setHotkey ( final String hotkey )
+    {
+        this.hotkey = hotkey;
+    }
+
     public List<Value> getValues ()
     {
         return values;
     }
 
-    /**
-     * Sets {@link Value}s for this {@link Record}.
-     *
-     * @param values new {@link Value}s for this {@link Record}
-     */
     public void setValues ( final List<Value> values )
     {
         this.values = values;
     }
 
-    /**
-     * Adds new {@link Value} for this {@link Record}.
-     *
-     * @param value new {@link Value}
-     * @return added {@link Value}
-     */
     public Value addValue ( final Value value )
     {
         if ( values == null )
@@ -156,11 +125,6 @@ public final class Record implements Cloneable, Serializable
         return value;
     }
 
-    /**
-     * Removes {@link Value} from this {@link Record}.
-     *
-     * @param value {@link Value} to remove
-     */
     public void removeValue ( final Value value )
     {
         if ( values != null )
@@ -169,117 +133,90 @@ public final class Record implements Cloneable, Serializable
         }
     }
 
-    /**
-     * Removes all {@link Value}s from this {@link Record}.
-     */
-    public void clearValues ()
+    public void removeValue ( final String language )
     {
-        if ( CollectionUtils.notEmpty ( values ) )
+        if ( values != null )
         {
-            values.clear ();
-        }
-    }
-
-    /**
-     * Returns amount of {@link Value}s within this {@link Record}.
-     *
-     * @return amount of {@link Value}s within this {@link Record}
-     */
-    public int valuesCount ()
-    {
-        return values != null ? values.size () : 0;
-    }
-
-    /**
-     * Collects all {@link Locale}s from this {@link Record}.
-     *
-     * @param locales {@link List} to put {@link Locale}s into
-     */
-    protected void collectAllLocales ( final List<Locale> locales )
-    {
-        if ( CollectionUtils.notEmpty ( values ) )
-        {
-            for ( final Value value : values )
+            for ( int i = 0; i < values.size (); i++ )
             {
-                final Locale locale = value.getLocale ();
-                if ( !locales.contains ( locale ) )
+                final String valueLang = values.get ( i ).getLang ();
+                if ( CompareUtils.equals ( valueLang, language ) )
                 {
-                    locales.add ( locale );
+                    values.remove ( i );
                 }
             }
         }
     }
 
-    /**
-     * Returns whether or not this {@link Record} has {@link Value} for the specified {@link Locale}.
-     *
-     * @param locale {@link Locale} to check {@link Value} for
-     * @return {@code true} if this {@link Record} has {@link Value} for the specified {@link Locale}, {@code false} otherwise
-     */
-    public boolean hasValue ( final Locale locale )
+    public void clear ()
     {
-        return getValue ( locale ) != null;
+        if ( values != null )
+        {
+            values.clear ();
+        }
     }
 
-    /**
-     * Returns {@link Value} most fitting for the specified {@link Locale}.
-     *
-     * @param locale {@link Locale} to provide {@link Value} for
-     * @return {@link Value} most fitting for the specified {@link Locale}
-     */
-    public Value getValue ( final Locale locale )
+    public int size ()
     {
-        // Looking for appropriate value
-        final Value result;
-        final String key = locale.getLanguage () + "_" + locale.getCountry ();
-        if ( valuesCache != null && valuesCache.containsKey ( key ) )
-        {
-            // Resulting value is already cached
-            result = valuesCache.get ( key );
-        }
-        else
-        {
-            // Looking for value within existing values
-            if ( CollectionUtils.notEmpty ( values ) )
-            {
-                // Looking for most fittng value
-                final List<Value> values = getValues ( locale );
-                final Comparator<Value> comparator = new ValueCountryComparator ( locale );
-                result = CollectionUtils.max ( values, comparator );
-            }
-            else
-            {
-                // Empty value result
-                result = null;
-            }
-
-            // Caching result
-            if ( valuesCache == null )
-            {
-                valuesCache = new HashMap<String, Value> ( values.size () );
-            }
-            valuesCache.put ( key, result );
-        }
-        return result;
+        return values != null ? values.size () : 0;
     }
 
-    /**
-     * Returns {@link List} of {@link Value}s for the specified {@link Locale}.
-     *
-     * @param locale {@link Locale} to provide {@link Value}s for
-     * @return {@link List} of {@link Value} for the specified {@link Locale}
-     */
-    public List<Value> getValues ( final Locale locale )
+    public String getText ( final String lang )
     {
-        final List<Value> values = new ArrayList<Value> ( 3 );
-        for ( final Value value : this.values )
+        return getText ( lang, null );
+    }
+
+    public String getText ( final String lang, final String state )
+    {
+        final Value value = getValue ( lang );
+        return value != null ? value.getText ( state ) : null;
+    }
+
+    public Value getValue ( final String lang )
+    {
+        if ( values != null )
         {
-            if ( Objects.equals ( value.getLocale ().getLanguage (), locale.getLanguage () ) )
+            for ( final Value value : values )
             {
-                values.add ( value );
+                final String valueLang = value.getLang ();
+                if ( valueLang == null || CompareUtils.equals ( valueLang, lang ) )
+                {
+                    return value;
+                }
             }
         }
-        return values;
+        return null;
+    }
+
+    public boolean hasValue ( final String lang )
+    {
+        return getValue ( lang ) != null;
+    }
+
+    public List<String> getSupportedLanguages ()
+    {
+        return getSupportedLanguages ( new ArrayList<String> ( size () ) );
+    }
+
+    public List<String> getSupportedLanguages ( final List<String> languages )
+    {
+        if ( values != null )
+        {
+            for ( final Value value : values )
+            {
+                if ( !languages.contains ( value.getLang () ) )
+                {
+                    languages.add ( value.getLang () );
+                }
+            }
+        }
+        return languages;
+    }
+
+    @Override
+    public Record clone ()
+    {
+        return MergeUtils.cloneByFieldsSafely ( this );
     }
 
     @Override
@@ -288,15 +225,10 @@ public final class Record implements Cloneable, Serializable
         return toString ( false );
     }
 
-    /**
-     * Returns {@link Record} text representation.
-     *
-     * @param boldKey whether or not key should be displayed bold
-     * @return {@link Record} text representation
-     */
     public String toString ( final boolean boldKey )
     {
         return ( boldKey ? "{" : "" ) + key + ( boldKey ? ":b}" : "" ) +
-                ( values != null ? "[ " + TextUtils.listToString ( values, "; " ) + " ]" : "null" );
+                ( hotkey != null ? " (" + hotkey + ")" : "" ) + " -> " +
+                ( values != null ? ( "[ " + TextUtils.listToString ( values, "; " ) + " ]" ) : "null" );
     }
 }

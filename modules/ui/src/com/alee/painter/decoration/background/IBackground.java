@@ -18,25 +18,34 @@
 package com.alee.painter.decoration.background;
 
 import com.alee.api.Identifiable;
-import com.alee.api.merge.Overwriting;
+import com.alee.api.Mergeable;
 import com.alee.painter.decoration.IDecoration;
-import com.alee.painter.decoration.IShapedElement;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.Serializable;
 
 /**
- * Interface for any custom background.
+ * This interface is a base for any custom background.
+ * It exists exclusively to provide custom-shaped elements background fill algorithms.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <D> decoration type
  * @param <I> background type
  * @author Mikle Garin
  */
-public interface IBackground<C extends JComponent, D extends IDecoration<C, D>, I extends IBackground<C, D, I>>
-        extends IShapedElement<C, D, I>, Identifiable, Overwriting, Cloneable, Serializable
+
+public interface IBackground<E extends JComponent, D extends IDecoration<E, D>, I extends IBackground<E, D, I>>
+        extends Serializable, Cloneable, Mergeable<I>, Identifiable
 {
     /**
-     * This interface doesn't offer any additional methods to implement.
+     * Fills the specified shape with this background.
+     *
+     * @param g2d    graphics context
+     * @param bounds painting bounds
+     * @param c      painted component
+     * @param d      painted decoration state
+     * @param shape  background shape
      */
+    public void paint ( Graphics2D g2d, Rectangle bounds, E c, D d, Shape shape );
 }

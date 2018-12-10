@@ -36,7 +36,6 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.*;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,16 +45,16 @@ import static com.alee.laf.splitpane.WebSplitPane.HORIZONTAL_SPLIT;
  * Data for single tabbed pane within document pane.
  * It basically contains tabbed pane and opened documents list.
  *
- * @param <T> {@link DocumentData} type
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
- * @see WebDocumentPane
+ * @see com.alee.extended.tab.WebDocumentPane
  */
+
 public final class PaneData<T extends DocumentData> implements StructureData<T>, SwingConstants
 {
     /**
-     * {@link WebDocumentPane} this {@link PaneData} belongs to.
-     * Referenced to properly act when {@link WebDocumentPane} is required to retrieve customizers or perform any operation.
+     * WebDocumentPane this PaneData belongs to.
+     * Referenced to properly act when WebDocumentPane is required to retrieve customizers or perform any operation.
      */
     protected WebDocumentPane<T> documentPane;
 
@@ -75,9 +74,9 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
     protected List<T> data = new ArrayList<T> ();
 
     /**
-     * Constructs new {@link PaneData} for the specified {@link WebDocumentPane}.
+     * Constructs new PaneData for the specified WebDocumentPane.
      *
-     * @param documentPane parent {@link WebDocumentPane}
+     * @param documentPane parent WebDocumentPane
      */
     public PaneData ( final WebDocumentPane<T> documentPane )
     {
@@ -100,19 +99,12 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
             @Override
             public void run ( final KeyEvent e )
             {
-                if ( getDocumentPane ().isClosable () )
-                {
-                    final T selected = getSelected ();
-                    if ( selected.isClosable () )
-                    {
-                        close ( selected );
-                    }
-                }
+                closeSelected ();
             }
         } );
 
         // Tabs drag & drop
-        DocumentTransferHandler.install ( this );
+        DocumentDragHandler.install ( this );
 
         // Activating document pane on
         tabbedPane.addChangeListener ( new ChangeListener ()
@@ -132,13 +124,13 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
             {
                 if ( SwingUtils.isMiddleMouseButton ( e ) )
                 {
-                    if ( getDocumentPane ().isClosable () )
+                    if ( getDocumentPane ().isCloseable () )
                     {
                         final int index = tabbedPane.getTabAt ( e.getPoint () );
                         if ( index != -1 )
                         {
                             final T document = get ( index );
-                            if ( document.isClosable () )
+                            if ( document.isCloseable () )
                             {
                                 close ( document );
                             }
@@ -163,8 +155,8 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
 
                     // Variables
                     final T document = get ( index );
-                    final boolean close = documentPane.isClosable () && document.isClosable ();
-                    final boolean closeOthers = documentPane.isClosable () && data.size () > 1;
+                    final boolean close = documentPane.isCloseable () && document.isCloseable ();
+                    final boolean closeOthers = documentPane.isCloseable () && data.size () > 1;
                     final boolean split = data.size () > 1 && documentPane.isSplitEnabled ();
                     final boolean unsplit = tabbedPane.getParent () instanceof WebSplitPane;
                     final boolean hor = unsplit && ( ( WebSplitPane ) tabbedPane.getParent () ).getOrientation () == HORIZONTAL_SPLIT;
@@ -179,14 +171,6 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
                         public void actionPerformed ( final ActionEvent e )
                         {
                             close ( get ( index ) );
-                        }
-                    } );
-                    pmg.addItem ( "closeAll", "closeAll", close, new ActionListener ()
-                    {
-                        @Override
-                        public void actionPerformed ( final ActionEvent e )
-                        {
-                            closeAll ();
                         }
                     } );
                     pmg.addItem ( "closeOthers", "closeOthers", closeOthers, new ActionListener ()
@@ -274,7 +258,7 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
         } );
 
         // Adding focus tracker
-        focusTracker = new DefaultFocusTracker ( tabbedPane, true )
+        focusTracker = new DefaultFocusTracker ( true )
         {
             @Override
             public void focusChanged ( final boolean focused )
@@ -325,12 +309,6 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
     public PaneData<T> findClosestPane ()
     {
         return this;
-    }
-
-    @Override
-    public DocumentPaneState getDocumentPaneState ()
-    {
-        return new DocumentPaneState ( this );
     }
 
     /**
@@ -454,7 +432,7 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
         tabbedPane.setTabComponentAt ( i, createTabComponent ( document ) );
 
         // Listening to document data changes
-        document.addListener ( new PaneUpdater<T> ( this ) );
+        document.addListener ( new PaneDataAdapter<T> ( this ) );
     }
 
     /**
@@ -465,7 +443,6 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
      */
     protected JComponent createTabComponent ( final T document )
     {
-        final WeakReference<T> weakDocument = new WeakReference<T> ( document );
         final MouseAdapter tabSelector = new MouseAdapter ()
         {
             @Override
@@ -524,12 +501,8 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
              */
             protected void redirectMouseEvent ( final MouseEvent e )
             {
-                final PaneData paneData = getDocumentPane ().getPane ( weakDocument.get () );
-                if ( paneData != null )
-                {
-                    final WebTabbedPane tabbedPane = paneData.getTabbedPane ();
-                    tabbedPane.dispatchEvent ( SwingUtilities.convertMouseEvent ( e.getComponent (), e, tabbedPane ) );
-                }
+                final WebTabbedPane tabbedPane = getDocumentPane ().getPane ( document ).getTabbedPane ();
+                tabbedPane.dispatchEvent ( SwingUtilities.convertMouseEvent ( e.getComponent (), e, tabbedPane ) );
             }
         };
         return getDocumentPane ().getTabTitleComponentProvider ().createTabTitleComponent ( this, document, tabSelector );
@@ -781,9 +754,9 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
         final List<DocumentDataListener<T>> listeners = document.getListeners ();
         for ( final DocumentDataListener<T> listener : listeners )
         {
-            if ( listener instanceof PaneUpdater )
+            if ( listener instanceof PaneDataAdapter )
             {
-                final PaneData paneData = ( ( PaneUpdater ) listener ).getPaneData ();
+                final PaneData paneData = ( ( PaneDataAdapter ) listener ).getPaneData ();
                 if ( paneData == this )
                 {
                     return listener;
@@ -795,25 +768,20 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
 
     /**
      * Closes all document in this group.
-     *
-     * @return {@code true} if all documents were successfully closed, {@code false} otherwise
      */
-    public boolean closeAll ()
+    public void closeAll ()
     {
-        boolean success = true;
         for ( final T document : CollectionUtils.copy ( data ) )
         {
-            success &= close ( document );
+            close ( document );
         }
-
-        return success;
     }
 
     /**
      * Closes document at the specified index in the active pane.
      *
      * @param index index of the document to close
-     * @return {@code true} if document was successfully closed, {@code false} otherwise
+     * @return true if document was successfully closed, false otherwise
      */
     public boolean close ( final int index )
     {
@@ -824,7 +792,7 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
      * Closes document with the specified ID.
      *
      * @param id ID of the document to close
-     * @return {@code true} if document was successfully closed, {@code false} otherwise
+     * @return true if document was successfully closed, false otherwise
      */
     public boolean close ( final String id )
     {
@@ -835,7 +803,7 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
      * Closes the specified document.
      *
      * @param document document to close
-     * @return {@code true} if document was successfully closed, {@code false} otherwise
+     * @return true if document was successfully closed, false otherwise
      */
     public boolean close ( final T document )
     {
@@ -850,9 +818,6 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
                 // Closing document and fixing view
                 final boolean removed = remove ( document );
                 mergeIfEmpty ();
-
-                // todo Fire additional event when all documents are closed?
-                // if ( documentPane.getDocumentsCount () == 0 )
 
                 // Informing listeners about document close event
                 documentPane.fireDocumentClosed ( document, this, index );
@@ -874,30 +839,28 @@ public final class PaneData<T extends DocumentData> implements StructureData<T>,
      * Closes all documents except the specified one.
      *
      * @param document document to keep opened
-     * @return {@code true} if all documents were successfully closed, {@code false} otherwise
      */
-    public boolean closeOthers ( final T document )
+    public void closeOthers ( final T document )
     {
-        boolean success = true;
         for ( final T doc : CollectionUtils.copy ( data ) )
         {
-            if ( doc != document && doc.isClosable () )
+            if ( doc != document && doc.isCloseable () )
             {
-                success &= close ( doc );
+                close ( doc );
             }
         }
-        return success;
     }
 
     /**
      * Closes selected document.
-     *
-     * @return {@code true} if selected document was successfully closed, {@code false} otherwise
      */
-    public boolean closeSelected ()
+    public void closeSelected ()
     {
         final T selected = getSelected ();
-        return selected != null && close ( selected );
+        if ( selected != null )
+        {
+            close ( selected );
+        }
     }
 
     /**

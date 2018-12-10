@@ -17,25 +17,30 @@
 
 package com.alee.extended.tree;
 
-import com.alee.api.ui.TextBridge;
-import com.alee.laf.tree.TreeNodeParameters;
+import com.alee.api.IconSupport;
+import com.alee.api.TitleSupport;
 import com.alee.utils.FileUtils;
 
 import javax.swing.*;
 import java.io.File;
 
 /**
- * {@link AsyncUniqueNode} representing single {@link File}.
+ * Custom AsyncUniqueNode for WebFileTree.
  *
  * @author Mikle Garin
  */
-public class FileTreeNode extends AsyncUniqueNode<FileTreeNode, File>
-        implements TextBridge<TreeNodeParameters<FileTreeNode, WebAsyncTree<FileTreeNode>>>
+
+public class FileTreeNode extends AsyncUniqueNode implements IconSupport, TitleSupport
 {
     /**
      * Root node ID.
      */
     public static final String rootId = "File.tree.root";
+
+    /**
+     * File for this node.
+     */
+    protected File file;
 
     /**
      * Custom node title.
@@ -49,13 +54,13 @@ public class FileTreeNode extends AsyncUniqueNode<FileTreeNode, File>
      */
     public FileTreeNode ( final File file )
     {
-        super ( file );
+        super ();
+        this.file = file;
     }
 
     @Override
     public String getId ()
     {
-        final File file = getUserObject ();
         return file != null ? file.getAbsolutePath () : rootId;
     }
 
@@ -66,7 +71,7 @@ public class FileTreeNode extends AsyncUniqueNode<FileTreeNode, File>
      */
     public File getFile ()
     {
-        return getUserObject ();
+        return file;
     }
 
     /**
@@ -76,63 +81,46 @@ public class FileTreeNode extends AsyncUniqueNode<FileTreeNode, File>
      */
     public void setFile ( final File file )
     {
-        setUserObject ( file );
+        this.file = file;
     }
 
     @Override
-    public Icon getNodeIcon ( final TreeNodeParameters<FileTreeNode, WebAsyncTree<FileTreeNode>> parameters )
+    public Icon getNodeIcon ()
     {
-        final File file = getUserObject ();
         return file != null ? FileUtils.getFileIcon ( file, false ) : null;
     }
 
     @Override
-    public String getText ( final TreeNodeParameters<FileTreeNode, WebAsyncTree<FileTreeNode>> parameters )
-    {
-        return getTitle ();
-    }
-
-    /**
-     * Returns node title.
-     *
-     * @return node title
-     */
     public String getTitle ()
     {
-        final String title;
-        if ( this.title != null )
+        if ( title != null )
         {
-            title = this.title;
+            return title;
         }
-        else
+        else if ( file != null )
         {
-            final File file = getUserObject ();
-            if ( file != null )
+            String name = FileUtils.getDisplayFileName ( file );
+            if ( name != null && !name.trim ().equals ( "" ) )
             {
-                String name = FileUtils.getDisplayFileName ( file );
-                if ( name != null && !name.trim ().equals ( "" ) )
-                {
-                    title = name;
-                }
-                else
-                {
-                    name = file.getName ();
-                    if ( !name.trim ().equals ( "" ) )
-                    {
-                        title = name != null ? name : "";
-                    }
-                    else
-                    {
-                        title = FileUtils.getFileDescription ( file, null ).getDescription ();
-                    }
-                }
+                return name;
             }
             else
             {
-                title = rootId;
+                name = file.getName ();
+                if ( !name.trim ().equals ( "" ) )
+                {
+                    return name != null ? name : "";
+                }
+                else
+                {
+                    return FileUtils.getFileDescription ( file, null ).getDescription ();
+                }
             }
         }
-        return title;
+        else
+        {
+            return rootId;
+        }
     }
 
     /**
@@ -143,6 +131,19 @@ public class FileTreeNode extends AsyncUniqueNode<FileTreeNode, File>
     public void setTitle ( final String title )
     {
         this.title = title;
+
+    }
+
+    @Override
+    public FileTreeNode getParent ()
+    {
+        return ( FileTreeNode ) super.getParent ();
+    }
+
+    @Override
+    public FileTreeNode getChildAt ( final int index )
+    {
+        return ( FileTreeNode ) super.getChildAt ( index );
     }
 
     /**

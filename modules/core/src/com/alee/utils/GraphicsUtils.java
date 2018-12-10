@@ -17,6 +17,7 @@
 
 package com.alee.utils;
 
+import com.alee.global.StyleConstants;
 import com.alee.utils.laf.ShadeType;
 
 import java.awt.*;
@@ -29,16 +30,9 @@ import java.util.Map;
  *
  * @author Mikle Garin
  */
+
 public final class GraphicsUtils
 {
-    /**
-     * Private constructor to avoid instantiation.
-     */
-    private GraphicsUtils ()
-    {
-        throw new UtilityException ( "Utility classes are not meant to be instantiated" );
-    }
-
     /**
      * Setting antialias on
      */
@@ -81,6 +75,37 @@ public final class GraphicsUtils
     }
 
     /**
+     * Installing system text settings
+     */
+
+    private static boolean systemTextHintsInitialized = false;
+    private static Map systemTextHints = null;
+
+    public static Map getSystemTextHints ()
+    {
+        if ( !systemTextHintsInitialized )
+        {
+            systemTextHints = ( Map ) Toolkit.getDefaultToolkit ().getDesktopProperty ( "awt.font.desktophints" );
+            systemTextHintsInitialized = true;
+        }
+        return systemTextHints;
+    }
+
+    public static void setupSystemTextHints ( final Graphics g )
+    {
+        setupSystemTextHints ( ( Graphics2D ) g );
+    }
+
+    public static void setupSystemTextHints ( final Graphics2D g2d )
+    {
+        final Map systemTextHints = getSystemTextHints ();
+        if ( systemTextHints != null )
+        {
+            g2d.addRenderingHints ( systemTextHints );
+        }
+    }
+
+    /**
      * Setting AlphaComposite by taking old AlphaComposite settings into account
      */
 
@@ -110,8 +135,7 @@ public final class GraphicsUtils
 
         // Determining old composite alpha
         float currentComposite = 1f;
-        if ( composeWith != null && composeWith instanceof AlphaComposite &&
-                ( ( AlphaComposite ) composeWith ).getRule () == AlphaComposite.SRC_OVER )
+        if ( composeWith != null && composeWith instanceof AlphaComposite )
         {
             currentComposite = ( ( AlphaComposite ) composeWith ).getAlpha ();
         }
@@ -382,12 +406,40 @@ public final class GraphicsUtils
     }
 
     /**
+     * Strokes caching
+     */
+
+    private static final Map<String, Stroke> cachedStrokes = new HashMap<String, Stroke> ();
+
+    public static Stroke getStroke ( final int width )
+    {
+        return getStroke ( width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND );
+    }
+
+    public static Stroke getStroke ( final int width, final int cap )
+    {
+        return getStroke ( width, cap, BasicStroke.JOIN_ROUND );
+    }
+
+    public static Stroke getStroke ( final int width, final int cap, final int join )
+    {
+        final String key = width + "," + cap + "," + join;
+        Stroke stroke = cachedStrokes.get ( key );
+        if ( stroke == null )
+        {
+            stroke = new BasicStroke ( width, cap, join );
+            cachedStrokes.put ( key, stroke );
+        }
+        return stroke;
+    }
+
+    /**
      * Draws web styled shade using specified shape
      */
 
     public static void drawShade ( final Graphics2D g2d, final Shape shape, final Color shadeColor, final int width )
     {
-        drawShade ( g2d, shape, ShadeType.simple, shadeColor, width );
+        drawShade ( g2d, shape, StyleConstants.shadeType, shadeColor, width );
     }
 
     public static void drawShade ( final Graphics2D g2d, final Shape shape, final ShadeType shadeType, final Color shadeColor,
@@ -398,7 +450,7 @@ public final class GraphicsUtils
 
     public static void drawShade ( final Graphics2D g2d, final Shape shape, final Color shadeColor, final int width, final Shape clip )
     {
-        drawShade ( g2d, shape, ShadeType.simple, shadeColor, width, clip, true );
+        drawShade ( g2d, shape, StyleConstants.shadeType, shadeColor, width, clip, true );
     }
 
     public static void drawShade ( final Graphics2D g2d, final Shape shape, final ShadeType shadeType, final Color shadeColor,
@@ -409,7 +461,7 @@ public final class GraphicsUtils
 
     public static void drawShade ( final Graphics2D g2d, final Shape shape, final Color shadeColor, final int width, final boolean round )
     {
-        drawShade ( g2d, shape, ShadeType.simple, shadeColor, width, null, round );
+        drawShade ( g2d, shape, StyleConstants.shadeType, shadeColor, width, null, round );
     }
 
     public static void drawShade ( final Graphics2D g2d, final Shape shape, final ShadeType shadeType, final Color shadeColor,
@@ -421,7 +473,7 @@ public final class GraphicsUtils
     public static void drawShade ( final Graphics2D g2d, final Shape shape, final Color shadeColor, final int width, final Shape clip,
                                    final boolean round )
     {
-        drawShade ( g2d, shape, ShadeType.simple, shadeColor, width, clip, round );
+        drawShade ( g2d, shape, StyleConstants.shadeType, shadeColor, width, clip, round );
     }
 
     public static void drawShade ( final Graphics2D g2d, final Shape shape, final ShadeType shadeType, final Color shadeColor, int width,
@@ -439,7 +491,7 @@ public final class GraphicsUtils
         // Saving composite
         final Composite oldComposite = g2d.getComposite ();
         float currentComposite = 1f;
-        if ( oldComposite instanceof AlphaComposite && ( ( AlphaComposite ) oldComposite ).getRule () == AlphaComposite.SRC_OVER )
+        if ( oldComposite instanceof AlphaComposite )
         {
             currentComposite = ( ( AlphaComposite ) oldComposite ).getAlpha ();
         }
@@ -486,30 +538,67 @@ public final class GraphicsUtils
     }
 
     /**
-     * Strokes caching
+     * Draw a string with a blur or shadow effect. The light angle is assumed to be 0 degrees, (i.e., window is illuminated from top).
+     * The effect is intended to be subtle to be usable in as many text components as possible. The effect is generated with multiple calls
+     * todraw string. This method paints the text on coordinates {@code tx}, {@code ty}. If text should be painted elsewhere, a transform
+     * should be applied to the graphics before passing it.
+     *
+     * @param g2d      graphics context
+     * @param text     text to paint
+     * @param color    effect color
+     * @param size     effect size
+     * @param tx       shift by X
+     * @param ty       shift by Y
+     * @param isShadow whether should paint shadow effect or not
      */
-
-    private static final Map<String, Stroke> cachedStrokes = new HashMap<String, Stroke> ();
-
-    public static Stroke getStroke ( final int width )
+    public static void paintTextEffect ( final Graphics2D g2d, final String text, final Color color, final int size, final double tx,
+                                         final double ty, final boolean isShadow )
     {
-        return getStroke ( width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND );
-    }
+        // Effect "darkness"
+        final float opacity = 0.8f;
 
-    public static Stroke getStroke ( final int width, final int cap )
-    {
-        return getStroke ( width, cap, BasicStroke.JOIN_ROUND );
-    }
+        final Composite oldComposite = g2d.getComposite ();
+        final Color oldColor = g2d.getColor ();
 
-    public static Stroke getStroke ( final int width, final int cap, final int join )
-    {
-        final String key = width + "," + cap + "," + join;
-        Stroke stroke = cachedStrokes.get ( key );
-        if ( stroke == null )
+        // Use a alpha blend smaller than 1 to prevent the effect from becoming too dark when multiple paints occur on top of each other.
+        float preAlpha = 0.4f;
+        if ( oldComposite instanceof AlphaComposite && ( ( AlphaComposite ) oldComposite ).getRule () == AlphaComposite.SRC_OVER )
         {
-            stroke = new BasicStroke ( width, cap, join );
-            cachedStrokes.put ( key, stroke );
+            preAlpha = Math.min ( ( ( AlphaComposite ) oldComposite ).getAlpha (), preAlpha );
         }
-        return stroke;
+        g2d.setPaint ( ColorUtils.removeAlpha ( color ) );
+
+        g2d.translate ( tx, ty );
+
+        // If the effect is a shadow it looks better to stop painting a bit earlier - shadow will look softer
+        final int maxSize = isShadow ? size - 1 : size;
+
+        for ( int i = -size; i <= maxSize; i++ )
+        {
+            for ( int j = -size; j <= maxSize; j++ )
+            {
+                final double distance = i * i + j * j;
+                float alpha = opacity;
+                if ( distance > 0.0d )
+                {
+                    alpha = ( float ) ( 1.0f / ( distance * size * opacity ) );
+                }
+                alpha *= preAlpha;
+                if ( alpha > 1.0f )
+                {
+                    alpha = 1.0f;
+                }
+                g2d.setComposite ( AlphaComposite.getInstance ( AlphaComposite.SRC_OVER, alpha ) );
+                g2d.drawString ( text, i + size, j + size );
+            }
+        }
+
+        // Restore graphics
+        g2d.translate ( -tx, -ty );
+        g2d.setComposite ( oldComposite );
+        g2d.setPaint ( oldColor );
+
+        // Painting text itself
+        g2d.drawString ( text, 0, 0 );
     }
 }

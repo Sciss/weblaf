@@ -17,10 +17,9 @@
 
 package com.alee.utils.filefilter;
 
-import com.alee.api.ui.RenderingParameters;
-import com.alee.managers.language.LM;
+import com.alee.global.GlobalConstants;
+import com.alee.managers.language.LanguageManager;
 import com.alee.utils.FileUtils;
-import com.alee.utils.ImageUtils;
 
 import javax.swing.*;
 import java.io.File;
@@ -40,7 +39,7 @@ public class ImageFilesFilter extends AbstractFileFilter
     public static final ImageIcon ICON = new ImageIcon ( ImageFilesFilter.class.getResource ( "icons/image.png" ) );
 
     @Override
-    public Icon getIcon ( final RenderingParameters parameters )
+    public ImageIcon getIcon ()
     {
         return ICON;
     }
@@ -48,12 +47,12 @@ public class ImageFilesFilter extends AbstractFileFilter
     @Override
     public String getDescription ()
     {
-        return LM.get ( "weblaf.file.filter.images" );
+        return LanguageManager.get ( "weblaf.file.filter.images" );
     }
 
     @Override
     public boolean accept ( final File file )
     {
-        return ImageUtils.VIEWABLE_IMAGES.contains ( FileUtils.getFileExtPart ( file.getName ().toLowerCase ( Locale.ROOT ), false ) );
+        return GlobalConstants.IMAGE_FORMATS.contains ( FileUtils.getFileExtPart ( file.getName ().toLowerCase ( Locale.ROOT ), false ) );
     }
 }

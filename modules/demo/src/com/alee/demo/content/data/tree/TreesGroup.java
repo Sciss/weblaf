@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.data.tree;
 
-import com.alee.demo.api.example.AbstractExampleGroup;
+import com.alee.demo.api.AbstractExampleGroup;
 import com.alee.utils.CollectionUtils;
 
 import java.util.List;
@@ -37,15 +37,7 @@ public class TreesGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleClasses ()
     {
-        return CollectionUtils.<Class>asList (
-                JTreeExample.class,
-                WebTreeExample.class,
-                WebExTreeExample.class,
-                WebAsyncTreeExample.class,
-                WebFileTreeExample.class,
-                WebCheckBoxTreeExample.class,
-                WebExCheckBoxTreeExample.class,
-                WebTreeFilterFieldExample.class
-        );
+        return CollectionUtils.<Class>asList ( JTreeExample.class, WebTreeExample.class, WebExTreeExample.class, WebAsyncTreeExample.class,
+                WebCheckBoxTreeExample.class );
     }
 }

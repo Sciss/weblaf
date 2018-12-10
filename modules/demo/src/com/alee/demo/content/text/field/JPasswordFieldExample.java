@@ -17,9 +17,7 @@
 
 package com.alee.demo.content.text.field;
 
-import com.alee.demo.api.example.*;
-import com.alee.demo.api.example.wiki.OracleWikiPage;
-import com.alee.demo.api.example.wiki.WikiPage;
+import com.alee.demo.api.*;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
@@ -29,7 +27,8 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-public class JPasswordFieldExample extends AbstractStylePreviewExample
+
+public class JPasswordFieldExample extends AbstractExample
 {
     @Override
     public String getId ()
@@ -50,19 +49,12 @@ public class JPasswordFieldExample extends AbstractStylePreviewExample
     }
 
     @Override
-    public WikiPage getWikiPage ()
-    {
-        return new OracleWikiPage ( "How to Use Password Fields", "passwordfield" );
-    }
-
-    @Override
     protected List<Preview> createPreviews ()
     {
-        return CollectionUtils.<Preview>asList (
-                new BasicField ( "basic", StyleId.passwordfield ),
-                new BasicField ( "transparent", StyleId.passwordfieldTransparent ),
-                new BasicField ( "nofocus", StyleId.passwordfieldNoFocus )
-        );
+        final BasicField e1 = new BasicField ( "basic", StyleId.passwordfield );
+        final BasicField e2 = new BasicField ( "undecorated", StyleId.passwordfieldUndecorated );
+        final BasicField e3 = new BasicField ( "nofocus", StyleId.passwordfieldNoFocus );
+        return CollectionUtils.<Preview>asList ( e1, e2, e3 );
     }
 
     /**
@@ -82,7 +74,7 @@ public class JPasswordFieldExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final JPasswordField passwordField = new JPasswordField ( "password", 20 );
             passwordField.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );

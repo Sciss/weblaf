@@ -5,17 +5,14 @@ import com.alee.laf.separator.IAbstractSeparatorPainter;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JSeparator} component painters.
+ * Base interface for JSeparator component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IToolBarSeparatorPainter<C extends JToolBar.Separator, U extends WToolBarSeparatorUI>
-        extends IAbstractSeparatorPainter<C, U>
+public interface IToolBarSeparatorPainter<E extends JToolBar.Separator, U extends WebToolBarSeparatorUI>
+        extends IAbstractSeparatorPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

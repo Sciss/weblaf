@@ -5,17 +5,14 @@ import com.alee.laf.separator.IAbstractSeparatorPainter;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JPopupMenu.Separator} component painters.
+ * Base interface for JSeparator component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IPopupMenuSeparatorPainter<C extends JPopupMenu.Separator, U extends WPopupMenuSeparatorUI>
-        extends IAbstractSeparatorPainter<C, U>
+public interface IPopupMenuSeparatorPainter<E extends JPopupMenu.Separator, U extends WebPopupMenuSeparatorUI>
+        extends IAbstractSeparatorPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

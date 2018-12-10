@@ -18,6 +18,7 @@
 package com.alee.laf.text;
 
 import com.alee.extended.layout.AbstractLayoutManager;
+import com.alee.utils.CompareUtils;
 
 import java.awt.*;
 
@@ -30,49 +31,80 @@ import java.awt.*;
 public class TextFieldLayout extends AbstractLayoutManager
 {
     /**
-     * Text field painter implementation.
+     * Positions component at the leading side of the field.
      */
-    private final IAbstractTextFieldPainter painter;
+    public static final String LEADING = "LEADING";
 
     /**
-     * Constructs new text field layout.
-     *
-     * @param painter text field painter implementation
+     * Positions component at the trailing side of the field
      */
-    public TextFieldLayout ( final IAbstractTextFieldPainter painter )
+    public static final String TRAILING = "TRAILING";
+
+    /**
+     * Leading layout component.
+     */
+    private Component leading;
+
+    /**
+     * Trailing layout component.
+     */
+    private Component trailing;
+
+    @Override
+    public void addComponent ( final Component component, final Object constraints )
     {
-        super ();
-        this.painter = painter;
+        if ( CompareUtils.equals ( constraints, LEADING ) )
+        {
+            leading = component;
+        }
+        else if ( CompareUtils.equals ( constraints, TRAILING ) )
+        {
+            trailing = component;
+        }
+        else
+        {
+            final String msg = "Component cannot be added to layout: constraint must be either of '%s' or '%s' string value";
+            throw new IllegalArgumentException ( String.format ( msg, LEADING, TRAILING ) );
+        }
     }
 
     @Override
-    public Dimension preferredLayoutSize ( final Container container )
+    public void removeComponent ( final Component component )
     {
-        final Insets b = container.getInsets ();
-        final Component leading = painter.getLeadingComponent ();
-        final Component trailing = painter.getTrailingComponent ();
+        if ( leading == component )
+        {
+            leading = null;
+        }
+        else if ( trailing == component )
+        {
+            trailing = null;
+        }
+    }
+
+    @Override
+    public Dimension preferredLayoutSize ( final Container parent )
+    {
+        final Insets b = parent.getInsets ();
         final Dimension l = leading != null ? leading.getPreferredSize () : new Dimension ();
         final Dimension t = trailing != null ? trailing.getPreferredSize () : new Dimension ();
         return new Dimension ( b.left + l.width + t.width + b.right, b.top + Math.max ( l.height, t.height ) + b.bottom );
     }
 
     @Override
-    public void layoutContainer ( final Container container )
+    public void layoutContainer ( final Container parent )
     {
-        final Insets b = container.getInsets ();
-        final boolean ltr = container.getComponentOrientation ().isLeftToRight ();
-        final Component leading = painter.getLeadingComponent ();
-        final Component trailing = painter.getTrailingComponent ();
+        final Insets b = parent.getInsets ();
+        final boolean ltr = parent.getComponentOrientation ().isLeftToRight ();
         if ( leading != null )
         {
             final int w = leading.getPreferredSize ().width;
             if ( ltr )
             {
-                leading.setBounds ( b.left - w, b.top, w, container.getHeight () - b.top - b.bottom );
+                leading.setBounds ( b.left - w, b.top, w, parent.getHeight () - b.top - b.bottom );
             }
             else
             {
-                leading.setBounds ( container.getWidth () - b.right, b.top, w, container.getHeight () - b.top - b.bottom );
+                leading.setBounds ( parent.getWidth () - b.right, b.top, w, parent.getHeight () - b.top - b.bottom );
             }
         }
         if ( trailing != null )
@@ -80,11 +112,11 @@ public class TextFieldLayout extends AbstractLayoutManager
             final int w = trailing.getPreferredSize ().width;
             if ( ltr )
             {
-                trailing.setBounds ( container.getWidth () - b.right, b.top, w, container.getHeight () - b.top - b.bottom );
+                trailing.setBounds ( parent.getWidth () - b.right, b.top, w, parent.getHeight () - b.top - b.bottom );
             }
             else
             {
-                trailing.setBounds ( b.left - w, b.top, w, container.getHeight () - b.top - b.bottom );
+                trailing.setBounds ( b.left - w, b.top, w, parent.getHeight () - b.top - b.bottom );
             }
         }
     }

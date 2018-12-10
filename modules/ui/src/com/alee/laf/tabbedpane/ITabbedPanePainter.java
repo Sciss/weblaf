@@ -5,16 +5,13 @@ import com.alee.painter.SpecificPainter;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JTabbedPane} component painters.
+ * Base interface for JTabbedPane component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface ITabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> extends SpecificPainter<C, U>
+public interface ITabbedPanePainter<E extends JTabbedPane, U extends WebTabbedPaneUI> extends SpecificPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

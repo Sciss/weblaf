@@ -1,168 +1,75 @@
 package com.alee.laf.table;
 
-import com.alee.api.jdk.Objects;
-import com.alee.managers.language.Language;
-import com.alee.managers.language.LanguageListener;
-import com.alee.managers.language.LanguageSensitive;
-import com.alee.managers.language.UILanguageManager;
-import com.alee.painter.DefaultPainter;
-import com.alee.painter.SectionPainter;
-import com.alee.painter.decoration.AbstractDecorationPainter;
-import com.alee.painter.decoration.IDecoration;
-import com.alee.utils.CollectionUtils;
-import com.alee.utils.GeometryUtils;
-import com.alee.utils.ReflectUtils;
-import com.alee.utils.general.Pair;
+import com.alee.laf.table.ITablePainter;
+import com.alee.laf.table.WebTable;
+import com.alee.laf.table.WebTableUI;
+import com.alee.managers.tooltip.ToolTipProvider;
+import com.alee.painter.AbstractPainter;
+import com.alee.utils.CompareUtils;
 
 import javax.swing.*;
-import javax.swing.table.*;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Hashtable;
-import java.util.List;
 
 /**
- * Basic painter for {@link JTable} component.
- * It is used as {@link WebTableUI} default painter.
- *
- * @param <C> component type
- * @param <U> component UI type
- * @param <D> decoration type
  * @author Alexandr Zernov
  */
 
-public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDecoration<C, D>> extends AbstractDecorationPainter<C, U, D>
-        implements ITablePainter<C, U>
+public class TablePainter<E extends JTable, U extends WebTableUI> extends AbstractPainter<E, U> implements ITablePainter<E, U>
 {
-    /**
-     * Table rows background painter.
-     * It can be used to provide background customization for specific table rows.
-     */
-    @DefaultPainter ( TableRowPainter.class )
-    protected ITableRowPainter rowPainter;
-
-    /**
-     * Table columns background painter.
-     * It can be used to provide background customization for specific table columns.
-     */
-    @DefaultPainter ( TableColumnPainter.class )
-    protected ITableColumnPainter columnPainter;
-
-    /**
-     * Table cell background painter.
-     * It can be used to provide background customization for specific table cells.
-     */
-    @DefaultPainter ( TableCellPainter.class )
-    protected ITableCellPainter cellPainter;
-
-    /**
-     * Table selection painter.
-     * It can be used to provide table selection customization.
-     */
-    @DefaultPainter ( TableSelectionPainter.class )
-    protected ITableSelectionPainter selectionPainter;
-
-    /**
-     * Dragged column background painter
-     */
-    @DefaultPainter ( TableColumnPainter.class )
-    protected ITableColumnPainter draggedColumnPainter;
-
     /**
      * Listeners.
      */
-    protected transient MouseAdapter mouseAdapter;
-    protected transient LanguageListener languageSensitive;
+    protected MouseAdapter mouseAdapter;
 
     /**
      * Runtime variables.
      */
-    protected transient TableCellArea rolloverCell;
+    protected Point rolloverCell;
 
     /**
      * Painting variables.
      */
-    protected transient CellRendererPane rendererPane = null;
+    protected CellRendererPane rendererPane = null;
 
     @Override
-    protected List<SectionPainter<C, U>> getSectionPainters ()
+    public void install ( final E c, final U ui )
     {
-        return asList ( rowPainter, columnPainter, cellPainter, selectionPainter, draggedColumnPainter );
-    }
+        super.install ( c, ui );
 
-    @Override
-    protected void installPropertiesAndListeners ()
-    {
-        super.installPropertiesAndListeners ();
-        installTableMouseListeners ();
-        installLanguageListeners ();
-    }
-
-    @Override
-    protected void uninstallPropertiesAndListeners ()
-    {
-        uninstallLanguageListeners ();
-        uninstallTableMouseListeners ();
-        super.uninstallPropertiesAndListeners ();
-    }
-
-    /**
-     * Installs table mouse listeners.
-     */
-    protected void installTableMouseListeners ()
-    {
+        // Rollover listener
         mouseAdapter = new MouseAdapter ()
         {
             @Override
             public void mouseMoved ( final MouseEvent e )
             {
-                // Ensure component is still available
-                // This might happen if painter is replaced from another MouseMotionListener
-                if ( component != null )
-                {
-                    updateMouseover ( e );
-                }
+                updateMouseover ( e );
             }
 
             @Override
             public void mouseDragged ( final MouseEvent e )
             {
-                // Ensure component is still available
-                // This might happen if painter is replaced from another MouseMotionListener
-                if ( component != null )
-                {
-                    updateMouseover ( e );
-                }
+                updateMouseover ( e );
             }
 
             @Override
             public void mouseExited ( final MouseEvent e )
             {
-                // Ensure component is still available
-                // This might happen if painter is replaced from another MouseListener
-                if ( component != null )
-                {
-                    clearMouseover ();
-                }
+                clearMouseover ();
             }
 
-            /**
-             * Performs mouseover cell update.
-             *
-             * @param e mouse event
-             */
             private void updateMouseover ( final MouseEvent e )
             {
                 final Point point = e.getPoint ();
-                final int row = component.rowAtPoint ( point );
-                final int column = component.columnAtPoint ( point );
-                if ( row != -1 && column != -1 )
+                final Point cell = p ( component.columnAtPoint ( point ), component.rowAtPoint ( point ) );
+                if ( cell.x != -1 && cell.y != -1 )
                 {
-                    final TableCellArea cell = new TableCellArea ( row, column );
-                    if ( Objects.notEquals ( rolloverCell, cell ) )
+                    if ( !CompareUtils.equals ( rolloverCell, cell ) )
                     {
                         updateRolloverCell ( rolloverCell, cell );
                     }
@@ -173,9 +80,6 @@ public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDec
                 }
             }
 
-            /**
-             * Clears mouseover cell.
-             */
             private void clearMouseover ()
             {
                 if ( rolloverCell != null )
@@ -184,22 +88,20 @@ public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDec
                 }
             }
 
-            /**
-             * Performs mouseover cell update.
-             *
-             * @param oldCell previous mouseover cell
-             * @param newCell current mouseover cell
-             */
-            private void updateRolloverCell ( final TableCellArea oldCell, final TableCellArea newCell )
+            private void updateRolloverCell ( final Point oldCell, final Point newCell )
             {
                 // Updating rollover cell
                 rolloverCell = newCell;
 
                 // Updating custom WebLaF tooltip display state
-                final TableToolTipProvider provider = getToolTipProvider ();
+                final ToolTipProvider provider = getToolTipProvider ();
                 if ( provider != null )
                 {
-                    provider.hoverAreaChanged ( component, oldCell, newCell );
+                    final int oldIndex = oldCell != null ? oldCell.y : -1;
+                    final int oldColumn = oldCell != null ? oldCell.x : -1;
+                    final int newIndex = newCell != null ? newCell.y : -1;
+                    final int newColumn = newCell != null ? newCell.x : -1;
+                    provider.hoverCellChanged ( component, oldIndex, oldColumn, newIndex, newColumn );
                 }
             }
         };
@@ -207,121 +109,15 @@ public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDec
         component.addMouseMotionListener ( mouseAdapter );
     }
 
-    /**
-     * Uninstalls table mouse listeners.
-     */
-    protected void uninstallTableMouseListeners ()
+    @Override
+    public void uninstall ( final E c, final U ui )
     {
+        // Removing listeners
         component.removeMouseListener ( mouseAdapter );
         component.removeMouseMotionListener ( mouseAdapter );
         mouseAdapter = null;
-    }
 
-    /**
-     * Installs language listeners.
-     */
-    protected void installLanguageListeners ()
-    {
-        languageSensitive = new LanguageListener ()
-        {
-            @Override
-            public void languageChanged ( final Language oldLanguage, final Language newLanguage )
-            {
-                if ( isLanguageSensitive () )
-                {
-                    final TableModel model = component.getModel ();
-                    if ( model.getRowCount () > 0 )
-                    {
-                        if ( model instanceof AbstractTableModel )
-                        {
-                            // Calling public model methods when possible
-                            ( ( AbstractTableModel ) model ).fireTableRowsUpdated ( 0, model.getRowCount () - 1 );
-                        }
-                        else
-                        {
-                            // Simply repainting table when we don't have tools to update it properly
-                            component.repaint ();
-                        }
-                    }
-                }
-            }
-        };
-        UILanguageManager.addLanguageListener ( component, languageSensitive );
-    }
-
-    /**
-     * Returns whether or not table is language-sensitive.
-     *
-     * @return {@code true} if table is language-sensitive, {@code false} otherwise
-     */
-    protected boolean isLanguageSensitive ()
-    {
-        boolean sensitive = false;
-        if ( component instanceof LanguageSensitive ||
-                component.getModel () instanceof LanguageSensitive )
-        {
-            // Either table or its model is language-sensitive
-            sensitive = true;
-        }
-        else
-        {
-            // Checking whether or not one of table column renderers is language-sensitive
-            final TableColumnModel columnModel = component.getColumnModel ();
-            for ( int i = 0; i < columnModel.getColumnCount (); i++ )
-            {
-                if ( columnModel.getColumn ( i ).getCellRenderer () instanceof LanguageSensitive )
-                {
-                    sensitive = true;
-                    break;
-                }
-            }
-            if ( !sensitive )
-            {
-                // Checking whether or not one of table default renderers is language-sensitive
-                final Hashtable defaultRenderers = ReflectUtils.getFieldValueSafely ( component, "defaultRenderersByColumnClass" );
-                if ( defaultRenderers != null )
-                {
-                    for ( final Object renderer : defaultRenderers.values () )
-                    {
-                        if ( renderer instanceof LanguageSensitive )
-                        {
-                            sensitive = true;
-                            break;
-                        }
-                    }
-                }
-                if ( !sensitive )
-                {
-                    // Checking whether or not table data is language-sensitive
-                    final TableModel model = component.getModel ();
-                    for ( int row = 0; row < model.getRowCount (); row++ )
-                    {
-                        for ( int col = 0; col < model.getColumnCount (); col++ )
-                        {
-                            if ( model.getValueAt ( row, col ) instanceof LanguageSensitive )
-                            {
-                                sensitive = true;
-                                break;
-                            }
-                        }
-                        if ( sensitive )
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        return sensitive;
-    }
-
-    /**
-     * Uninstalls language listeners.
-     */
-    protected void uninstallLanguageListeners ()
-    {
-        UILanguageManager.removeLanguageListener ( component, languageSensitive );
-        languageSensitive = null;
+        super.uninstall ( c, ui );
     }
 
     @Override
@@ -331,15 +127,22 @@ public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDec
     }
 
     @Override
-    protected void paintContent ( final Graphics2D g2d, final Rectangle bounds, final C c, final U ui )
+    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
     {
         final Rectangle clip = g2d.getClipBounds ();
 
-        // Avoiding painting the entire table when there are no cells
-        // Also this check prevents us from painting the entire table when the clip doesn't intersect our bounds at all
-        if ( component.getRowCount () <= 0 || component.getColumnCount () <= 0 || !bounds.intersects ( clip ) )
+        //        Rectangle bounds = table.getBounds();
+        // account for the fact that the graphics has already been translated
+        // into the table's bounds
+        //        bounds.x = bounds.y = 0;
+
+        if ( component.getRowCount () <= 0 || component.getColumnCount () <= 0 ||
+                // this check prevents us from painting the entire table
+                // when the clip doesn't intersect our bounds at all
+                !bounds.intersects ( clip ) )
         {
-            paintDropLocation ( g2d );
+
+            paintDropLines ( g2d );
             return;
         }
 
@@ -349,7 +152,7 @@ public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDec
             upperLeft.x++;
         }
 
-        final Point lowerRight = new Point ( clip.x + clip.width - ( ltr ? 1 : 0 ), clip.y + clip.height );
+        final Point lowerRight = p ( clip.x + clip.width - ( ltr ? 1 : 0 ), clip.y + clip.height );
 
         int rMin = component.rowAtPoint ( upperLeft );
         int rMax = component.rowAtPoint ( lowerRight );
@@ -382,431 +185,18 @@ public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDec
             cMax = component.getColumnCount () - 1;
         }
 
-        // Paint table background
-        paintBackground ( g2d, bounds, rMin, rMax, cMin, cMax );
-
-        // Paint table grid
+        // Paint the grid.
         paintGrid ( g2d, rMin, rMax, cMin, cMax );
 
-        // Paint table selection
-        paintSelection ( g2d );
+        // Paint the cells.
+        paintCells ( g2d, rMin, rMax, cMin, cMax );
 
-        // Painting table cells
-        paintContent ( g2d, rMin, rMax, cMin, cMax );
-
-        // Painting drop location
-        paintDropLocation ( g2d );
+        paintDropLines ( g2d );
 
         rendererPane = null;
     }
 
-    /**
-     * Paints table background.
-     *
-     * @param g2d    graphics context
-     * @param bounds painting bounds
-     * @param rMin   least visible row index
-     * @param rMax   last visible row index
-     * @param cMin   least visible column index
-     * @param cMax   last visible column index
-     */
-    protected void paintBackground ( final Graphics2D g2d, final Rectangle bounds, final int rMin, final int rMax, final int cMin,
-                                     final int cMax )
-    {
-        final TableColumnModel cm = component.getColumnModel ();
-        final int columnMargin = cm.getColumnMargin ();
-
-        Rectangle cellRect;
-        TableColumn aColumn;
-        int columnWidth;
-
-        // Painting rows background
-        if ( rowPainter != null )
-        {
-            Rectangle rowRect;
-            for ( int row = rMin; row <= rMax; row++ )
-            {
-                cellRect = component.getCellRect ( row, cMin, false );
-                rowRect = new Rectangle ( bounds.x, cellRect.y, bounds.width, cellRect.height );
-                rowPainter.prepareToPaint ( row );
-                paintSection ( rowPainter, g2d, rowRect );
-            }
-        }
-
-        // Painting columns background
-        if ( columnPainter != null )
-        {
-            Rectangle colRect;
-            cellRect = component.getCellRect ( rMin, cMin, false );
-            for ( int column = cMin; column <= cMax; column++ )
-            {
-                aColumn = cm.getColumn ( column );
-                columnWidth = aColumn.getWidth ();
-                cellRect.width = columnWidth - columnMargin;
-                colRect = new Rectangle ( cellRect.x, bounds.y, cellRect.width, bounds.height );
-                columnPainter.prepareToPaint ( column );
-                paintSection ( columnPainter, g2d, colRect );
-                cellRect.x += columnWidth;
-            }
-        }
-
-        // Painting background
-        if ( cellPainter != null )
-        {
-            for ( int row = rMin; row <= rMax; row++ )
-            {
-                // First column cell bounds
-                cellRect = component.getCellRect ( row, cMin, false );
-                for ( int column = cMin; column <= cMax; column++ )
-                {
-                    // Current column cell bounds
-                    aColumn = cm.getColumn ( column );
-                    columnWidth = aColumn.getWidth ();
-                    cellRect.width = columnWidth - columnMargin;
-
-                    // Shift for RTL orientation
-                    if ( !ltr && column != cMin )
-                    {
-                        cellRect.x -= columnWidth;
-                    }
-
-                    // Painting cell background
-                    if ( cellPainter != null )
-                    {
-                        cellPainter.prepareToPaint ( row, column );
-                        paintSection ( cellPainter, g2d, cellRect );
-                    }
-
-                    // Shift for LTR orientation
-                    if ( ltr )
-                    {
-                        cellRect.x += columnWidth;
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Paints table grid lines within visible bounds.
-     *
-     * @param g2d  graphics context
-     * @param rMin least visible row index
-     * @param rMax last visible row index
-     * @param cMin least visible column index
-     * @param cMax last visible column index
-     */
-    protected void paintGrid ( final Graphics2D g2d, final int rMin, final int rMax, final int cMin, final int cMax )
-    {
-        g2d.setColor ( component.getGridColor () );
-
-        final Rectangle minCell = component.getCellRect ( rMin, cMin, true );
-        final Rectangle maxCell = component.getCellRect ( rMax, cMax, true );
-        final Rectangle damagedArea = minCell.union ( maxCell );
-
-        if ( component.getShowHorizontalLines () )
-        {
-            final int tableWidth = damagedArea.x + damagedArea.width;
-            int y = damagedArea.y;
-            for ( int row = rMin; row <= rMax; row++ )
-            {
-                y += component.getRowHeight ( row );
-                g2d.drawLine ( damagedArea.x, y - 1, tableWidth - 1, y - 1 );
-            }
-        }
-        if ( component.getShowVerticalLines () )
-        {
-            final TableColumnModel cm = component.getColumnModel ();
-            final int tableHeight = damagedArea.y + damagedArea.height;
-            int x;
-            if ( ltr )
-            {
-                x = damagedArea.x;
-                for ( int column = cMin; column <= cMax; column++ )
-                {
-                    final int w = cm.getColumn ( column ).getWidth ();
-                    x += w;
-                    g2d.drawLine ( x - 1, 0, x - 1, tableHeight - 1 );
-                }
-            }
-            else
-            {
-                x = damagedArea.x;
-                for ( int column = cMax; column >= cMin; column-- )
-                {
-                    final int w = cm.getColumn ( column ).getWidth ();
-                    x += w;
-                    g2d.drawLine ( x - 1, 0, x - 1, tableHeight - 1 );
-                }
-            }
-        }
-    }
-
-    /**
-     * Paints table selection.
-     *
-     * @param g2d graphics context
-     */
-    protected void paintSelection ( final Graphics2D g2d )
-    {
-        if ( selectionPainter != null )
-        {
-            final JTableHeader header = component.getTableHeader ();
-            final TableColumn draggedColumn = header == null ? null : header.getDraggedColumn ();
-            final int draggedIndex = component.convertColumnIndexToView ( draggedColumn != null ? draggedColumn.getModelIndex () : -1 );
-
-            final int[] rows = component.getSelectedRows ();
-            final int[] cols = component.getSelectedColumns ();
-
-            if ( rows.length > 0 || cols.length > 0 )
-            {
-                final boolean rs = component.getRowSelectionAllowed ();
-                final boolean cs = component.getColumnSelectionAllowed ();
-                if ( rs && cs )
-                {
-                    final List<Pair<Integer, Integer>> rowSections = getSections ( rows, -1 );
-                    final List<Pair<Integer, Integer>> colSections = getSections ( cols, draggedIndex );
-                    for ( final Pair<Integer, Integer> rowSection : rowSections )
-                    {
-                        for ( final Pair<Integer, Integer> colSection : colSections )
-                        {
-                            final Rectangle first = component.getCellRect ( rowSection.getKey (), colSection.getKey (), false );
-                            final Rectangle last = component.getCellRect ( rowSection.getValue (), colSection.getValue (), false );
-                            final Rectangle selection = GeometryUtils.getContainingRect ( first, last );
-                            paintSection ( selectionPainter, g2d, selection );
-                        }
-                    }
-                }
-                else if ( rs )
-                {
-                    final List<Pair<Integer, Integer>> rowSections = getSections ( rows, -1 );
-                    for ( final Pair<Integer, Integer> rowSection : rowSections )
-                    {
-                        final Rectangle first = component.getCellRect ( rowSection.getKey (), 0, false );
-                        final Rectangle last = component.getCellRect ( rowSection.getValue (), component.getColumnCount () - 1, false );
-                        final Rectangle selection = GeometryUtils.getContainingRect ( first, last );
-                        paintSection ( selectionPainter, g2d, selection );
-                    }
-                }
-                else if ( cs )
-                {
-                    final List<Pair<Integer, Integer>> colSections = getSections ( cols, draggedIndex );
-                    for ( final Pair<Integer, Integer> colSection : colSections )
-                    {
-                        final Rectangle first = component.getCellRect ( 0, colSection.getKey (), false );
-                        final Rectangle last = component.getCellRect ( component.getRowCount () - 1, colSection.getValue (), false );
-                        final Rectangle selection = GeometryUtils.getContainingRect ( first, last );
-                        paintSection ( selectionPainter, g2d, selection );
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Paints table contents.
-     *
-     * @param g2d  graphics context
-     * @param rMin least visible row index
-     * @param rMax last visible row index
-     * @param cMin least visible column index
-     * @param cMax last visible column index
-     */
-    protected void paintContent ( final Graphics2D g2d, final int rMin, final int rMax, final int cMin, final int cMax )
-    {
-        final JTableHeader header = component.getTableHeader ();
-        final TableColumn draggedColumn = header == null ? null : header.getDraggedColumn ();
-        final TableColumnModel cm = component.getColumnModel ();
-        final int columnMargin = cm.getColumnMargin ();
-
-        Rectangle cellRect;
-        TableColumn aColumn;
-        int columnWidth;
-
-        // Painting cells content
-        for ( int row = rMin; row <= rMax; row++ )
-        {
-            // First column cell bounds
-            cellRect = component.getCellRect ( row, cMin, false );
-            for ( int column = cMin; column <= cMax; column++ )
-            {
-                // Current column cell bounds
-                aColumn = cm.getColumn ( column );
-                columnWidth = aColumn.getWidth ();
-                cellRect.width = columnWidth - columnMargin;
-
-                // Shift for RTL orientation
-                if ( !ltr && column != cMin )
-                {
-                    cellRect.x -= columnWidth;
-                }
-
-                // Painting non-dragged cell
-                if ( aColumn != draggedColumn )
-                {
-                    paintCell ( g2d, cellRect, row, column );
-                }
-
-                // Shift for LTR orientation
-                if ( ltr )
-                {
-                    cellRect.x += columnWidth;
-                }
-            }
-        }
-
-        // Paint the dragged column if we are dragging.
-        if ( draggedColumn != null )
-        {
-            paintDraggedColumn ( g2d, rMin, rMax, draggedColumn, header.getDraggedDistance () );
-        }
-
-        // Remove any renderers that may be left in the rendererPane.
-        rendererPane.removeAll ();
-    }
-
-    /**
-     * Returns groupable sections of indices.
-     *
-     * @param indices  indices
-     * @param excluded excluded index
-     * @return groupable sections of indices
-     */
-    protected List<Pair<Integer, Integer>> getSections ( final int[] indices, final int excluded )
-    {
-        // Sorting indices first
-        // We have to do it to ensure they are strictly ordered
-        Arrays.sort ( indices );
-
-        // Removing excluded index
-        final List<Integer> inx = CollectionUtils.asList ( indices );
-        inx.remove ( ( Integer ) excluded );
-
-        // Collecting sections
-        final List<Pair<Integer, Integer>> sections = new ArrayList<Pair<Integer, Integer>> ( 1 );
-        int first = -1;
-        for ( int i = 0; i < inx.size (); i++ )
-        {
-            if ( first != -1 )
-            {
-                if ( inx.get ( i ) - 1 != inx.get ( i - 1 ) )
-                {
-                    sections.add ( new Pair<Integer, Integer> ( first, inx.get ( i - 1 ) ) );
-                    first = inx.get ( i );
-                }
-            }
-            else
-            {
-                first = inx.get ( i );
-            }
-            if ( i == inx.size () - 1 )
-            {
-                sections.add ( new Pair<Integer, Integer> ( first, inx.get ( i ) ) );
-            }
-        }
-        return sections;
-    }
-
-    /**
-     * Paint single table cell at the specified row and column.
-     *
-     * @param g2d    graphics context
-     * @param bounds cell bounds
-     * @param row    cell row index
-     * @param column cell column index
-     */
-    protected void paintCell ( final Graphics2D g2d, final Rectangle bounds, final int row, final int column )
-    {
-        // Placing cell editor or painting cell renderer
-        if ( component.isEditing () && component.getEditingRow () == row && component.getEditingColumn () == column )
-        {
-            // Correctly place cell editor
-            final Component editor = component.getEditorComponent ();
-            editor.setBounds ( bounds );
-            editor.validate ();
-        }
-        else
-        {
-            // Paint cell renderer
-            final TableCellRenderer renderer = component.getCellRenderer ( row, column );
-            final Component prepareRenderer = component.prepareRenderer ( renderer, row, column );
-            rendererPane.paintComponent ( g2d, prepareRenderer, component, bounds.x, bounds.y, bounds.width, bounds.height, true );
-        }
-    }
-
-    /**
-     * Paints dragged table column.
-     *
-     * @param g2d      graphics context
-     * @param rMin     least visible row index
-     * @param rMax     last visible row index
-     * @param column   dragged column
-     * @param distance dragged distance
-     */
-    protected void paintDraggedColumn ( final Graphics2D g2d, final int rMin, final int rMax, final TableColumn column, final int distance )
-    {
-        final int index = component.convertColumnIndexToView ( column.getModelIndex () );
-        final Rectangle minCell = component.getCellRect ( rMin, index, true );
-        final Rectangle maxCell = component.getCellRect ( rMax, index, true );
-
-        // Vacated cell bounds
-        final Rectangle vcr = minCell.union ( maxCell );
-
-        // Paint a gray well in place of the moving column.
-        // g2d.setColor ( component.getBackground () );
-        // g2d.fillRect ( vacatedColumnRect.x, vacatedColumnRect.y, vacatedColumnRect.width - 1, vacatedColumnRect.height );
-
-        // Move to the where the cell has been dragged.
-        vcr.x += distance;
-
-        // Fill the background
-        if ( draggedColumnPainter != null )
-        {
-            final Rectangle b = new Rectangle ( vcr.x, vcr.y, vcr.width, vcr.height );
-            draggedColumnPainter.prepareToPaint ( index );
-            paintSection ( draggedColumnPainter, g2d, b );
-        }
-
-        // Paint the vertical grid lines if necessary.
-        if ( component.getShowVerticalLines () )
-        {
-            g2d.setColor ( component.getGridColor () );
-            final int x1 = vcr.x;
-            final int y1 = vcr.y;
-            final int x2 = x1 + vcr.width - 1;
-            final int y2 = y1 + vcr.height - 1;
-            g2d.drawLine ( x1 - 1, y1, x1 - 1, y2 );
-            g2d.drawLine ( x2, y1, x2, y2 );
-        }
-
-        for ( int row = rMin; row <= rMax; row++ )
-        {
-            // Render the cell value
-            final Rectangle r = component.getCellRect ( row, index, false );
-            r.x += distance;
-            paintCell ( g2d, r, row, index );
-
-            // Paint the (lower) horizontal grid line if necessary.
-            if ( component.getShowHorizontalLines () )
-            {
-                g2d.setColor ( component.getGridColor () );
-                final Rectangle rcr = component.getCellRect ( row, index, true );
-                rcr.x += distance;
-                final int x1 = rcr.x;
-                final int y1 = rcr.y;
-                final int x2 = x1 + rcr.width - 1;
-                final int y2 = y1 + rcr.height - 1;
-                g2d.drawLine ( x1, y2, x2, y2 );
-            }
-        }
-    }
-
-    /**
-     * Paints drop location.
-     *
-     * @param g2d graphics context
-     */
-    protected void paintDropLocation ( final Graphics2D g2d )
+    protected void paintDropLines ( final Graphics g )
     {
         final JTable.DropLocation loc = component.getDropLocation ();
         if ( loc == null )
@@ -831,13 +221,13 @@ public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDec
             if ( color != null )
             {
                 extendRect ( rect, true );
-                g2d.setColor ( color );
-                g2d.fillRect ( rect.x, rect.y, rect.width, rect.height );
+                g.setColor ( color );
+                g.fillRect ( rect.x, rect.y, rect.width, rect.height );
             }
             if ( !loc.isInsertColumn () && shortColor != null )
             {
-                g2d.setColor ( shortColor );
-                g2d.fillRect ( x, rect.y, w, rect.height );
+                g.setColor ( shortColor );
+                g.fillRect ( x, rect.y, w, rect.height );
             }
         }
 
@@ -849,32 +239,26 @@ public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDec
             if ( color != null )
             {
                 extendRect ( rect, false );
-                g2d.setColor ( color );
-                g2d.fillRect ( rect.x, rect.y, rect.width, rect.height );
+                g.setColor ( color );
+                g.fillRect ( rect.x, rect.y, rect.width, rect.height );
             }
             if ( !loc.isInsertRow () && shortColor != null )
             {
-                g2d.setColor ( shortColor );
-                g2d.fillRect ( rect.x, y, rect.width, h );
+                g.setColor ( shortColor );
+                g.fillRect ( rect.x, y, rect.width, h );
             }
         }
     }
 
-    /**
-     * Returns horizontal drop line bounds.
-     *
-     * @param location drop location
-     * @return horizontal drop line bounds
-     */
-    protected Rectangle getHDropLineRect ( final JTable.DropLocation location )
+    protected Rectangle getHDropLineRect ( final JTable.DropLocation loc )
     {
-        if ( !location.isInsertRow () )
+        if ( !loc.isInsertRow () )
         {
             return null;
         }
 
-        int row = location.getRow ();
-        int col = location.getColumn ();
+        int row = loc.getRow ();
+        int col = loc.getColumn ();
         if ( col >= component.getColumnCount () )
         {
             col--;
@@ -903,26 +287,20 @@ public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDec
         return rect;
     }
 
-    /**
-     * Returns vertical drop line bounds.
-     *
-     * @param location drop location
-     * @return vertical drop line bounds
-     */
-    protected Rectangle getVDropLineRect ( final JTable.DropLocation location )
+    protected Rectangle getVDropLineRect ( final JTable.DropLocation loc )
     {
-        if ( !location.isInsertColumn () )
+        if ( !loc.isInsertColumn () )
         {
             return null;
         }
 
-        int col = location.getColumn ();
-        Rectangle rect = component.getCellRect ( location.getRow (), col, true );
+        int col = loc.getColumn ();
+        Rectangle rect = component.getCellRect ( loc.getRow (), col, true );
 
         if ( col >= component.getColumnCount () )
         {
             col--;
-            rect = component.getCellRect ( location.getRow (), col, true );
+            rect = component.getCellRect ( loc.getRow (), col, true );
             if ( ltr )
             {
                 rect.x = rect.x + rect.width;
@@ -947,13 +325,6 @@ public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDec
         return rect;
     }
 
-    /**
-     * Returns extended drop line bounds.
-     *
-     * @param rect       drop line bounds
-     * @param horizontal whether or not line is horizontal
-     * @return extended drop line bounds
-     */
     protected Rectangle extendRect ( final Rectangle rect, final boolean horizontal )
     {
         if ( rect != null )
@@ -978,15 +349,219 @@ public class TablePainter<C extends JTable, U extends WebTableUI, D extends IDec
                 }
             }
         }
+
         return rect;
     }
 
-    /**
-     * Returns {@link TableToolTipProvider} for {@link JTable} that uses this {@link TablePainter}.
-     *
-     * @return {@link TableToolTipProvider} for {@link JTable} that uses this {@link TablePainter}
+    /*
+     * Paints the grid lines within <I>aRect</I>, using the grid color set with <I>setGridColor</I>. Paints vertical lines
+     * if <code>getShowVerticalLines()</code> returns true and paints horizontal lines if <code>getShowHorizontalLines()</code>
+     * returns true.
      */
-    protected TableToolTipProvider getToolTipProvider ()
+    protected void paintGrid ( final Graphics g, final int rMin, final int rMax, final int cMin, final int cMax )
+    {
+        g.setColor ( component.getGridColor () );
+
+        final Rectangle minCell = component.getCellRect ( rMin, cMin, true );
+        final Rectangle maxCell = component.getCellRect ( rMax, cMax, true );
+        final Rectangle damagedArea = minCell.union ( maxCell );
+
+        if ( component.getShowHorizontalLines () )
+        {
+            final int tableWidth = damagedArea.x + damagedArea.width;
+            int y = damagedArea.y;
+            for ( int row = rMin; row <= rMax; row++ )
+            {
+                y += component.getRowHeight ( row );
+                g.drawLine ( damagedArea.x, y - 1, tableWidth - 1, y - 1 );
+            }
+        }
+        if ( component.getShowVerticalLines () )
+        {
+            final TableColumnModel cm = component.getColumnModel ();
+            final int tableHeight = damagedArea.y + damagedArea.height;
+            int x;
+            if ( ltr )
+            {
+                x = damagedArea.x;
+                for ( int column = cMin; column <= cMax; column++ )
+                {
+                    final int w = cm.getColumn ( column ).getWidth ();
+                    x += w;
+                    g.drawLine ( x - 1, 0, x - 1, tableHeight - 1 );
+                }
+            }
+            else
+            {
+                x = damagedArea.x;
+                for ( int column = cMax; column >= cMin; column-- )
+                {
+                    final int w = cm.getColumn ( column ).getWidth ();
+                    x += w;
+                    g.drawLine ( x - 1, 0, x - 1, tableHeight - 1 );
+                }
+            }
+        }
+    }
+
+    protected void paintCells ( final Graphics g, final int rMin, final int rMax, final int cMin, final int cMax )
+    {
+        final JTableHeader header = component.getTableHeader ();
+        final TableColumn draggedColumn = ( header == null ) ? null : header.getDraggedColumn ();
+
+        final TableColumnModel cm = component.getColumnModel ();
+        final int columnMargin = cm.getColumnMargin ();
+
+        Rectangle cellRect;
+        TableColumn aColumn;
+        int columnWidth;
+        if ( ltr )
+        {
+            for ( int row = rMin; row <= rMax; row++ )
+            {
+                cellRect = component.getCellRect ( row, cMin, false );
+                for ( int column = cMin; column <= cMax; column++ )
+                {
+                    aColumn = cm.getColumn ( column );
+                    columnWidth = aColumn.getWidth ();
+                    cellRect.width = columnWidth - columnMargin;
+                    if ( aColumn != draggedColumn )
+                    {
+                        paintCell ( g, cellRect, row, column );
+                    }
+                    cellRect.x += columnWidth;
+                }
+            }
+        }
+        else
+        {
+            for ( int row = rMin; row <= rMax; row++ )
+            {
+                cellRect = component.getCellRect ( row, cMin, false );
+                aColumn = cm.getColumn ( cMin );
+                if ( aColumn != draggedColumn )
+                {
+                    columnWidth = aColumn.getWidth ();
+                    cellRect.width = columnWidth - columnMargin;
+                    paintCell ( g, cellRect, row, cMin );
+                }
+                for ( int column = cMin + 1; column <= cMax; column++ )
+                {
+                    aColumn = cm.getColumn ( column );
+                    columnWidth = aColumn.getWidth ();
+                    cellRect.width = columnWidth - columnMargin;
+                    cellRect.x -= columnWidth;
+                    if ( aColumn != draggedColumn )
+                    {
+                        paintCell ( g, cellRect, row, column );
+                    }
+                }
+            }
+        }
+
+        // Paint the dragged column if we are dragging.
+        if ( draggedColumn != null )
+        {
+            paintDraggedArea ( g, rMin, rMax, draggedColumn, header.getDraggedDistance () );
+        }
+
+        // Remove any renderers that may be left in the rendererPane.
+        rendererPane.removeAll ();
+    }
+
+    protected void paintCell ( final Graphics g, final Rectangle cellRect, final int row, final int column )
+    {
+        if ( component.isEditing () && component.getEditingRow () == row &&
+                component.getEditingColumn () == column )
+        {
+            final Component editor = component.getEditorComponent ();
+            editor.setBounds ( cellRect );
+            editor.validate ();
+        }
+        else
+        {
+            final TableCellRenderer renderer = component.getCellRenderer ( row, column );
+            final Component prepareRenderer = component.prepareRenderer ( renderer, row, column );
+            rendererPane.paintComponent ( g, prepareRenderer, component, cellRect.x, cellRect.y, cellRect.width, cellRect.height, true );
+        }
+    }
+
+    protected void paintDraggedArea ( final Graphics g, final int rMin, final int rMax, final TableColumn draggedColumn,
+                                      final int distance )
+    {
+        final int draggedColumnIndex = viewIndexForColumn ( draggedColumn );
+
+        final Rectangle minCell = component.getCellRect ( rMin, draggedColumnIndex, true );
+        final Rectangle maxCell = component.getCellRect ( rMax, draggedColumnIndex, true );
+
+        final Rectangle vacatedColumnRect = minCell.union ( maxCell );
+
+        // Paint a gray well in place of the moving column.
+        g.setColor ( component.getBackground () );
+        g.fillRect ( vacatedColumnRect.x, vacatedColumnRect.y, vacatedColumnRect.width, vacatedColumnRect.height );
+
+        // Move to the where the cell has been dragged.
+        vacatedColumnRect.x += distance;
+
+        // Fill the background.
+        g.setColor ( component.getBackground () );
+        g.fillRect ( vacatedColumnRect.x, vacatedColumnRect.y, vacatedColumnRect.width, vacatedColumnRect.height );
+
+        // Paint the vertical grid lines if necessary.
+        if ( component.getShowVerticalLines () )
+        {
+            g.setColor ( component.getGridColor () );
+            final int x1 = vacatedColumnRect.x;
+            final int y1 = vacatedColumnRect.y;
+            final int x2 = x1 + vacatedColumnRect.width - 1;
+            final int y2 = y1 + vacatedColumnRect.height - 1;
+            // Left
+            g.drawLine ( x1 - 1, y1, x1 - 1, y2 );
+            // Right
+            g.drawLine ( x2, y1, x2, y2 );
+        }
+
+        for ( int row = rMin; row <= rMax; row++ )
+        {
+            // Render the cell value
+            final Rectangle r = component.getCellRect ( row, draggedColumnIndex, false );
+            r.x += distance;
+            paintCell ( g, r, row, draggedColumnIndex );
+
+            // Paint the (lower) horizontal grid line if necessary.
+            if ( component.getShowHorizontalLines () )
+            {
+                g.setColor ( component.getGridColor () );
+                final Rectangle rcr = component.getCellRect ( row, draggedColumnIndex, true );
+                rcr.x += distance;
+                final int x1 = rcr.x;
+                final int y1 = rcr.y;
+                final int x2 = x1 + rcr.width - 1;
+                final int y2 = y1 + rcr.height - 1;
+                g.drawLine ( x1, y2, x2, y2 );
+            }
+        }
+    }
+
+    protected int viewIndexForColumn ( final TableColumn aColumn )
+    {
+        final TableColumnModel cm = component.getColumnModel ();
+        for ( int column = 0; column < cm.getColumnCount (); column++ )
+        {
+            if ( cm.getColumn ( column ) == aColumn )
+            {
+                return column;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Returns custom WebLaF tooltip provider.
+     *
+     * @return custom WebLaF tooltip provider
+     */
+    protected ToolTipProvider<? extends WebTable> getToolTipProvider ()
     {
         return component != null && component instanceof WebTable ? ( ( WebTable ) component ).getToolTipProvider () : null;
     }

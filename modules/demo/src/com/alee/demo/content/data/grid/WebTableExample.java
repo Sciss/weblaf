@@ -17,20 +17,22 @@
 
 package com.alee.demo.content.data.grid;
 
-import com.alee.demo.api.example.*;
-import com.alee.demo.content.SampleData;
+import com.alee.demo.api.*;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.table.WebTable;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
 import java.util.List;
 
 /**
  * @author Mikle Garin
  */
-public class WebTableExample extends AbstractStylePreviewExample
+
+public class WebTableExample extends AbstractExample
 {
     @Override
     public String getId ()
@@ -53,11 +55,10 @@ public class WebTableExample extends AbstractStylePreviewExample
     @Override
     protected List<Preview> createPreviews ()
     {
-        return CollectionUtils.<Preview>asList (
-                new BasicTable ( StyleId.table ),
-                new ScrollableTable ( StyleId.table ),
-                new EditableTable ( StyleId.table )
-        );
+        final BasicTable basic = new BasicTable ( StyleId.table );
+        final ScrollableTable scrollable = new ScrollableTable ( StyleId.table );
+        final EditableTable editable = new EditableTable ( StyleId.table );
+        return CollectionUtils.<Preview>asList ( basic, scrollable, editable );
     }
 
     /**
@@ -76,11 +77,10 @@ public class WebTableExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
-            final WebTable table = new WebTable ( getStyleId (), SampleData.createShortTableModel ( false ) );
+            final WebTable table = new WebTable ( getStyleId (), createShortTableModel () );
             table.optimizeColumnWidths ( true );
-            table.setOptimizeRowHeight ( true );
             return CollectionUtils.asList ( table );
         }
     }
@@ -101,13 +101,12 @@ public class WebTableExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
-            final WebTable table = new WebTable ( getStyleId (), SampleData.createLongTableModel ( false ) );
+            final WebTable table = new WebTable ( getStyleId (), createLongTableModel () );
             table.setAutoResizeMode ( JTable.AUTO_RESIZE_OFF );
             table.setVisibleRowCount ( 5 );
             table.optimizeColumnWidths ( true );
-            table.setOptimizeRowHeight ( true );
             return CollectionUtils.asList ( new WebScrollPane ( table ).setPreferredWidth ( 300 ) );
         }
     }
@@ -128,15 +127,50 @@ public class WebTableExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
-            final WebTable table = new WebTable ( getStyleId (), SampleData.createLongTableModel ( true ) );
+            final WebTable table = new WebTable ( getStyleId (), createLongTableModel () );
             table.setAutoResizeMode ( JTable.AUTO_RESIZE_OFF );
             table.setVisibleRowCount ( 5 );
             table.optimizeColumnWidths ( true );
-            table.setOptimizeRowHeight ( true );
             table.setEditable ( true );
             return CollectionUtils.asList ( new WebScrollPane ( table ).setPreferredWidth ( 300 ) );
         }
+    }
+
+    /**
+     * Returns sample short table model.
+     *
+     * @return sample short table model
+     */
+    protected static TableModel createShortTableModel ()
+    {
+        final Object[] columns = { "First Name", "Last Name", "Sport", "# of Years", "Vegetarian" };
+        final Object[] kathy = { "Kathy", "Smith", "Snowboarding", 5, false };
+        final Object[] john = { "John", "Doe", "Rowing", 3, true };
+        final Object[] sue = { "Sue", "Black", "Knitting", 2, false };
+        final Object[] jane = { "Jane", "White", "Speed reading", 20, true };
+        final Object[][] data = { kathy, john, sue, jane };
+        return new DefaultTableModel ( data, columns );
+    }
+
+    /**
+     * Returns sample long table model.
+     *
+     * @return sample long table model
+     */
+    protected static TableModel createLongTableModel ()
+    {
+        final Object[] columns = { "First Name", "Last Name", "Sport", "# of Years", "Vegetarian" };
+        final Object[] kathy = { "Kathy", "Smith", "Snowboarding", 5, false };
+        final Object[] john = { "John", "Doe", "Rowing", 3, true };
+        final Object[] sue = { "Sue", "Black", "Knitting", 2, false };
+        final Object[] jane = { "Jane", "White", "Speed reading", 20, true };
+        final Object[] joe = { "Joe", "Brown", "Pool", 10, false };
+        final Object[] sven = { "Sven", "Alister", "Boxing", 36, false };
+        final Object[] allen = { "Allen", "Snow", "Diving", 18, true };
+        final Object[] mikle = { "Mikle", "Garin", "Judo", 26, false };
+        final Object[][] data = { kathy, john, sue, jane, joe, sven, allen, mikle };
+        return new DefaultTableModel ( data, columns );
     }
 }

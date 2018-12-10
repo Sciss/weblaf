@@ -18,15 +18,12 @@
 package com.alee.utils.swing.menu;
 
 import com.alee.laf.menu.WebMenu;
-import com.alee.managers.style.StyleId;
-
-import javax.swing.*;
 
 /**
- * Special generator that simplifies and shortens {@link WebMenu} creation code.
+ * Special generator that simplifies and shortens menu creation code.
  *
  * @author Mikle Garin
- * @see AbstractMenuGenerator
+ * @see com.alee.utils.swing.menu.AbstractMenuGenerator
  */
 
 public class MenuGenerator extends AbstractMenuGenerator<WebMenu>
@@ -36,103 +33,7 @@ public class MenuGenerator extends AbstractMenuGenerator<WebMenu>
      */
     public MenuGenerator ()
     {
-        this ( new WebMenu () );
-    }
-
-    /**
-     * Constructs new menu generator using menu with the specified settings.
-     *
-     * @param icon menu icon
-     */
-    public MenuGenerator ( final Icon icon )
-    {
-        this ( new WebMenu ( icon ) );
-    }
-
-    /**
-     * Constructs new menu generator using menu with the specified settings.
-     *
-     * @param text menu text
-     */
-    public MenuGenerator ( final String text )
-    {
-        this ( new WebMenu ( text ) );
-    }
-
-    /**
-     * Constructs new menu generator using menu with the specified settings.
-     *
-     * @param action menu action
-     */
-    public MenuGenerator ( final Action action )
-    {
-        this ( new WebMenu ( action ) );
-    }
-
-    /**
-     * Constructs new menu generator using menu with the specified settings.
-     *
-     * @param text menu text
-     * @param icon menu item icon
-     */
-    public MenuGenerator ( final String text, final Icon icon )
-    {
-        this ( new WebMenu ( text, icon ) );
-    }
-
-    /**
-     * Constructs new menu.
-     *
-     * @param id style ID
-     */
-    public MenuGenerator ( final StyleId id )
-    {
-        this ( new WebMenu ( id ) );
-    }
-
-    /**
-     * Constructs new menu generator using menu with the specified settings.
-     *
-     * @param id   style ID
-     * @param icon menu icon
-     */
-    public MenuGenerator ( final StyleId id, final Icon icon )
-    {
-        this ( new WebMenu ( id, icon ) );
-    }
-
-    /**
-     * Constructs new menu generator using menu with the specified settings.
-     *
-     * @param id   style ID
-     * @param text menu text
-     */
-    public MenuGenerator ( final StyleId id, final String text )
-    {
-        this ( new WebMenu ( id, text ) );
-    }
-
-    /**
-     * Constructs new menu generator using menu with the specified settings.
-     *
-     * @param id     style ID
-     * @param action menu action
-     */
-    public MenuGenerator ( final StyleId id, final Action action )
-    {
-        this ( new WebMenu ( id, action ) );
-    }
-
-    /**
-     * Constructs new menu generator using menu with the specified settings.
-     *
-     * @param id   style ID
-     * @param text menu text
-     * @param icon menu item icon
-     */
-    public MenuGenerator ( final StyleId id, final String text, final Icon icon )
-    {
-        this ( new WebMenu ( id, text, icon ) );
+        super ( new WebMenu () );
     }
 
     /**
@@ -143,16 +44,5 @@ public class MenuGenerator extends AbstractMenuGenerator<WebMenu>
     public MenuGenerator ( final WebMenu menu )
     {
         super ( menu );
-    }
-
-    @Override
-    public void setLanguagePrefix ( final String prefix )
-    {
-        // Perform default actions
-        super.setLanguagePrefix ( prefix );
-
-        // Update menu language if any prefix is set
-        final String text = getMenu ().getLanguage ();
-        getMenu ().setLanguage ( getLanguageKey ( text ) );
     }
 }

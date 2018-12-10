@@ -18,6 +18,7 @@
 package com.alee.painter.decoration.background;
 
 import com.alee.painter.decoration.IDecoration;
+import com.alee.utils.MergeUtils;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
 import javax.swing.*;
@@ -25,13 +26,14 @@ import javax.swing.*;
 /**
  * Convenient base class for any {@link IBackground} implementation.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <D> decoration type
  * @param <I> background type
  * @author Mikle Garin
  */
-public abstract class AbstractBackground<C extends JComponent, D extends IDecoration<C, D>, I extends AbstractBackground<C, D, I>>
-        implements IBackground<C, D, I>
+
+public abstract class AbstractBackground<E extends JComponent, D extends IDecoration<E, D>, I extends AbstractBackground<E, D, I>>
+        implements IBackground<E, D, I>
 {
     /**
      * Background ID.
@@ -40,39 +42,25 @@ public abstract class AbstractBackground<C extends JComponent, D extends IDecora
     protected String id;
 
     /**
-     * Whether or not this background should overwrite previous one when merged.
-     */
-    @XStreamAsAttribute
-    protected Boolean overwrite;
-
-    /**
      * Background opacity.
      */
     @XStreamAsAttribute
-    protected Float opacity;
+    protected Float opacity = 1f;
 
     @Override
     public String getId ()
     {
-        return id != null ? id : "background";
+        return id != null ? id : getDefaultId ();
     }
 
-    @Override
-    public boolean isOverwrite ()
+    /**
+     * Returns default background ID.
+     *
+     * @return default background ID
+     */
+    protected String getDefaultId ()
     {
-        return overwrite != null && overwrite;
-    }
-
-    @Override
-    public void activate ( final C c, final D d )
-    {
-        // Do nothing by default
-    }
-
-    @Override
-    public void deactivate ( final C c, final D d )
-    {
-        // Do nothing by default
+        return "background";
     }
 
     /**
@@ -83,5 +71,21 @@ public abstract class AbstractBackground<C extends JComponent, D extends IDecora
     public float getOpacity ()
     {
         return opacity != null ? opacity : 1f;
+    }
+
+    @Override
+    public I merge ( final I background )
+    {
+        if ( background.opacity != null )
+        {
+            opacity = background.opacity;
+        }
+        return ( I ) this;
+    }
+
+    @Override
+    public I clone ()
+    {
+        return ( I ) MergeUtils.cloneByFieldsSafely ( this );
     }
 }

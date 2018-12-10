@@ -1,31 +1,23 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.laf.tree.WebTree -->
 
     <!-- Tree -->
     <style type="tree">
-        <component>
-            <opaque>true</opaque>
-            <background>white</background>
-        </component>
         <ui>
             <selectionStyle>line</selectionStyle>
+            <expandSelected>false</expandSelected>
+            <selectOnHover>false</selectOnHover>
         </ui>
         <painter>
             <paintLines>true</paintLines>
             <dashedLines>true</dashedLines>
             <linesColor>gray</linesColor>
-            <decorations>
-                <decoration>
-                    <BoundsShape />
-                    <ColorBackground color="white" />
-                </decoration>
-            </decorations>
 
-            <!-- Node background painter -->
-            <nodePainter>
+            <!-- Hover node background painter -->
+            <hoverPainter>
                 <decorations>
-                    <decoration states="unselected,hover" opacity="0.4">
+                    <decoration opacity="0.4">
                         <WebShape round="0" />
                         <GradientBackground>
                             <color>218,218,208</color>
@@ -33,9 +25,9 @@
                         </GradientBackground>
                     </decoration>
                 </decorations>
-            </nodePainter>
+            </hoverPainter>
 
-            <!-- Selection background painter -->
+            <!-- Selected nodes background painter -->
             <selectionPainter>
                 <decorations>
                     <decoration>
@@ -52,19 +44,19 @@
             <!-- Tree drop location painter -->
             <dropLocationPainter>
                 <decorations>
-                    <decoration states="drop-on">
+                    <decoration states="dropOn">
                         <WebShape round="0" />
                         <WebShadow type="inner" width="5" />
                         <LineBorder color="85,130,190" stroke="basic;1;round;round;0;4,5" />
                     </decoration>
-                    <decoration states="drop-between" size="80,2">
+                    <decoration states="dropBetween" size="80,2">
                         <WebShape round="0" />
                         <LineBorder color="85,130,190" stroke="basic;1;round;round;0;4,5" />
                     </decoration>
                 </decorations>
             </dropLocationPainter>
 
-            <!-- Selector painter -->
+            <!-- Nodes selector painter -->
             <selectorPainter>
                 <decorations>
                     <decoration>
@@ -77,43 +69,25 @@
 
         </painter>
 
-        <!-- Label cell renderer -->
+        <!-- Default tree cell renderer label -->
         <style type="label" id="renderer" padding="4,4,4,6" />
 
-        <!-- Styled label cell renderer -->
+        <!-- Default tree cell renderer label -->
         <style type="styledlabel" id="renderer" padding="4,4,4,6" />
 
-        <!-- Text field cell editor -->
-        <style type="textfield" id="editor" padding="0,3,0,2">
-            <painter>
-                <decorations overwrite="true">
-                    <decoration>
-                        <WebShape round="2" />
-                        <LineBorder color="85,130,190" />
-                        <ColorBackground color="white" />
-                    </decoration>
-                </decorations>
-            </painter>
+        <!-- Checkbox tree cell renderer checkbox -->
+        <style type="tristatecheckbox" id="renderer" padding="0,4,0,0" />
 
-            <!-- Cell editor icon -->
-            <style type="image" id="icon" padding="0,0,0,4" />
+        <!-- Default tree cell editor -->
+        <style type="textfield" id="editor" extends="nofocus" />
 
-        </style>
-
-    </style>
-
-    <!-- Non-opaque tree -->
-    <style type="tree" id="non-opaque">
-        <component>
-            <opaque>false</opaque>
-        </component>
     </style>
 
     <!-- Transparent tree -->
-    <style type="tree" id="transparent" extends="non-opaque">
-        <painter>
-            <decorations overwrite="true" />
-        </painter>
+    <style type="tree" id="transparent">
+        <component>
+            <opaque>false</opaque>
+        </component>
     </style>
 
 </skin>

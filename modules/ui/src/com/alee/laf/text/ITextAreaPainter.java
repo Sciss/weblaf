@@ -3,16 +3,13 @@ package com.alee.laf.text;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JTextArea} component painters.
+ * Base interface for JTextArea component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface ITextAreaPainter<C extends JTextArea, U extends WTextAreaUI> extends IAbstractTextAreaPainter<C, U>
+public interface ITextAreaPainter<E extends JTextArea, U extends WebTextAreaUI> extends IAbstractTextAreaPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

@@ -18,37 +18,30 @@
 package com.alee.extended.tree;
 
 import com.alee.laf.tree.UniqueNode;
-import com.alee.laf.tree.WebTreeModel;
-import com.alee.utils.CollectionUtils;
 import com.alee.utils.compare.Filter;
 
 import java.util.Comparator;
-import java.util.List;
 
 /**
- * Abstract {@link ExTreeDataProvider} that can contain single comparator and filter for child nodes.
+ * Abstract data provider with implemented comparator and filter getters and setters.
  *
- * @param <N> node type
  * @author Mikle Garin
  */
-public abstract class AbstractExTreeDataProvider<N extends UniqueNode> implements ExTreeDataProvider<N>
+
+public abstract class AbstractExTreeDataProvider<E extends UniqueNode> implements ExTreeDataProvider<E>
 {
     /**
-     * {@link Comparator} for all child nodes.
-     * It is {@code transient} as it can only be set through code.
-     * Override {@link #getChildrenComparator(UniqueNode, List)} method to provide parent-related {@link Comparator}.
+     * Children comparator.
      */
-    protected transient Comparator<N> comparator = null;
+    protected Comparator<E> comparator = null;
 
     /**
-     * {@link Filter} for all child nodes.
-     * It is {@code transient} as it can only be set through code.
-     * Override {@link #getChildrenFilter(UniqueNode, List)} method to provide parent-related {@link Filter}.
+     * Children filter.
      */
-    protected transient Filter<N> filter = null;
+    protected Filter<E> filter = null;
 
     @Override
-    public Comparator<N> getChildrenComparator ( final N parent, final List<N> children )
+    public Comparator<E> getChildrenComparator ( final E node )
     {
         return comparator;
     }
@@ -58,13 +51,13 @@ public abstract class AbstractExTreeDataProvider<N extends UniqueNode> implement
      *
      * @param comparator children comparator for all nodes
      */
-    public void setChildrenComparator ( final Comparator<N> comparator )
+    public void setChildrenComparator ( final Comparator<E> comparator )
     {
         this.comparator = comparator;
     }
 
     @Override
-    public Filter<N> getChildrenFilter ( final N parent, final List<N> children )
+    public Filter<E> getChildrenFilter ( final E node )
     {
         return filter;
     }
@@ -74,37 +67,21 @@ public abstract class AbstractExTreeDataProvider<N extends UniqueNode> implement
      *
      * @param filter children filter for all nodes
      */
-    public void setChildrenFilter ( final Filter<N> filter )
+    public void setChildrenFilter ( final Filter<E> filter )
     {
         this.filter = filter;
     }
 
     /**
-     * Returns plain {@link WebTreeModel} with data from this {@link AbstractExTreeDataProvider} implementation.
+     * Returns false by default to allow children load requests.
+     * It is recommended to override this behavior if you can easily determine whether node is leaf or not.
      *
-     * @return plain {@link WebTreeModel} with data from this {@link AbstractExTreeDataProvider} implementation
+     * @param node node
+     * @return false
      */
-    public WebTreeModel<N> createPlainModel ()
+    @Override
+    public boolean isLeaf ( final E node )
     {
-        final N root = getRoot ();
-        loadPlainChildren ( root );
-        return new WebTreeModel<N> ( root );
-    }
-
-    /**
-     * Loads all child {@link UniqueNode}s for the specified parent {@link UniqueNode} recursively.
-     *
-     * @param parent parent {@link UniqueNode} to load all children for recursively
-     */
-    protected void loadPlainChildren ( final N parent )
-    {
-        final List<N> children = getChildren ( parent );
-        final List<N> filtered = CollectionUtils.filter ( children, getChildrenFilter ( parent, children ) );
-        final List<N> sorted = CollectionUtils.sort ( children, getChildrenComparator ( parent, filtered ) );
-        for ( final N child : sorted )
-        {
-            parent.add ( child );
-            loadPlainChildren ( child );
-        }
+        return false;
     }
 }

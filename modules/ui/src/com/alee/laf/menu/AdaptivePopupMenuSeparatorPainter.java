@@ -6,19 +6,17 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link PopupMenuSeparatorPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WPopupMenuSeparatorUI}.
+ * Simple PopupMenuSeparatorPainter adapter class.
+ * It is used to install simple non-specific painters into WebPopupMenuSeparatorUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptivePopupMenuSeparatorPainter<C extends JPopupMenu.Separator, U extends WPopupMenuSeparatorUI>
-        extends AdaptivePainter<C, U> implements IPopupMenuSeparatorPainter<C, U>
+public final class AdaptivePopupMenuSeparatorPainter<E extends JPopupMenu.Separator, U extends WebPopupMenuSeparatorUI>
+        extends AdaptivePainter<E, U> implements IPopupMenuSeparatorPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptivePopupMenuSeparatorPainter} for the specified painter.
+     * Constructs new AdaptivePopupMenuSeparatorPainter for the specified painter.
      *
      * @param painter painter to adapt
      */

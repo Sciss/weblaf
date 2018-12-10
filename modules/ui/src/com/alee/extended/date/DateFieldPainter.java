@@ -21,18 +21,15 @@ import com.alee.painter.decoration.AbstractDecorationPainter;
 import com.alee.painter.decoration.IDecoration;
 
 /**
- * Basic painter for {@link WebDateField} component.
- * It is used as {@link WDateFieldUI} default painter.
+ * Basic painter for WebDateField component.
+ * It is used as WebDateFieldUI default painter.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
- * @param <D> decoration type
  * @author Mikle Garin
  */
-public class DateFieldPainter<C extends WebDateField, U extends WDateFieldUI<C>, D extends IDecoration<C, D>>
-        extends AbstractDecorationPainter<C, U, D> implements IDateFieldPainter<C, U>
+
+public class DateFieldPainter<E extends WebDateField, U extends WebDateFieldUI, D extends IDecoration<E, D>>
+        extends AbstractDecorationPainter<E, U, D> implements IDateFieldPainter<E, U>
 {
-    /**
-     * Implementation is used completely from {@link AbstractDecorationPainter}.
-     */
 }

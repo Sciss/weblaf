@@ -17,20 +17,22 @@
 
 package com.alee.laf.filechooser;
 
-import com.alee.api.jdk.Consumer;
+import com.alee.global.GlobalConstants;
 import com.alee.laf.WebLookAndFeel;
-import com.alee.managers.language.LM;
+import com.alee.managers.language.LanguageManager;
 import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
 import com.alee.utils.FileUtils;
-import com.alee.utils.filefilter.AllFilesFilter;
+import com.alee.utils.filefilter.AbstractFileFilter;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileView;
 import javax.swing.plaf.ComponentUI;
+import javax.swing.plaf.FileChooserUI;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -41,12 +43,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Custom UI for {@link JFileChooser} component.
+ * Custom UI for JFileChooser component.
  *
  * @author Mikle Garin
  * @author Alexandr Zernov
  */
-public class WebFileChooserUI extends WFileChooserUI implements ShapeSupport, MarginSupport, PaddingSupport
+
+public class WebFileChooserUI extends FileChooserUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -57,28 +60,49 @@ public class WebFileChooserUI extends WFileChooserUI implements ShapeSupport, Ma
     /**
      * Runtime variables.
      */
-    protected transient JFileChooser fileChooser;
-    protected transient WebFileView fileView;
-    protected transient WebFileChooserPanel fileChooserPanel;
-    protected transient boolean ignoreFileSelectionChanges = false;
+    protected Insets margin = null;
+    protected Insets padding = null;
+    protected JFileChooser fileChooser;
+    protected WebFileView fileView;
+    protected WebFileChooserPanel fileChooserPanel;
+    protected boolean ignoreFileSelectionChanges = false;
 
     /**
      * Listeners.
      */
-    protected transient PropertyChangeListener propertyChangeListener;
+    protected PropertyChangeListener propertyChangeListener;
 
     /**
-     * Returns an instance of the {@link WebFileChooserUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Returns an instance of the WebFileChooserUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebFileChooserUI}
+     * @return instance of the WebFileChooserUI
      */
+    @SuppressWarnings ( "UnusedParameters" )
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebFileChooserUI ();
     }
 
+    /**
+     * Constructs new WebFileChooserUI.
+     */
+    public WebFileChooserUI ()
+    {
+        super ();
+    }
+
+    protected WebFileChooserPanel createPanel ( final JFileChooser fileChooser )
+    {
+        return new WebFileChooserPanel ( getFileChooserType (), fileChooser.getControlButtonsAreShown () );
+    }
+
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
@@ -154,6 +178,11 @@ public class WebFileChooserUI extends WFileChooserUI implements ShapeSupport, Ma
         fileChooser.addPropertyChangeListener ( propertyChangeListener );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -170,7 +199,7 @@ public class WebFileChooserUI extends WFileChooserUI implements ShapeSupport, Ma
     }
 
     /**
-     * Fired when some of {@link JFileChooser} properties changes.
+     * Fired when some of JFileChooser properties changes.
      *
      * @param event property change event
      */
@@ -227,7 +256,7 @@ public class WebFileChooserUI extends WFileChooserUI implements ShapeSupport, Ma
                 }
                 else
                 {
-                    fileChooserPanel.setFileFilter ( new AllFilesFilter () );
+                    fileChooserPanel.setFileFilter ( GlobalConstants.ALL_FILES_FILTER );
                 }
             }
         }
@@ -245,21 +274,24 @@ public class WebFileChooserUI extends WFileChooserUI implements ShapeSupport, Ma
         }
         else if ( prop.equals ( JFileChooser.SELECTED_FILE_CHANGED_PROPERTY ) )
         {
-            /**
-             * We are not listening to {@link JFileChooser#SELECTED_FILES_CHANGED_PROPERTY} as it will only generate unnecessary event.
-             * Property {@link JFileChooser#SELECTED_FILE_CHANGED_PROPERTY} event is always triggered so it is sufficient.
-             */
+            // We are not listening to SELECTED_FILES_CHANGED_PROPERTY as it will only generate additional pointless event
+            // Property SELECTED_FILE_CHANGED_PROPERTY event is always triggered so it is sufficient
             if ( !ignoreFileSelectionChanges )
             {
-                if ( event.getNewValue () instanceof File )
+                final File[] selectedFiles = fileChooser.getSelectedFiles ();
+                if ( selectedFiles.length > 0 )
                 {
-                    // Simply pass the file, it will be selected when directory is opened
-                    fileChooserPanel.setSelectedFile ( fileChooser.getSelectedFile () );
+                    // Update displayed directory and select all files
+                    // fileChooserPanel.setCurrentFolder ( selectedFiles[ 0 ].getParentFile () );
+                    // fileChooserPanel.setSelectedFiles ( selectedFiles );
+                    fileChooserPanel.setSelectedFiles ( selectedFiles );
+
                 }
                 else
                 {
-                    // Update displayed directory and select all files
-                    fileChooserPanel.setSelectedFiles ( fileChooser.getSelectedFiles () );
+                    // Simply pass the file, it will be selected when directory is opened
+                    // fileChooserPanel.setCurrentFolder ( fileChooser.getSelectedFile () );
+                    fileChooserPanel.setSelectedFile ( fileChooser.getSelectedFile () );
                 }
             }
         }
@@ -281,57 +313,48 @@ public class WebFileChooserUI extends WFileChooserUI implements ShapeSupport, Ma
         }
     }
 
-    /**
-     * Returns main file chooser panel.
-     *
-     * @param fileChooser {@link JFileChooser}
-     * @return main file chooser panel
-     */
-    protected WebFileChooserPanel createPanel ( final JFileChooser fileChooser )
+    @Override
+    public StyleId getStyleId ()
     {
-        return new WebFileChooserPanel ( getFileChooserType (), fileChooser.getControlButtonsAreShown () );
+        return StyleManager.getStyleId ( fileChooser );
     }
 
     @Override
-    public Shape getShape ()
+    public StyleId setStyleId ( final StyleId id )
+    {
+        return StyleManager.setStyleId ( fileChooser, id );
+    }
+
+    @Override
+    public Shape provideShape ()
     {
         return PainterSupport.getShape ( fileChooser, painter );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return PainterSupport.isShapeDetectionEnabled ( fileChooser, painter );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        PainterSupport.setShapeDetectionEnabled ( fileChooser, painter, enabled );
-    }
-
-    @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( fileChooser );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( fileChooser, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( fileChooser );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( fileChooser, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -341,7 +364,7 @@ public class WebFileChooserUI extends WFileChooserUI implements ShapeSupport, Ma
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -352,32 +375,106 @@ public class WebFileChooserUI extends WFileChooserUI implements ShapeSupport, Ma
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( fileChooser, new Consumer<IFileChooserPainter> ()
+        PainterSupport.setPainter ( fileChooser, new DataRunnable<IFileChooserPainter> ()
         {
             @Override
-            public void accept ( final IFileChooserPainter newPainter )
+            public void run ( final IFileChooserPainter newPainter )
             {
                 WebFileChooserUI.this.painter = newPainter;
             }
         }, this.painter, painter, IFileChooserPainter.class, AdaptiveFileChooserPainter.class );
     }
 
-    @Override
+    /**
+     * Returns file chooser panel.
+     *
+     * @return file chooser panel
+     */
     public WebFileChooserPanel getFileChooserPanel ()
     {
         return fileChooserPanel;
     }
 
+    /**
+     * Returns list of available file filters.
+     *
+     * @return list of available file filters
+     */
+    public List<AbstractFileFilter> getAvailableFilters ()
+    {
+        return fileChooserPanel.getAvailableFilters ();
+    }
+
+    /**
+     * Returns currently active file filter.
+     *
+     * @return currently active file filter
+     */
+    public AbstractFileFilter getActiveFileFilter ()
+    {
+        return fileChooserPanel.getActiveFileFilter ();
+    }
+
+    /**
+     * Returns whether file thumbnails are generated or not.
+     *
+     * @return true if file thumbnails are generated, false otherwise
+     */
+    public boolean isGenerateThumbnails ()
+    {
+        return fileChooserPanel.isGenerateThumbnails ();
+    }
+
+    /**
+     * Sets whether file thumbnails should be generated or not.
+     *
+     * @param generate whether file thumbnails should be generated or not
+     */
+    public void setGenerateThumbnails ( final boolean generate )
+    {
+        fileChooserPanel.setGenerateThumbnails ( generate );
+    }
+
+    /**
+     * Sets approve button text type.
+     *
+     * @param approveText approve button text type
+     */
+    public void setApproveButtonText ( final FileAcceptText approveText )
+    {
+        fileChooserPanel.setAcceptButtonText ( approveText );
+    }
+
+    /**
+     * Sets approve button language key.
+     *
+     * @param key approve button language key
+     */
+    public void setApproveButtonLanguage ( final String key )
+    {
+        fileChooserPanel.setAcceptButtonLanguage ( key );
+    }
+
     @Override
     public FileFilter getAcceptAllFileFilter ( final JFileChooser fc )
     {
-        return new AllFilesFilter ();
+        return GlobalConstants.ALL_FILES_FILTER;
     }
 
     @Override
     public FileView getFileView ( final JFileChooser fc )
     {
         return fileView;
+    }
+
+    /**
+     * Sets file view.
+     *
+     * @param fileView new file view
+     */
+    public void setFileView ( final WebFileView fileView )
+    {
+        this.fileView = fileView;
     }
 
     @Override
@@ -390,7 +487,7 @@ public class WebFileChooserUI extends WFileChooserUI implements ShapeSupport, Ma
     public String getDialogTitle ( final JFileChooser fc )
     {
         final String dialogTitle = fc.getDialogTitle ();
-        return dialogTitle != null ? dialogTitle : LM.get ( "weblaf.filechooser.title" );
+        return dialogTitle != null ? dialogTitle : LanguageManager.get ( "weblaf.filechooser.title" );
     }
 
     @Override
@@ -430,37 +527,16 @@ public class WebFileChooserUI extends WFileChooserUI implements ShapeSupport, Ma
     }
 
     @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
-    {
-        return PainterSupport.contains ( c, this, painter, x, y );
-    }
-
-    @Override
-    public int getBaseline ( final JComponent c, final int width, final int height )
-    {
-        return PainterSupport.getBaseline ( c, this, painter, width, height );
-    }
-
-    @Override
-    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
-    {
-        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
-    }
-
-    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
     }
 
     /**
      * Special FileView for file chooser.
-     *
-     * todo 1. Make caching optional?
-     * todo 2. Make multiple default implementations?
      */
     protected class WebFileView extends FileView
     {

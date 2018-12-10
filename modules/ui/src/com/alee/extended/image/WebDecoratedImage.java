@@ -17,11 +17,9 @@
 
 package com.alee.extended.image;
 
-import com.alee.graphics.filters.GaussianFilter;
-import com.alee.graphics.filters.GrayscaleFilter;
-import com.alee.graphics.filters.MotionBlurFilter;
-import com.alee.managers.style.ShapeMethods;
+import com.alee.managers.style.ShapeProvider;
 import com.alee.utils.GraphicsUtils;
+import com.alee.utils.ImageFilterUtils;
 import com.alee.utils.ImageUtils;
 import com.alee.utils.SwingUtils;
 
@@ -34,12 +32,8 @@ import java.awt.image.BufferedImage;
  * @author Mikle Garin
  */
 
-public class WebDecoratedImage extends JComponent implements SwingConstants, ShapeMethods
+public class WebDecoratedImage extends JComponent implements SwingConstants, ShapeProvider
 {
-    /**
-     * todo 1. Implement proper UI and styling
-     */
-
     private ImageIcon icon;
     private ImageIcon previewIcon;
 
@@ -430,28 +424,28 @@ public class WebDecoratedImage extends JComponent implements SwingConstants, Sha
         }
 
         // Source image
-        BufferedImage image = ImageUtils.copy ( icon.getImage () );
+        Image image = ImageUtils.copy ( icon.getImage () );
 
         // Applying filters
         if ( grayscale )
         {
-            new GrayscaleFilter ().filter ( image, image );
+            ImageFilterUtils.applyGrayscaleFilter ( image, image );
         }
         if ( blur )
         {
-            new GaussianFilter ( blurFactor ).filter ( image, image );
+            ImageFilterUtils.applyGaussianFilter ( image, image, blurFactor );
         }
         if ( zoomBlur && rotationBlur )
         {
-            new MotionBlurFilter ( 0f, 0f, rotationBlurFactor, zoomBlurFactor, blurAlignX, blurAlignY ).filter ( image, image );
+            ImageFilterUtils.applyMotionBlurFilter ( image, image, 0f, 0f, rotationBlurFactor, zoomBlurFactor, blurAlignX, blurAlignY );
         }
         else if ( zoomBlur )
         {
-            new MotionBlurFilter ( 0f, 0f, 0f, zoomBlurFactor, blurAlignX, blurAlignY ).filter ( image, image );
+            ImageFilterUtils.applyZoomBlurFilter ( image, image, zoomBlurFactor, blurAlignX, blurAlignY );
         }
         else if ( rotationBlur )
         {
-            new MotionBlurFilter ( 0f, 0f, rotationBlurFactor, 0f, blurAlignX, blurAlignY ).filter ( image, image );
+            ImageFilterUtils.applyRotationBlurFilter ( image, image, rotationBlurFactor, blurAlignX, blurAlignY );
         }
 
         // Applying rounded corners
@@ -596,21 +590,9 @@ public class WebDecoratedImage extends JComponent implements SwingConstants, Sha
     }
 
     @Override
-    public Shape getShape ()
+    public Shape provideShape ()
     {
         final Point location = getPreviewLocation ();
         return getBorderShape ( location.x, location.y );
-    }
-
-    @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return false;
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        throw new UnsupportedOperationException ( "Shape detection is not yet supported for WebDecoratedImage" );
     }
 }

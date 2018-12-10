@@ -5,22 +5,21 @@ import com.alee.painter.SpecificPainter;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JList} component painters.
+ * Base interface for JList component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IListPainter<C extends JList, U extends WListUI> extends SpecificPainter<C, U>
+public interface IListPainter<E extends JList, U extends WebListUI> extends SpecificPainter<E, U>
 {
     /**
-     * Returns whether or not item hover decoration is supported by this list painter.
-     * This
+     * Returns whether or not hover item decoration is supported by this list painter.
      *
-     * @return {@code true} if item hover decoration is supported by this list painter, {@code false} otherwise
+     * @return true if hover item decoration is supported by this list painter, false otherwise
      */
-    public boolean isItemHoverDecorationSupported ();
+    public boolean isHoverDecorationSupported ();
 
     /**
      * Prepares painter to pain list.

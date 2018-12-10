@@ -1,23 +1,14 @@
 package com.alee.laf.tree;
 
-import com.alee.api.jdk.Objects;
-import com.alee.api.jdk.Predicate;
-import com.alee.extended.tree.WebAsyncTree;
-import com.alee.extended.tree.WebExTree;
 import com.alee.laf.WebLookAndFeel;
-import com.alee.managers.language.Language;
-import com.alee.managers.language.LanguageListener;
-import com.alee.managers.language.LanguageSensitive;
-import com.alee.managers.language.UILanguageManager;
-import com.alee.managers.style.BoundsType;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.DefaultPainter;
+import com.alee.painter.decoration.AbstractDecorationPainter;
+import com.alee.painter.decoration.IDecoration;
 import com.alee.painter.PainterSupport;
 import com.alee.painter.SectionPainter;
-import com.alee.painter.decoration.AbstractDecorationPainter;
-import com.alee.painter.decoration.DecorationState;
-import com.alee.painter.decoration.IDecoration;
-import com.alee.painter.decoration.IDecorationPainter;
 import com.alee.utils.CollectionUtils;
+import com.alee.utils.CompareUtils;
 import com.alee.utils.GeometryUtils;
 import com.alee.utils.SwingUtils;
 
@@ -26,7 +17,6 @@ import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
-import javax.swing.plaf.TreeUI;
 import javax.swing.tree.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -35,17 +25,11 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Basic painter for {@link JTree} component.
- * It is used as {@link WTreeUI} default painter.
- *
- * @param <C> component type
- * @param <U> component UI type
- * @param <D> decoration type
  * @author Alexandr Zernov
  */
 
-public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecoration<C, D>> extends AbstractDecorationPainter<C, U, D>
-        implements ITreePainter<C, U>
+public class TreePainter<E extends JTree, U extends WebTreeUI, D extends IDecoration<E, D>> extends AbstractDecorationPainter<E, U, D>
+        implements ITreePainter<E, U>
 {
     /**
      * Style settings.
@@ -55,27 +39,26 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
     protected Color linesColor;
 
     /**
-     * {@link SectionPainter} that can be used to customize tree rows background.
-     * It is separated from {@link #nodePainter} as nodes not always take the whole row space.
+     * Tree rows background painter.
+     * It can be used to provide background customization for specific tree rows.
      */
-    @DefaultPainter ( TreeRowPainter.class )
+    @DefaultPainter ( AlternateTreeRowPainter.class )
     protected ITreeRowPainter rowPainter;
 
     /**
-     * {@link SectionPainter} that can be used to customize tree nodes background.
-     * It is separated from {@link #rowPainter} as nodes not always take the whole row space.
+     * Hover node background painter.
+     * It can be used to provide background for hover nodes.
      */
     @DefaultPainter ( TreeNodePainter.class )
-    protected ITreeNodePainter nodePainter;
+    protected ITreeNodePainter hoverPainter;
 
     /**
-     * {@link SectionPainter} that can be used to customize tree nodes selection background.
-     * Separate painter is used because selection could include multiple nodes in some selection modes.
-     * This painter will not know any information about the nodes, use {@link #nodePainter} for painting node-specific decorations.
-     * You can also use {@link #rowPainter} for row-wide background customization that is aware of the row node contents.
+     * Selected nodes background painter.
+     * It can be used to provide background for selected nodes.
+     * WebLaF uses this painter instead of cell renderer -based selection decoration.
      */
-    @DefaultPainter ( TreeSelectionPainter.class )
-    protected ITreeSelectionPainter selectionPainter;
+    @DefaultPainter ( TreeNodePainter.class )
+    protected ITreeNodePainter selectionPainter;
 
     /**
      * Tree drop location painter.
@@ -94,276 +77,96 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
     /**
      * Listeners.
      */
-    protected transient TreeSelectionListener treeSelectionListener;
-    protected transient TreeExpansionListener treeExpansionListener;
-    protected transient MouseAdapter mouseAdapter;
-    protected transient LanguageListener languageSensitive;
+    protected TreeSelectionListener treeSelectionListener;
+    protected TreeExpansionListener treeExpansionListener;
+    protected MouseAdapter mouseAdapter;
 
     /**
      * Runtime variables.
      */
-    protected transient List<Integer> initialSelection = new ArrayList<Integer> ();
-    protected transient Point selectionStart = null;
-    protected transient Point selectionEnd = null;
-    protected transient TreePath draggablePath = null;
+    protected List<Integer> initialSelection = new ArrayList<Integer> ();
+    protected Point selectionStart = null;
+    protected Point selectionEnd = null;
+    protected TreePath draggablePath = null;
 
     /**
      * Painting variables.
      */
-    protected transient int totalChildIndent;
-    protected transient int depthOffset;
-    protected transient TreeModel treeModel;
-    protected transient AbstractLayoutCache treeLayoutCache;
-    protected transient Hashtable<TreePath, Boolean> paintingCache;
-    protected transient CellRendererPane rendererPane;
-    protected transient TreeCellRenderer currentCellRenderer;
-    protected transient int editingRow = -1;
-    protected transient int lastSelectionRow = -1;
+    protected int totalChildIndent;
+    protected int depthOffset;
+    protected TreeModel treeModel;
+    protected AbstractLayoutCache treeState;
+    protected Hashtable<TreePath, Boolean> paintingCache;
+    protected CellRendererPane rendererPane;
+    protected TreeCellRenderer currentCellRenderer;
+    protected int editingRow = -1;
+    protected int lastSelectionRow = -1;
 
     @Override
-    protected List<SectionPainter<C, U>> getSectionPainters ()
+    public void install ( final E c, final U ui )
     {
-        return asList ( rowPainter, nodePainter, selectionPainter, dropLocationPainter, selectorPainter );
-    }
+        super.install ( c, ui );
 
-    @Override
-    protected void installPropertiesAndListeners ()
-    {
-        super.installPropertiesAndListeners ();
-        installTreeSelectionListeners ();
-        installTreeExpansionListeners ();
-        installTreeMouseListeners ();
-        installLanguageListeners ();
-    }
+        // Properly installing section painters
+        this.rowPainter = PainterSupport.installSectionPainter ( this, rowPainter, null, c, ui );
+        this.hoverPainter = PainterSupport.installSectionPainter ( this, hoverPainter, null, c, ui );
+        this.selectionPainter = PainterSupport.installSectionPainter ( this, selectionPainter, null, c, ui );
+        this.dropLocationPainter = PainterSupport.installSectionPainter ( this, dropLocationPainter, null, c, ui );
+        this.selectorPainter = PainterSupport.installSectionPainter ( this, selectorPainter, null, c, ui );
 
-    @Override
-    protected void uninstallPropertiesAndListeners ()
-    {
-        uninstallLanguageListeners ();
-        uninstallTreeMouseListeners ();
-        uninstallTreeExpansionListeners ();
-        uninstallTreeSelectionListeners ();
-        super.uninstallPropertiesAndListeners ();
-    }
-
-    /**
-     * Installs custom {@link TreeSelectionListener} for complex selections update.
-     */
-    protected void installTreeSelectionListeners ()
-    {
+        // Selection listener
+        // Required for proper update of complex selection
         treeSelectionListener = new TreeSelectionListener ()
         {
             @Override
             public void valueChanged ( final TreeSelectionEvent e )
             {
-                // Ensure component is still available
-                // This might happen if painter is replaced from another TreeSelectionListener
-                if ( component != null )
+                // Optimized selection repaint
+                repaintSelection ();
+
+                // Tree expansion on selection
+                if ( ui.isExpandSelected () && component.getSelectionCount () > 0 )
                 {
-                    // Optimized selection repaint
-                    repaintSelection ();
+                    component.expandPath ( component.getSelectionPath () );
                 }
             }
         };
         component.addTreeSelectionListener ( treeSelectionListener );
-    }
 
-    /**
-     * Uninstalls custom {@link TreeSelectionListener}.
-     */
-    protected void uninstallTreeSelectionListeners ()
-    {
-        component.removeTreeSelectionListener ( treeSelectionListener );
-        treeSelectionListener = null;
-    }
-
-    /**
-     * Installs custom {@link TreeExpansionListener} for complex selections update.
-     */
-    protected void installTreeExpansionListeners ()
-    {
+        // Expansion listener
+        // Required for proper update of complex selection
         treeExpansionListener = new TreeExpansionListener ()
         {
             @Override
             public void treeExpanded ( final TreeExpansionEvent event )
             {
-                // Ensure component is still available
-                // This might happen if painter is replaced from another TreeExpansionListener
-                if ( component != null )
-                {
-                    repaintSelection ();
-                }
+                repaintSelection ();
             }
 
             @Override
             public void treeCollapsed ( final TreeExpansionEvent event )
             {
-                // Ensure component is still available
-                // This might happen if painter is replaced from another TreeExpansionListener
-                if ( component != null )
-                {
-                    repaintSelection ();
-                }
+                repaintSelection ();
             }
         };
         component.addTreeExpansionListener ( treeExpansionListener );
-    }
 
-    /**
-     * Uninstalls custom {@link TreeExpansionListener}.
-     */
-    protected void uninstallTreeExpansionListeners ()
-    {
-        component.removeTreeExpansionListener ( treeExpansionListener );
-        treeExpansionListener = null;
-    }
-
-    /**
-     * Installs custom {@link MouseAdapter}.
-     */
-    protected void installTreeMouseListeners ()
-    {
+        // Mouse events adapter
         mouseAdapter = new MouseAdapter ()
         {
             @Override
             public void mousePressed ( final MouseEvent e )
             {
-                // Ensure component is still available
-                // This might happen if painter is replaced from another MouseListener
-                if ( component != null )
+                // Only left mouse button events
+                if ( SwingUtilities.isLeftMouseButton ( e ) )
                 {
-                    // Only left mouse button events
-                    if ( SwingUtilities.isLeftMouseButton ( e ) )
+                    // Check that mouse did not hit actual tree cell
+                    if ( !SwingUtils.isCtrl ( e ) && ( !component.getDragEnabled () || component.getTransferHandler () == null ) ||
+                            ui.getRowForPoint ( e.getPoint (), false ) == -1 )
                     {
-                        // CTRL/SHIFT modifiers are not active
-                        final boolean ctrl = SwingUtils.isCtrl ( e );
-                        final boolean shift = SwingUtils.isShift ( e );
-
-                        // Drag is not available
-                        final boolean noDrag = !component.getDragEnabled () || component.getTransferHandler () == null;
-
-                        // Mouse did not hit actual tree node space
-                        final boolean notInNodeSpace = ui.getExactRowForLocation ( e.getPoint (), false ) == -1;
-
-                        // Handling additional events for full-line selection
-                        if ( notInNodeSpace && isFullLineSelection () )
+                        if ( isSelectorAvailable () )
                         {
                             // Avoiding selection start when pressed on tree expand handle
-                            // todo Checkbox condition should be in a different ui/painter and not in basic one
-                            // todo Collapse node expansion on double-click if it is expanded and clicked on full line (on release)
-                            final TreePath path = ui.getClosestPathForLocation ( component, e.getX (), e.getY () );
-                            if ( path != null && !isLocationInExpandControl ( path, e.getX (), e.getY () ) &&
-                                    !ui.isLocationInCheckBoxControl ( path, e.getX (), e.getY () ) )
-                            {
-                                // Updating selection
-                                final int clickRow = ui.getExactRowForLocation ( e.getPoint (), true );
-                                switch ( component.getSelectionModel ().getSelectionMode () )
-                                {
-                                    case TreeSelectionModel.SINGLE_TREE_SELECTION:
-                                    {
-                                        if ( ctrl && component.isRowSelected ( clickRow ) )
-                                        {
-                                            // Toggle selection
-                                            component.clearSelection ();
-                                        }
-                                        else
-                                        {
-                                            // Change selection to one row
-                                            component.setSelectionRow ( clickRow );
-                                        }
-                                        break;
-                                    }
-                                    case TreeSelectionModel.CONTIGUOUS_TREE_SELECTION:
-                                    {
-                                        if ( shift )
-                                        {
-                                            // Collecting new selection range
-                                            final int anchorRow = component.getRowForPath ( component.getAnchorSelectionPath () );
-                                            final List<Integer> selected = CollectionUtils.intRange ( anchorRow, clickRow );
-
-                                            // Making sure we provide a proper lead selection row
-                                            selected.remove ( 0 );
-                                            selected.add ( anchorRow );
-
-                                            // Updating selected rows
-                                            component.setSelectionRows ( CollectionUtils.toIntArray ( selected ) );
-                                        }
-                                        else if ( ctrl )
-                                        {
-                                            // Toggle selection
-                                            if ( component.isRowSelected ( clickRow ) )
-                                            {
-                                                component.removeSelectionRow ( clickRow );
-                                            }
-                                            else
-                                            {
-                                                component.addSelectionRow ( clickRow );
-                                            }
-                                        }
-                                        else
-                                        {
-                                            // Change selection to one row
-                                            component.setSelectionRow ( clickRow );
-                                        }
-                                        break;
-                                    }
-                                    case TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION:
-                                    {
-                                        if ( shift )
-                                        {
-                                            // Collecting new selection range
-                                            final int anchorRow = component.getRowForPath ( component.getAnchorSelectionPath () );
-                                            final List<Integer> selected = CollectionUtils.intRange ( anchorRow, clickRow );
-
-                                            // Adding all previously selected rows whenever CTRL modifier is pressed
-                                            if ( ctrl )
-                                            {
-                                                CollectionUtils.addUnique ( selected, component.getSelectionRows () );
-                                            }
-
-                                            // Making sure we provide a proper lead selection row
-                                            selected.remove ( 0 );
-                                            selected.add ( anchorRow );
-
-                                            // Updating selected rows
-                                            component.setSelectionRows ( CollectionUtils.toIntArray ( selected ) );
-                                        }
-                                        else if ( ctrl )
-                                        {
-                                            // Toggle selection
-                                            if ( component.isRowSelected ( clickRow ) )
-                                            {
-                                                component.removeSelectionRow ( clickRow );
-                                            }
-                                            else
-                                            {
-                                                component.addSelectionRow ( clickRow );
-                                            }
-                                        }
-                                        else
-                                        {
-                                            // Change selection to one row
-                                            component.setSelectionRow ( clickRow );
-                                        }
-                                        break;
-                                    }
-                                }
-
-                                // Marking row to be dragged
-                                final int rowForPath = ui.getRowForPath ( component, path );
-                                if ( isDragAvailable () && ui.getRowBounds ( rowForPath ).contains ( e.getX (), e.getY () ) &&
-                                        component.isRowSelected ( rowForPath ) )
-                                {
-                                    draggablePath = path;
-                                }
-                            }
-                        }
-
-                        // Activating tree nodes selector
-                        if ( !ctrl && !shift && ( noDrag || notInNodeSpace ) && isSelectorAvailable () )
-                        {
-                            // Avoiding selection start when pressed on tree expand handle
-                            // todo This should occur on actual mouse drag, not press
                             final TreePath path = ui.getClosestPathForLocation ( component, e.getX (), e.getY () );
                             if ( path == null || !isLocationInExpandControl ( path, e.getX (), e.getY () ) &&
                                     !ui.isLocationInCheckBoxControl ( path, e.getX (), e.getY () ) )
@@ -394,38 +197,61 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
                                 }
                             }
                         }
+                        else if ( isFullLineSelection () )
+                        {
+                            // todo Start DnD on selected line here
+                            // Avoiding selection start when pressed on tree expand handle
+                            final TreePath path = ui.getClosestPathForLocation ( component, e.getX (), e.getY () );
+                            if ( path != null && !isLocationInExpandControl ( path, e.getX (), e.getY () ) &&
+                                    !ui.isLocationInCheckBoxControl ( path, e.getX (), e.getY () ) )
+                            {
+                                // Single row selection
+                                if ( component.getSelectionModel ().getSelectionMode () == TreeSelectionModel.SINGLE_TREE_SELECTION )
+                                {
+                                    component.setSelectionRow ( ui.getRowForPoint ( e.getPoint (), true ) );
+                                }
+
+                                // Marking row to be dragged
+                                final int rowForPath = ui.getRowForPath ( component, path );
+                                if ( isDragAvailable () && ui.getRowBounds ( rowForPath ).contains ( e.getX (), e.getY () ) &&
+                                        component.isRowSelected ( rowForPath ) )
+                                {
+                                    draggablePath = path;
+                                }
+                            }
+                        }
                     }
+                    // else
+                    // {
+                    //     // todo Start DnD on selected row here
+                    //     // todo Also collapse node expansion on double-click if it is expanded and clicked on full line
+                    // }
                 }
             }
 
             @Override
             public void mouseDragged ( final MouseEvent e )
             {
-                // Ensure component is still available
-                // This might happen if painter is replaced from another MouseMotionListener
-                if ( component != null )
+                if ( draggablePath != null )
                 {
-                    if ( draggablePath != null )
+                    final TransferHandler transferHandler = component.getTransferHandler ();
+                    transferHandler.exportAsDrag ( component, e, transferHandler.getSourceActions ( component ) );
+                    draggablePath = null;
+                }
+                if ( isSelectorAvailable () && selectionStart != null )
+                {
+                    // Selection
+                    selectionEnd = e.getPoint ();
+
+                    // Updating selection
+                    validateSelection ( e );
+
+                    // Repainting selection on the tree
+                    repaintSelector ();
+
+                    if ( !component.getVisibleRect ().contains ( e.getPoint () ) )
                     {
-                        final TransferHandler transferHandler = component.getTransferHandler ();
-                        transferHandler.exportAsDrag ( component, e, transferHandler.getSourceActions ( component ) );
-                        draggablePath = null;
-                    }
-                    if ( isSelectorAvailable () && selectionStart != null )
-                    {
-                        // Selection
-                        selectionEnd = e.getPoint ();
-
-                        // Updating selection
-                        validateSelection ( e );
-
-                        // Repainting selection on the tree
-                        repaintSelector ();
-
-                        if ( !component.getVisibleRect ().contains ( e.getPoint () ) )
-                        {
-                            component.scrollRectToVisible ( new Rectangle ( e.getPoint (), new Dimension ( 0, 0 ) ) );
-                        }
+                        component.scrollRectToVisible ( new Rectangle ( e.getPoint (), new Dimension ( 0, 0 ) ) );
                     }
                 }
             }
@@ -433,26 +259,21 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
             @Override
             public void mouseReleased ( final MouseEvent e )
             {
-                // Ensure component is still available
-                // This might happen if painter is replaced from another MouseListener
-                if ( component != null )
+                if ( draggablePath != null )
                 {
-                    if ( draggablePath != null )
-                    {
-                        draggablePath = null;
-                    }
-                    if ( isSelectorAvailable () && selectionStart != null )
-                    {
-                        // Saving selection rect to repaint
-                        // Rectangle fr = GeometryUtils.getContainingRect ( selectionStart, selectionEnd );
+                    draggablePath = null;
+                }
+                if ( isSelectorAvailable () && selectionStart != null )
+                {
+                    // Saving selection rect to repaint
+                    // Rectangle fr = GeometryUtils.getContainingRect ( selectionStart, selectionEnd );
 
-                        // Selection
-                        selectionStart = null;
-                        selectionEnd = null;
+                    // Selection
+                    selectionStart = null;
+                    selectionEnd = null;
 
-                        // Repainting selection on the tree
-                        repaintSelector ( /*fr*/ );
-                    }
+                    // Repainting selection on the tree
+                    repaintSelector ( /*fr*/ );
                 }
             }
 
@@ -478,7 +299,10 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
                             newSelection.add ( row );
                         }
                     }
-                    newSelection.addAll ( initialSelection );
+                    for ( final int row : initialSelection )
+                    {
+                        newSelection.add ( row );
+                    }
                 }
                 else if ( SwingUtils.isCtrl ( e ) )
                 {
@@ -517,11 +341,11 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
                 }
 
                 // Change selection if it is not the same as before
-                if ( !CollectionUtils.equals ( getSelectedRows (), newSelection, true ) )
+                if ( !CollectionUtils.equals ( getSelectedRows (), newSelection ) )
                 {
                     if ( newSelection.size () > 0 )
                     {
-                        component.setSelectionRows ( CollectionUtils.toIntArray ( newSelection ) );
+                        component.setSelectionRows ( CollectionUtils.toArray ( newSelection ) );
                     }
                     else
                     {
@@ -562,100 +386,47 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
         component.addMouseMotionListener ( mouseAdapter );
     }
 
-    /**
-     * Uninstalls custom {@link MouseAdapter}.
-     */
-    protected void uninstallTreeMouseListeners ()
+    @Override
+    public void uninstall ( final E c, final U ui )
     {
-        component.removeMouseMotionListener ( mouseAdapter );
+        // Removing listeners
+        component.removeTreeSelectionListener ( treeSelectionListener );
+        treeSelectionListener = null;
+        component.removeTreeExpansionListener ( treeExpansionListener );
+        treeExpansionListener = null;
         component.removeMouseListener ( mouseAdapter );
+        component.removeMouseMotionListener ( mouseAdapter );
         mouseAdapter = null;
-    }
 
-    /**
-     * Installs language listeners.
-     */
-    protected void installLanguageListeners ()
-    {
-        languageSensitive = new LanguageListener ()
-        {
-            @Override
-            public void languageChanged ( final Language oldLanguage, final Language newLanguage )
-            {
-                if ( isLanguageSensitive () )
-                {
-                    if ( component.getRowCount () > 0 )
-                    {
-                        // Forcing node sizes update within tree
-                        final TreeUI ui = component.getUI ();
-                        if ( ui instanceof WTreeUI )
-                        {
-                            // Asking UI to update node sizes
-                            ( ( WTreeUI ) ui ).updateNodeSizes ();
-                        }
-                        else
-                        {
-                            // Simply repainting tree when we don't have tools to update it properly
-                            component.repaint ();
-                        }
-                    }
-                }
-            }
-        };
-        UILanguageManager.addLanguageListener ( component, languageSensitive );
-    }
+        // Properly uninstalling section painters
+        this.selectorPainter = PainterSupport.uninstallSectionPainter ( selectorPainter, c, ui );
+        this.dropLocationPainter = PainterSupport.uninstallSectionPainter ( dropLocationPainter, c, ui );
+        this.selectionPainter = PainterSupport.uninstallSectionPainter ( selectionPainter, c, ui );
+        this.hoverPainter = PainterSupport.uninstallSectionPainter ( hoverPainter, c, ui );
+        this.rowPainter = PainterSupport.uninstallSectionPainter ( rowPainter, c, ui );
 
-    /**
-     * Returns whether or not tree is language-sensitive.
-     * Tree is language-sensitive if either tree, its renderer, model, data provider or any of the nodes are language-sensitive.
-     *
-     * @return {@code true} if tree is language-sensitive, {@code false} otherwise
-     */
-    protected boolean isLanguageSensitive ()
-    {
-        return component instanceof LanguageSensitive ||
-                component.getCellRenderer () instanceof LanguageSensitive ||
-                component.getModel () instanceof LanguageSensitive ||
-                component instanceof WebExTree && ( ( WebExTree ) component ).getDataProvider () instanceof LanguageSensitive ||
-                component instanceof WebAsyncTree && ( ( WebAsyncTree ) component ).getDataProvider () instanceof LanguageSensitive ||
-                TreeUtils.getTreeWalker ( component ).anyMatch ( new Predicate<TreeNode> ()
-                {
-                    @Override
-                    public boolean test ( final TreeNode treeNode )
-                    {
-                        return treeNode instanceof LanguageSensitive;
-                    }
-                } );
-    }
-
-    /**
-     * Uninstalls language listeners.
-     */
-    protected void uninstallLanguageListeners ()
-    {
-        UILanguageManager.removeLanguageListener ( component, languageSensitive );
-        languageSensitive = null;
+        super.uninstall ( c, ui );
     }
 
     @Override
-    protected void propertyChanged ( final String property, final Object oldValue, final Object newValue )
+    protected void propertyChange ( final String property, final Object oldValue, final Object newValue )
     {
         // Perform basic actions on property changes
-        super.propertyChanged ( property, oldValue, newValue );
+        super.propertyChange ( property, oldValue, newValue );
 
         // Update visual drop location
-        if ( Objects.equals ( property, WebLookAndFeel.DROP_LOCATION ) && dropLocationPainter != null )
+        if ( CompareUtils.equals ( property, WebLookAndFeel.DROP_LOCATION ) && dropLocationPainter != null )
         {
             // Repainting previous drop location
             final JTree.DropLocation oldLocation = ( JTree.DropLocation ) oldValue;
-            if ( oldLocation != null && oldLocation.getPath () != null )
+            if ( oldLocation != null )
             {
                 component.repaint ( dropLocationPainter.getDropViewBounds ( oldLocation ) );
             }
 
             // Repainting current drop location
             final JTree.DropLocation newLocation = ( JTree.DropLocation ) newValue;
-            if ( newLocation != null && newLocation.getPath () != null )
+            if ( newLocation != null )
             {
                 component.repaint ( dropLocationPainter.getDropViewBounds ( newLocation ) );
             }
@@ -663,67 +434,50 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
     }
 
     @Override
-    public boolean isRowHoverDecorationSupported ()
+    protected List<SectionPainter<E, U>> getSectionPainters ()
     {
-        boolean supported = false;
-        if ( component != null && component.isEnabled () )
-        {
-            if ( rowPainter != null && rowPainter instanceof IDecorationPainter )
-            {
-                supported = ( ( IDecorationPainter ) rowPainter ).usesState ( DecorationState.hover );
-            }
-            if ( !supported && nodePainter != null && nodePainter instanceof IDecorationPainter )
-            {
-                supported = ( ( IDecorationPainter ) nodePainter ).usesState ( DecorationState.hover );
-            }
-        }
-        return supported;
+        return asList ( rowPainter, selectionPainter, hoverPainter );
     }
 
     @Override
-    public void prepareToPaint ( final Hashtable<TreePath, Boolean> paintingCache, final TreeCellRenderer currentCellRenderer )
+    protected void paintContent ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
     {
-        this.paintingCache = paintingCache;
-        this.currentCellRenderer = currentCellRenderer;
-    }
-
-    @Override
-    protected void paintContent ( final Graphics2D g2d, final Rectangle bounds, final C c, final U ui )
-    {
-        // Updating tree layout cache
-        treeLayoutCache = ui.getTreeLayoutCache ();
-
-        // Paint tree content only if cache exists
-        if ( treeLayoutCache != null )
+        // Checking tree state
+        treeState = ui.getTreeState ();
+        if ( treeState == null )
         {
-            // Preparing to paint tree
-            treeModel = component.getModel ();
-            totalChildIndent = ui.getLeftChildIndent () + ui.getRightChildIndent ();
-            rendererPane = ui.getCellRendererPane ();
-            lastSelectionRow = component.getLeadSelectionRow ();
-            final TreePath editingPath = component.getEditingPath ();
-            editingRow = editingPath != null ? component.getRowForPath ( editingPath ) : -1;
-            updateDepthOffset ();
-
-            // Painting tree background
-            paintBackground ( g2d );
-
-            // Painting selected nodes background
-            paintSelectedNodesBackground ( g2d );
-
-            // Painting tree
-            paintTree ( g2d );
-
-            // Painting drop location
-            paintDropLocation ( g2d );
-
-            // Multiselector
-            paintMultiselector ( g2d );
+            return;
         }
 
-        // Cleaning up
+        // Preparing to paint tree
+        treeModel = component.getModel ();
+        totalChildIndent = ui.getLeftChildIndent () + ui.getRightChildIndent ();
+        rendererPane = ui.getCellRendererPane ();
+        lastSelectionRow = component.getLeadSelectionRow ();
+        final TreePath editingPath = component.getEditingPath ();
+        editingRow = editingPath != null ? component.getRowForPath ( editingPath ) : -1;
+        updateDepthOffset ();
+
+        // Painting tree background
+        paintBackground ( g2d );
+
+        // Painting hover node background
+        paintHoverNodeBackground ( g2d );
+
+        // Painting selected nodes background
+        paintSelectedNodesBackground ( g2d );
+
+        // Painting tree
+        paintTree ( g2d );
+
+        // Painting drop location
+        paintDropLocation ( g2d, bounds, c, ui );
+
+        // Multiselector
+        paintMultiselector ( g2d );
+
         treeModel = null;
-        treeLayoutCache = null;
+        treeState = null;
         paintingCache = null;
         rendererPane = null;
     }
@@ -736,11 +490,11 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
     protected void paintBackground ( final Graphics2D g2d )
     {
         // Painting row background if one is available
-        if ( rowPainter != null || nodePainter != null )
+        if ( rowPainter != null )
         {
             final Rectangle paintBounds = g2d.getClipBounds ();
             final TreePath initialPath = ui.getClosestPathForLocation ( component, 0, paintBounds.y );
-            final Enumeration paintingEnumerator = treeLayoutCache.getVisiblePathsFrom ( initialPath );
+            final Enumeration paintingEnumerator = treeState.getVisiblePathsFrom ( initialPath );
 
             if ( initialPath != null && paintingEnumerator != null )
             {
@@ -750,7 +504,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
 
                 Rectangle bounds;
                 TreePath path;
-                int row = treeLayoutCache.getRowForPath ( initialPath );
+                int row = treeState.getRowForPath ( initialPath );
                 while ( paintingEnumerator.hasMoreElements () )
                 {
                     path = ( TreePath ) paintingEnumerator.nextElement ();
@@ -759,48 +513,29 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
                         bounds = getPathBounds ( path, insets, boundsBuffer );
                         if ( bounds == null )
                         {
-                            // Note from Swing devs:
-                            // This will only happen if the model changes out from under us (usually in another thread)
-                            // Swing isn't multi-threaded, but I'll put this check in anyway
+                            // This will only happen if the model changes out
+                            // from under us (usually in another thread).
+                            // Swing isn't multi-threaded, but I'll put this
+                            // check in anyway.
                             return;
                         }
 
-                        // Painting row background
-                        if ( rowPainter != null )
+                        // Preparing row painter to paint row background
+                        rowPainter.prepareToPaint ( row );
+
+                        // Calculating row bounds and painting its background
+                        final Rectangle rowBounds = ui.getFullRowBounds ( row );
+                        final Insets padding = ui.getPadding ();
+                        if ( padding != null )
                         {
-                            // We have to ensure we can retrieve bounds for it first
-                            final Rectangle rowBounds = ui.getRowBounds ( row, true );
-                            if ( rowBounds != null )
-                            {
-                                // This is a workaround to make sure row painter takes the whole tree width
-                                final Insets padding = PainterSupport.getPadding ( component );
-                                if ( padding != null )
-                                {
-                                    // Increasing background by the padding sizes at left and right sides
-                                    rowBounds.x -= padding.left;
-                                    rowBounds.width += padding.left + padding.right;
-                                }
-
-                                // Painting row background
-                                rowPainter.prepareToPaint ( row );
-                                paintSection ( rowPainter, g2d, rowBounds );
-                            }
+                            // Increasing background by the padding sizes at left and right sides
+                            // This is required to properly display full row background, not node background
+                            rowBounds.x -= padding.left;
+                            rowBounds.width += padding.left + padding.right;
                         }
+                        rowPainter.paint ( g2d, rowBounds, component, ui );
 
-                        // Painting node background
-                        if ( nodePainter != null )
-                        {
-                            // We have to ensure we can retrieve bounds for it first
-                            final Rectangle nodeBounds = ui.getRowBounds ( row );
-                            if ( nodeBounds != null )
-                            {
-                                // Painting hover node background
-                                nodePainter.prepareToPaint ( row );
-                                paintSection ( nodePainter, g2d, nodeBounds );
-                            }
-                        }
-
-                        if ( bounds.y + bounds.height >= endY )
+                        if ( ( bounds.y + bounds.height ) >= endY )
                         {
                             break;
                         }
@@ -815,6 +550,13 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
         }
     }
 
+    @Override
+    public void prepareToPaint ( final Hashtable<TreePath, Boolean> paintingCache, final TreeCellRenderer currentCellRenderer )
+    {
+        this.paintingCache = paintingCache;
+        this.currentCellRenderer = currentCellRenderer;
+    }
+
     /**
      * Paints centered icon.
      *
@@ -825,10 +567,8 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
      * @param y    Y coordinate
      */
     protected void paintCentered ( final Component c, final Graphics2D g2d, final Icon icon, final int x, final int y )
-    {
-        final int ix = findCenteredX ( x, icon.getIconWidth () );
-        final int iy = y - icon.getIconHeight () / 2;
-        icon.paintIcon ( c, g2d, ix, iy );
+    {                                                                   //x-icon.getIconWidth ()/2-2
+        icon.paintIcon ( c, g2d, findCenteredX ( x, icon.getIconWidth () ), y - icon.getIconHeight () / 2 );
     }
 
     /**
@@ -840,7 +580,37 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
      */
     protected int findCenteredX ( final int x, final int iconWidth )
     {
-        return ltr ? x - ( int ) Math.ceil ( iconWidth / 2.0 ) : x - ( int ) Math.floor ( iconWidth / 2.0 );
+        return ltr ? ( x - 2 - ( int ) Math.ceil ( iconWidth / 2.0 ) ) : ( x - 1 - ( int ) Math.floor ( iconWidth / 2.0 ) );
+    }
+
+    @Override
+    public boolean isHoverDecorationSupported ()
+    {
+        return hoverPainter != null && component != null && component.isEnabled ();
+    }
+
+    /**
+     * Paints hover node highlight.
+     *
+     * @param g2d graphics context
+     */
+    protected void paintHoverNodeBackground ( final Graphics2D g2d )
+    {
+        if ( isHoverDecorationSupported () )
+        {
+            // Checking hover row availability
+            final int hoverRow = ui.getHoverRow ();
+            if ( hoverRow != -1 && !component.isRowSelected ( hoverRow ) )
+            {
+                // Checking hover row bounds
+                final Rectangle r = isFullLineSelection () ? ui.getFullRowBounds ( hoverRow ) : component.getRowBounds ( hoverRow );
+                if ( r != null )
+                {
+                    // Painting hover node background
+                    hoverPainter.paint ( g2d, r, component, ui );
+                }
+            }
+        }
     }
 
     /**
@@ -857,8 +627,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
             final List<Rectangle> selections = getSelectionRects ();
             for ( final Rectangle rect : selections )
             {
-                // Painting single selection
-                paintSection ( selectionPainter, g2d, rect );
+                selectionPainter.paint ( g2d, rect, component, ui );
             }
         }
     }
@@ -963,9 +732,9 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
         final Rectangle paintBounds = g2d.getClipBounds ();
         final Insets insets = component.getInsets ();
         final TreePath initialPath = ui.getClosestPathForLocation ( component, 0, paintBounds.y );
-        final Enumeration paintingEnumerator = treeLayoutCache.getVisiblePathsFrom ( initialPath );
+        final Enumeration paintingEnumerator = treeState.getVisiblePathsFrom ( initialPath );
         final int endY = paintBounds.y + paintBounds.height;
-        int row = treeLayoutCache.getRowForPath ( initialPath );
+        int row = treeState.getRowForPath ( initialPath );
 
         paintingCache.clear ();
 
@@ -1005,14 +774,13 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
                     }
                     else
                     {
-                        isExpanded = treeLayoutCache.getExpandedState ( path );
+                        isExpanded = treeState.getExpandedState ( path );
                         hasBeenExpanded = component.hasBeenExpanded ( path );
                     }
 
                     bounds = getPathBounds ( path, insets, boundsBuffer );
                     if ( bounds == null )
                     {
-                        // Note from Swing devs:
                         // This will only happen if the model changes out from under us (usually in another thread).
                         // Swing isn't multi-threaded, but I'll put this check in anyway.
                         return;
@@ -1038,7 +806,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
                         paintExpandControl ( g2d, paintBounds, insets, bounds, path, row, isExpanded, hasBeenExpanded, isLeaf );
                     }
                     paintRow ( g2d, paintBounds, insets, bounds, path, row, isExpanded, hasBeenExpanded, isLeaf );
-                    if ( bounds.y + bounds.height >= endY )
+                    if ( ( bounds.y + bounds.height ) >= endY )
                     {
                         break;
                     }
@@ -1062,9 +830,10 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
      * @param path   tree path
      * @param mouseX mouse X location
      * @param mouseY mouse Y location
-     * @return {@code true} if {@code mouseX} and {@code mouseY} fall in the area of row that is used to expand/collapse the node and the
-     * node at {@code row} does not represent a leaf, {@code false} otherwise
+     * @return true if {@code mouseX} and {@code mouseY} fall in the area of row that is used to expand/collapse the node and the node at
+     * {@code row} does not represent a leaf, false otherwise
      */
+    @SuppressWarnings ( "UnusedParameters" )
     protected boolean isLocationInExpandControl ( final TreePath path, final int mouseX, final int mouseY )
     {
         if ( path != null && !component.getModel ().isLeaf ( path.getLastPathComponent () ) )
@@ -1079,7 +848,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
 
             boxLeftX = findCenteredX ( boxLeftX, boxWidth );
 
-            return mouseX >= boxLeftX && mouseX < boxLeftX + boxWidth;
+            return mouseX >= boxLeftX && mouseX < ( boxLeftX + boxWidth );
         }
         return false;
     }
@@ -1098,6 +867,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
      * @param hasBeenExpanded whether row has been expanded once before or not
      * @param isLeaf          whether node is leaf or not
      */
+    @SuppressWarnings ( "UnusedParameters" )
     protected void paintExpandControl ( final Graphics2D g2d, final Rectangle clipBounds, final Insets insets, final Rectangle bounds,
                                         final TreePath path, final int row, final boolean isExpanded, final boolean hasBeenExpanded,
                                         final boolean isLeaf )
@@ -1117,7 +887,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
             {
                 middleXOfKnob = bounds.x + bounds.width + ui.getRightChildIndent () - 1;
             }
-            final int middleYOfKnob = bounds.y + bounds.height / 2;
+            final int middleYOfKnob = bounds.y + ( bounds.height / 2 );
 
             if ( isExpanded )
             {
@@ -1152,6 +922,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
      * @param hasBeenExpanded whether row has been expanded once before or not
      * @param isLeaf          whether node is leaf or not
      */
+    @SuppressWarnings ( "UnusedParameters" )
     protected void paintRow ( final Graphics2D g2d, final Rectangle clipBounds, final Insets insets, final Rectangle bounds,
                               final TreePath path, final int row, final boolean isExpanded, final boolean hasBeenExpanded,
                               final boolean isLeaf )
@@ -1181,8 +952,9 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
      * @param isExpanded      whether row is expanded or not
      * @param hasBeenExpanded whether row has been expanded once before or not
      * @param isLeaf          whether node is leaf or not
-     * @return {@code true} if the expand (toggle) control should be painted for the specified row, {@code false} otherwise
+     * @return true if the expand (toggle) control should be painted for the specified row, false otherwise
      */
+    @SuppressWarnings ( "UnusedParameters" )
     protected boolean shouldPaintExpandControl ( final TreePath path, final int row, final boolean isExpanded,
                                                  final boolean hasBeenExpanded, final boolean isLeaf )
     {
@@ -1192,13 +964,13 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
         }
 
         final int depth = path.getPathCount () - 1;
-        return !( ( depth == 0 || depth == 1 && !isRootVisible () ) && !getShowsRootHandles () );
+        return !( ( depth == 0 || ( depth == 1 && !isRootVisible () ) ) && !getShowsRootHandles () );
     }
 
     /**
      * Returns whether or not root is visible.
      *
-     * @return {@code true} if root is visible, {@code false} otherwise
+     * @return true if root is visible, false otherwise
      */
     protected boolean isRootVisible ()
     {
@@ -1208,7 +980,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
     /**
      * Returns whether or not root handles should be displayed.
      *
-     * @return {@code true} if root handles should be displayed, {@code false} otherwise
+     * @return true if root handles should be displayed, false otherwise
      */
     protected boolean getShowsRootHandles ()
     {
@@ -1228,6 +1000,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
      * @param hasBeenExpanded whether row has been expanded once before or not
      * @param isLeaf          whether node is leaf or not
      */
+    @SuppressWarnings ( "UnusedParameters" )
     protected void paintHorizontalPartOfLeg ( final Graphics2D g2d, final Rectangle clipBounds, final Insets insets, final Rectangle bounds,
                                               final TreePath path, final int row, final boolean isExpanded, final boolean hasBeenExpanded,
                                               final boolean isLeaf )
@@ -1239,7 +1012,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
 
         // Don't paint the legs for the root node if the
         final int depth = path.getPathCount () - 1;
-        if ( ( depth == 0 || depth == 1 && !isRootVisible () ) && !getShowsRootHandles () )
+        if ( ( depth == 0 || ( depth == 1 && !isRootVisible () ) ) && !getShowsRootHandles () )
         {
             return;
         }
@@ -1316,7 +1089,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
             lineX = component.getWidth () - lineX - insets.right + ui.getRightChildIndent () - 1;
         }
         final int clipLeft = clipBounds.x;
-        final int clipRight = clipBounds.x + clipBounds.width - 1;
+        final int clipRight = clipBounds.x + ( clipBounds.width - 1 );
 
         if ( lineX >= clipLeft && lineX <= clipRight )
         {
@@ -1362,7 +1135,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
                 }
             }
 
-            final int bottom = Math.min ( lastChildBounds.y + lastChildBounds.height / 2, clipBottom );
+            final int bottom = Math.min ( lastChildBounds.y + ( lastChildBounds.height / 2 ), clipBottom );
 
             if ( top <= bottom )
             {
@@ -1468,7 +1241,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
     {
         // Painting only even coordinates helps join line segments so they appear as one line
         // This can be defeated by translating the Graphics2D by an odd amount
-        x1 += x1 % 2 + ( ltr ? 0 : -1 );
+        x1 += x1 % 2;
 
         // Painting dashed line
         for ( int x = x1; x <= x2; x += 2 )
@@ -1486,6 +1259,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
      * @param depth Depth of the row
      * @return amount to indent the given row.
      */
+    @SuppressWarnings ( "UnusedParameters" )
     protected int getRowX ( final int row, final int depth )
     {
         return totalChildIndent * ( depth + depthOffset );
@@ -1531,24 +1305,28 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
     /**
      * Paints drop location if it is available.
      *
-     * @param g2d graphics context
+     * @param g2d    graphics context
+     * @param bounds painting bounds
+     * @param c      painted component
+     * @param ui     painted component UI
      */
-    protected void paintDropLocation ( final Graphics2D g2d )
+    protected void paintDropLocation ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
     {
-        // Checking drop location availability
-        if ( dropLocationPainter != null )
+        if ( isDropLocationAvailable () )
         {
-            final JTree.DropLocation dropLocation = component.getDropLocation ();
-            if ( dropLocation != null && dropLocation.getPath () != null )
-            {
-                // Calculating drop location bounds
-                final Rectangle dropViewBounds = dropLocationPainter.getDropViewBounds ( dropLocation );
-
-                // Painting drop location view
-                dropLocationPainter.prepareToPaint ( dropLocation );
-                paintSection ( dropLocationPainter, g2d, dropViewBounds );
-            }
+            dropLocationPainter.prepareToPaint ( component.getDropLocation () );
+            dropLocationPainter.paint ( g2d, bounds, c, ui );
         }
+    }
+
+    /**
+     * Returns whether or not drop location is available.
+     *
+     * @return true if drop location is available, false otherwise
+     */
+    protected boolean isDropLocationAvailable ()
+    {
+        return dropLocationPainter != null && component.getDropLocation () != null;
     }
 
     /**
@@ -1560,21 +1338,18 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
     {
         if ( isSelectorAvailable () && selectionStart != null && selectionEnd != null )
         {
-            // Calculating selector bounds
-            final Rectangle rawBounds = GeometryUtils.getContainingRect ( selectionStart, selectionEnd );
-            final Rectangle bounds = rawBounds.intersection ( BoundsType.component.bounds ( component ) );
-            bounds.width -= 1;
-            bounds.height -= 1;
-
-            // Painting selector
-            paintSection ( selectorPainter, g2d, bounds );
+            final Rectangle sb = GeometryUtils.getContainingRect ( selectionStart, selectionEnd );
+            final Rectangle fsb = sb.intersection ( Bounds.component.of ( component ) );
+            fsb.width -= 1;
+            fsb.height -= 1;
+            selectorPainter.paint ( g2d, fsb, component, ui );
         }
     }
 
     /**
      * Returns whether selector is available for current tree or not.
      *
-     * @return {@code true} if selector is available for current tree, {@code false} otherwise
+     * @return true if selector is available for current tree, false otherwise
      */
     protected boolean isSelectorAvailable ()
     {
@@ -1591,7 +1366,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
      */
     protected Rectangle getPathBounds ( final TreePath path )
     {
-        if ( component != null && treeLayoutCache != null )
+        if ( component != null && treeState != null )
         {
             return getPathBounds ( path, component.getInsets (), new Rectangle () );
         }
@@ -1608,7 +1383,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
      */
     protected Rectangle getPathBounds ( final TreePath path, final Insets insets, Rectangle bounds )
     {
-        bounds = treeLayoutCache.getBounds ( path, bounds );
+        bounds = treeState.getBounds ( path, bounds );
         if ( bounds != null )
         {
             if ( ltr )
@@ -1627,7 +1402,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
     /**
      * Returns whether tree selection style points that the whole line is a single cell or not.
      *
-     * @return {@code true} if tree selection style points that the whole line is a single cell, {@code false} otherwise
+     * @return true if tree selection style points that the whole line is a single cell, false otherwise
      */
     protected boolean isFullLineSelection ()
     {
@@ -1637,7 +1412,7 @@ public class TreePainter<C extends JTree, U extends WTreeUI, D extends IDecorati
     /**
      * Returns whether tree nodes drag available or not.
      *
-     * @return {@code true} if tree nodes drag available, {@code false} otherwise
+     * @return true if tree nodes drag available, false otherwise
      */
     protected boolean isDragAvailable ()
     {

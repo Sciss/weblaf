@@ -21,8 +21,6 @@
 
 package com.alee.utils.text;
 
-import java.io.Serializable;
-
 /**
  * Simple lorem ipsum text generator.
  * Suitable for creating sample data for test cases and performance tests.
@@ -31,24 +29,16 @@ import java.io.Serializable;
  * @version 1.0
  */
 
-public class LoremIpsum implements Serializable
+public class LoremIpsum
 {
-    /**
-     * Complete lorem ipsum text.
-     */
+    @SuppressWarnings ( "SpellCheckingInspection" )
     public static final String LOREM_IPSUM = "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, " +
             "sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. " +
             "At vero eos et accusam et justo duo dolores et ea rebum. " +
             "Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.";
 
-    /**
-     * Separated lorem ipsum words.
-     */
     private final String[] loremIpsumWords;
 
-    /**
-     * Constructs new {@link LoremIpsum}.
-     */
     public LoremIpsum ()
     {
         this.loremIpsumWords = LOREM_IPSUM.split ( "\\s" );

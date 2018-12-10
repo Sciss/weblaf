@@ -17,11 +17,11 @@
 
 package com.alee.extended.window;
 
-import com.alee.api.jdk.Supplier;
-import com.alee.laf.rootpane.WebRootPaneUI;
-import com.alee.laf.window.WebDialog;
+import com.alee.laf.rootpane.WebDialog;
 import com.alee.managers.style.StyleId;
 import com.alee.painter.Painter;
+import com.alee.utils.EventUtils;
+import com.alee.utils.swing.DataProvider;
 
 import javax.swing.*;
 import javax.swing.event.EventListenerList;
@@ -32,12 +32,12 @@ import java.awt.*;
  * It may also act as a simple dialog with custom styling if configured so.
  *
  * @author Mikle Garin
- * @see WebDialog
+ * @see com.alee.laf.rootpane.WebDialog
  * @see PopOverPainter
  * @see com.alee.laf.menu.AbstractPopupPainter
- * @see PopOverSourcePoint
- * @see PopOverDirection
- * @see PopOverAlignment
+ * @see com.alee.extended.window.PopOverSourcePoint
+ * @see com.alee.extended.window.PopOverDirection
+ * @see com.alee.extended.window.PopOverAlignment
  */
 
 public class WebPopOver extends WebDialog implements PopOverEventMethods
@@ -54,7 +54,6 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
 
     /**
      * Whether WebPopOver should be movable or not.
-     * todo Rename to draggable
      */
     protected boolean movable = true;
 
@@ -255,29 +254,31 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
     /**
      * WebPopOver settings initialization.
      *
-     * @param owner owner window
-     * @param id    initial style ID
-     * @param title dialog title
+     * @param id initial style ID
      */
     @Override
-    protected void initialize ( final Window owner, final StyleId id, final String title )
+    protected void initialize ( final StyleId id )
     {
-        // Initializing base settings
-        super.initialize ( owner, id, title );
-
         // Properly undecorating dialog
-        // todo This should be removed along with proper popover styling
+        getRootPane ().putClientProperty ( POPOVER_INSTANCE, this );
         getRootPane ().setWindowDecorationStyle ( JRootPane.NONE );
         setUndecorated ( true );
         setWindowOpaque ( false );
-    }
 
-    @Override
-    protected JRootPane createRootPane ()
-    {
-        final JRootPane rootPane = super.createRootPane ();
-        rootPane.putClientProperty ( POPOVER_INSTANCE, this );
-        return rootPane;
+        // Initializing base settings
+        super.initialize ( id );
+
+        // Removing all listeners on window close event
+        final PopOverCloseListener closeListener = new PopOverCloseListener ()
+        {
+            @Override
+            public void popOverClosed ()
+            {
+                fireClosed ();
+            }
+        };
+        addComponentListener ( closeListener );
+        addWindowListener ( closeListener );
     }
 
     /**
@@ -321,6 +322,9 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
         // Displaying popover
         setVisible ( true );
 
+        // Performing post-open operations
+        postOpen ();
+
         return this;
     }
 
@@ -356,6 +360,9 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
 
         // Displaying popover
         setVisible ( true );
+
+        // Performing post-open operations
+        postOpen ();
 
         return this;
     }
@@ -502,10 +509,10 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
                              final PopOverAlignment alignment )
     {
         final Rectangle bounds = new Rectangle ( x, y, w, h );
-        return show ( invoker, new Supplier<Rectangle> ()
+        return show ( invoker, new DataProvider<Rectangle> ()
         {
             @Override
-            public Rectangle get ()
+            public Rectangle provide ()
             {
                 return bounds;
             }
@@ -518,12 +525,12 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
      * WebPopOver opened in this way will always auto-follow invoker's ancestor window.
      *
      * @param invoker        invoker component
-     * @param boundsSupplier source area supplier
+     * @param boundsProvider source area provider
      * @return displayed WebPopOver
      */
-    public WebPopOver show ( final Component invoker, final Supplier<Rectangle> boundsSupplier )
+    public WebPopOver show ( final Component invoker, final DataProvider<Rectangle> boundsProvider )
     {
-        return show ( invoker, boundsSupplier, PopOverDirection.down );
+        return show ( invoker, boundsProvider, PopOverDirection.down );
     }
 
     /**
@@ -532,13 +539,13 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
      * WebPopOver opened in this way will always auto-follow invoker's ancestor window.
      *
      * @param invoker        invoker component
-     * @param boundsSupplier source area supplier
+     * @param boundsProvider source area provider
      * @param direction      preferred display direction
      * @return displayed WebPopOver
      */
-    public WebPopOver show ( final Component invoker, final Supplier<Rectangle> boundsSupplier, final PopOverDirection direction )
+    public WebPopOver show ( final Component invoker, final DataProvider<Rectangle> boundsProvider, final PopOverDirection direction )
     {
-        return show ( invoker, boundsSupplier, direction, PopOverAlignment.centered );
+        return show ( invoker, boundsProvider, direction, PopOverAlignment.centered );
     }
 
     /**
@@ -547,16 +554,14 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
      * WebPopOver opened in this way will always auto-follow invoker's ancestor window.
      *
      * @param invoker        invoker component
-     * @param boundsSupplier source area provider
+     * @param boundsProvider source area provider
      * @param direction      preferred display direction
      * @param alignment      preferred display alignment
      * @return displayed WebPopOver
      */
-    public WebPopOver show ( final Component invoker, final Supplier<Rectangle> boundsSupplier, final PopOverDirection direction,
+    public WebPopOver show ( final Component invoker, final DataProvider<Rectangle> boundsProvider, final PopOverDirection direction,
                              final PopOverAlignment alignment )
     {
-        // todo Doesn't position properly for window-type invoker
-
         // Performing pre-open operations
         preOpen ();
 
@@ -564,11 +569,14 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
         final IPopOverPainter painter = getPainter ();
         if ( painter != null )
         {
-            painter.configure ( this, invoker, boundsSupplier, direction, alignment );
+            painter.configure ( this, invoker, boundsProvider, direction, alignment );
         }
 
         // Displaying popover
         setVisible ( true );
+
+        // Performing post-open operations
+        postOpen ();
 
         return this;
     }
@@ -580,8 +588,7 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
      */
     protected IPopOverPainter getPainter ()
     {
-        // todo Acquire painter properly
-        final Painter painter = ( ( WebRootPaneUI ) getUI () ).getPainter ();
+        final Painter painter = getWebUI ().getPainter ();
         return painter instanceof IPopOverPainter ? ( IPopOverPainter ) painter : null;
     }
 
@@ -599,6 +606,17 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
         {
             fireReopened ();
         }
+    }
+
+    /**
+     * Performs popover post-open operations.
+     */
+    protected void postOpen ()
+    {
+        // Fire opened event
+        // Note that if this pop-over is modal this event will be fired only after it is closed
+        // Unfortunately there is no good way to provide this event after dialog is opened but before it is closed in that case
+        fireOpened ();
     }
 
     /**
@@ -679,24 +697,24 @@ public class WebPopOver extends WebDialog implements PopOverEventMethods
     @Override
     public PopOverAdapter onOpen ( final PopOverEventRunnable runnable )
     {
-        return PopOverEventMethodsImpl.onOpen ( this, runnable );
+        return EventUtils.onOpen ( this, runnable );
     }
 
     @Override
     public PopOverAdapter onReopen ( final PopOverEventRunnable runnable )
     {
-        return PopOverEventMethodsImpl.onReopen ( this, runnable );
+        return EventUtils.onReopen ( this, runnable );
     }
 
     @Override
     public PopOverAdapter onDetach ( final PopOverEventRunnable runnable )
     {
-        return PopOverEventMethodsImpl.onDetach ( this, runnable );
+        return EventUtils.onDetach ( this, runnable );
     }
 
     @Override
     public PopOverAdapter onClose ( final PopOverEventRunnable runnable )
     {
-        return PopOverEventMethodsImpl.onClose ( this, runnable );
+        return EventUtils.onClose ( this, runnable );
     }
 }

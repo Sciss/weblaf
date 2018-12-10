@@ -18,24 +18,25 @@
 package com.alee.extended.checkbox;
 
 import com.alee.managers.style.*;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.api.jdk.Consumer;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
+import javax.swing.plaf.basic.BasicCheckBoxUI;
 import java.awt.*;
 
 /**
- * Custom UI for {@link WebTristateCheckBox} component.
+ * Custom UI for WebTristateCheckBox component.
  *
- * @param <C> component type
  * @author Mikle Garin
  * @author Alexandr Zernov
  */
-public class WebTristateCheckBoxUI<C extends WebTristateCheckBox> extends WTristateCheckBoxUI<C>
-        implements ShapeSupport, MarginSupport, PaddingSupport
+
+public class WebTristateCheckBoxUI extends BasicCheckBoxUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -44,77 +45,75 @@ public class WebTristateCheckBoxUI<C extends WebTristateCheckBox> extends WTrist
     protected ITristateCheckBoxPainter painter;
 
     /**
-     * Returns an instance of the {@link WebTristateCheckBoxUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Runtime variables.
+     */
+    protected JCheckBox checkBox = null;
+    protected Insets margin = null;
+    protected Insets padding = null;
+
+    /**
+     * Returns an instance of the WebTristateCheckBoxUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebTristateCheckBoxUI}
+     * @return instance of the WebTristateCheckBoxUI
      */
+    @SuppressWarnings ( "UnusedParameters" )
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebTristateCheckBoxUI ();
     }
 
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
-        // Installing UI
         super.installUI ( c );
 
+        // Saving checkbox to local variable
+        checkBox = ( JCheckBox ) c;
+
         // Applying skin
-        StyleManager.installSkin ( button );
+        StyleManager.installSkin ( checkBox );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
         // Uninstalling applied skin
-        StyleManager.uninstallSkin ( button );
+        StyleManager.uninstallSkin ( checkBox );
+
+        checkBox = null;
 
         // Uninstalling UI
         super.uninstallUI ( c );
     }
 
     @Override
-    public Shape getShape ()
+    public StyleId getStyleId ()
     {
-        return PainterSupport.getShape ( button, painter );
+        return StyleManager.getStyleId ( checkBox );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
+    public StyleId setStyleId ( final StyleId id )
     {
-        return PainterSupport.isShapeDetectionEnabled ( button, painter );
+        return StyleManager.setStyleId ( checkBox, id );
     }
 
     @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
+    public Shape provideShape ()
     {
-        PainterSupport.setShapeDetectionEnabled ( button, painter, enabled );
-    }
-
-    @Override
-    public Insets getMargin ()
-    {
-        return PainterSupport.getMargin ( button );
-    }
-
-    @Override
-    public void setMargin ( final Insets margin )
-    {
-        PainterSupport.setMargin ( button, margin );
-    }
-
-    @Override
-    public Insets getPadding ()
-    {
-        return PainterSupport.getPadding ( button );
-    }
-
-    @Override
-    public void setPadding ( final Insets padding )
-    {
-        PainterSupport.setPadding ( button, padding );
+        return PainterSupport.getShape ( checkBox, painter );
     }
 
     /**
@@ -124,7 +123,7 @@ public class WebTristateCheckBoxUI<C extends WebTristateCheckBox> extends WTrist
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -135,46 +134,14 @@ public class WebTristateCheckBoxUI<C extends WebTristateCheckBox> extends WTrist
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( button, new Consumer<ITristateCheckBoxPainter> ()
+        PainterSupport.setPainter ( checkBox, new DataRunnable<ITristateCheckBoxPainter> ()
         {
             @Override
-            public void accept ( final ITristateCheckBoxPainter newPainter )
+            public void run ( final ITristateCheckBoxPainter newPainter )
             {
                 WebTristateCheckBoxUI.this.painter = newPainter;
             }
         }, this.painter, painter, ITristateCheckBoxPainter.class, AdaptiveTristateCheckBoxPainter.class );
-    }
-
-    /**
-     * Returns icon bounds.
-     *
-     * @return icon bounds
-     */
-    public Rectangle getIconBounds ()
-    {
-        if ( painter != null )
-        {
-            return painter.getIconBounds ();
-        }
-        return null;
-    }
-
-    @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
-    {
-        return PainterSupport.contains ( c, this, painter, x, y );
-    }
-
-    @Override
-    public int getBaseline ( final JComponent c, final int width, final int height )
-    {
-        return PainterSupport.getBaseline ( c, this, painter, width, height );
-    }
-
-    @Override
-    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
-    {
-        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
     }
 
     @Override
@@ -182,13 +149,54 @@ public class WebTristateCheckBoxUI<C extends WebTristateCheckBox> extends WTrist
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
+    }
+
+    /**
+     * Returns icon bounds.
+     *
+     * @return icon bounds
+     */
+    public Rectangle getIconRect ()
+    {
+        if ( painter != null )
+        {
+            return painter.getIconRect ();
+        }
+
+        return null;
     }
 
     @Override
     public Dimension getPreferredSize ( final JComponent c )
     {
-        return PainterSupport.getPreferredSize ( c, painter );
+        return PainterSupport.getPreferredSize ( c, super.getPreferredSize ( c ), painter );
+    }
+
+    @Override
+    public Insets getMargin ()
+    {
+        return margin;
+    }
+
+    @Override
+    public void setMargin ( final Insets margin )
+    {
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
+    }
+
+    @Override
+    public Insets getPadding ()
+    {
+        return padding;
+    }
+
+    @Override
+    public void setPadding ( final Insets padding )
+    {
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 }

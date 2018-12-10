@@ -56,7 +56,13 @@ public class LanguageEditor extends WebPanel
         WebLookAndFeel.install ();
 
         final LanguageEditor languageEditor = new LanguageEditor ();
-        languageEditor.loadDictionary ( LanguageManager.getDictionaries () );
+
+        for ( final Dictionary d : LanguageManager.getDictionaries () )
+        {
+            languageEditor.loadDictionary ( d );
+        }
+        languageEditor.loadDictionary ( LanguageManager.loadDictionary ( LanguageManager.class, "resources/language.xml" ) );
+
         languageEditor.getDictionariesTree ().expandTillRecords ();
         languageEditor.getDictionariesTree ().setRootVisible ( false );
 

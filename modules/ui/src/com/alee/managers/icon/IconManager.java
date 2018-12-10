@@ -17,34 +17,29 @@
 
 package com.alee.managers.icon;
 
-import com.alee.extended.svg.*;
-import com.alee.managers.icon.data.AbstractIconData;
-import com.alee.managers.icon.data.ImageIconData;
-import com.alee.managers.icon.data.SetIcon;
-import com.alee.managers.icon.set.IconSet;
-import com.alee.managers.icon.set.IconSetData;
-import com.alee.utils.XmlUtils;
-
 import javax.swing.*;
 import java.lang.ref.WeakReference;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * This class manages customizable component {@link Icon}s.
- * All {@link Icon}s are provided through {@link IconSet} implementations that can be added and removed here.
+ * This class manages customizable component icons.
+ * It will eventually be in control of all icons used within WebLaF.
  *
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-IconManager">How to use IconManager</a>
  */
+
 public final class IconManager
 {
     /**
-     * Added icon sets.
+     * Icons information kept for lazy loading.
      */
-    private static List<IconSet> iconSets;
+    private static Map<String, IconInfo> lazyIcons;
 
     /**
-     * Global icons cache.
+     * Loaded icons cache.
+     * It uses weak reference to ensure that icons will be removed from memory if not used any longer.
+     * This cache is useful to avoid loading the same icon multiple times.
      */
     private static Map<String, WeakReference<Icon>> cache;
 
@@ -62,172 +57,81 @@ public final class IconManager
         {
             initialized = true;
 
-            // Added icon sets
-            iconSets = new ArrayList<IconSet> ( 2 );
-
-            // Simple icons cache
-            cache = new HashMap<String, WeakReference<Icon>> ( 60 );
-
-            // Base XStream aliases
-            XmlUtils.processAnnotations ( SetIcon.class );
-            XmlUtils.processAnnotations ( IconSetData.class );
-            XmlUtils.processAnnotations ( AbstractIconData.class );
-
-            // ImageIcon aliases
-            XmlUtils.processAnnotations ( ImageIconData.class );
-
-            // SvgIcon aliases
-            XmlUtils.processAnnotations ( SvgIconData.class );
-            XmlUtils.processAnnotations ( SvgStroke.class );
-            XmlUtils.processAnnotations ( SvgFill.class );
-            XmlUtils.processAnnotations ( SvgTransform.class );
-            XmlUtils.processAnnotations ( SvgGrayscale.class );
+            // Initializing lazy icons map and cache
+            lazyIcons = new HashMap<String, IconInfo> ( 100 );
+            cache = new HashMap<String, WeakReference<Icon>> ( 30 );
         }
     }
 
     /**
-     * Returns icon set with the specified identifier.
+     * Registers lazy icon information.
      *
-     * @param id icon set identifier
-     * @return icon set with the specified identifier
+     * @param icon lazy icon information
      */
-    public static IconSet getIconSet ( final String id )
+    public static void add ( final IconInfo icon )
     {
-        for ( final IconSet iconSet : iconSets )
+        // Saving lazy icon information
+        lazyIcons.put ( icon.getId (), icon );
+
+        // Clearing icon cache
+        cache.remove ( icon.getId () );
+    }
+
+    /**
+     * Returns icon for the specified ID.
+     *
+     * @param id unique icon ID
+     * @return icon for the specified ID
+     */
+    public static Icon get ( final String id )
+    {
+        // Checking cache first
+        final WeakReference<Icon> reference = cache.get ( id );
+        if ( reference != null )
         {
-            if ( iconSet.getId ().equals ( id ) )
-            {
-                return iconSet;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Adds new icon set.
-     *
-     * @param iconSet icon set to add
-     */
-    public static void addIconSet ( final IconSet iconSet )
-    {
-        // Removing existing set with the same identifier
-        removeIconSet ( iconSet.getId () );
-
-        // Adding new set
-        iconSets.add ( iconSet );
-    }
-
-    /**
-     * Removes icon set.
-     *
-     * @param id icon set identifier
-     */
-    public static void removeIconSet ( final String id )
-    {
-        final IconSet iconSet = getIconSet ( id );
-        if ( iconSet != null )
-        {
-            // Removing icon set
-            iconSets.remove ( iconSet );
-
-            // Clearing its cache
-            clearIconSetCache ( iconSet );
-        }
-    }
-
-    /**
-     * Removes icon set.
-     *
-     * @param iconSet icon set to remove
-     */
-    public static void removeIconSet ( final IconSet iconSet )
-    {
-        removeIconSet ( iconSet.getId () );
-    }
-
-    /**
-     * Clears global cache for the specified icon set.
-     *
-     * @param iconSet icon set to clear global cache for
-     */
-    private static void clearIconSetCache ( final IconSet iconSet )
-    {
-        for ( final String id : iconSet.getIds () )
-        {
-            cache.remove ( id );
-        }
-    }
-
-    /**
-     * Returns whether or not icon for the specified identifier exists.
-     *
-     * @param id icon identifier
-     * @return icon for the specified identifier
-     */
-    public static boolean hasIcon ( final String id )
-    {
-        return getIconImpl ( id ) != null;
-    }
-
-    /**
-     * Returns {@link Icon} for the specified identifier.
-     *
-     * @param id  {@link Icon} identifier
-     * @param <I> {@link Icon} type
-     * @return {@link Icon} for the specified identifier
-     * @throws IconException if {@link Icon} cannot be found for the specified identifier
-     */
-    public static <I extends Icon> I getIcon ( final String id )
-    {
-        if ( iconSets.size () > 0 )
-        {
-            // Looking for an icon
-            final I icon = getIconImpl ( id );
+            // Checking referenced icon existance
+            final Icon icon = reference.get ();
             if ( icon != null )
             {
-                // Returning icon we found
+                // Returning cached icon
                 return icon;
+            }
+        }
+
+        // Loading lazy icon
+        final IconInfo iconInfo = lazyIcons.get ( id );
+        if ( iconInfo != null )
+        {
+            final Icon icon;
+
+            // Retrieving icon
+            final Class<? extends Icon> type = iconInfo.getType ();
+            if ( type == ImageIcon.class )
+            {
+                // Loading common ImageIcon
+                if ( iconInfo.getNearClass () != null )
+                {
+                    icon = new ImageIcon ( iconInfo.getNearClass ().getResource ( iconInfo.getPath () ) );
+                }
+                else
+                {
+                    icon = new ImageIcon ( iconInfo.getPath () );
+                }
             }
             else
             {
-                // No icon found
-                final String msg = "Could not find Icon for identifier: %s";
-                throw new IconException ( String.format ( msg, id ) );
+                throw new IconException ( "Unknown icon class type: " + type );
             }
-        }
-        else
-        {
-            // No icon sets added at all
-            final String msg = "There are no icon sets added";
-            throw new IconException ( msg );
-        }
-    }
 
-    /**
-     * Returns icon for the specified identifier.
-     *
-     * @param id icon identifier
-     * @return icon for the specified identifier
-     */
-    private static <I extends Icon> I getIconImpl ( final String id )
-    {
-        // Checking cached icon
-        final WeakReference<Icon> reference = cache.get ( id );
-        I icon = reference != null ? ( I ) reference.get () : null;
-        if ( icon == null )
-        {
-            // Checking icon sets from the end
-            final ListIterator<IconSet> iter = iconSets.listIterator ( iconSets.size () );
-            while ( iter.hasPrevious () )
-            {
-                // Stop looking for an icon as soon as we found one with the specified identifier
-                icon = ( I ) iter.previous ().getIcon ( id );
-                if ( icon != null )
-                {
-                    break;
-                }
-            }
+            // Caching icon
+            cache.put ( id, new WeakReference<Icon> ( icon ) );
+
+            // Returning icon
+            return icon;
         }
-        return icon;
+
+        // Icon is not provided for the specified ID
+        // This is pretty dire in most cases so we will throw an exception
+        throw new IconException ( "Icon is not provided for ID: " + id );
     }
 }

@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.data;
 
-import com.alee.demo.api.example.AbstractExampleGroup;
+import com.alee.demo.api.AbstractExampleGroup;
 import com.alee.demo.content.data.grid.GridsGroup;
 import com.alee.demo.content.data.list.ListsGroup;
 import com.alee.demo.content.data.tree.TreesGroup;
@@ -40,10 +40,6 @@ public class DataGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleGroupClasses ()
     {
-        return CollectionUtils.<Class>asList (
-                ListsGroup.class,
-                GridsGroup.class,
-                TreesGroup.class
-        );
+        return CollectionUtils.<Class>asList ( ListsGroup.class, GridsGroup.class, TreesGroup.class );
     }
 }

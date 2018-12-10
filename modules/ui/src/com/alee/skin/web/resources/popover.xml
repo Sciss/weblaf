@@ -1,11 +1,10 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.extended.window.WebPopOver -->
 
     <!-- Popover -->
     <style type="rootpane" id="popover">
-        <painter class="PopOverPainter">
-            <background>white</background>
+        <painter class="com.alee.extended.window.PopOverPainter">
             <borderColor>128,128,128,128</borderColor>
             <round>4</round>
             <shadeWidth>20</shadeWidth>

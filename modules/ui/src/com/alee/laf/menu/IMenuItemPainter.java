@@ -3,16 +3,13 @@ package com.alee.laf.menu;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JToolBar} component painters.
+ * Base interface for JToolBar component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IMenuItemPainter<C extends JMenuItem, U extends WebMenuItemUI> extends IAbstractMenuItemPainter<C, U>
+public interface IMenuItemPainter<E extends JMenuItem, U extends WebMenuItemUI> extends IAbstractMenuItemPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

@@ -18,41 +18,32 @@
 package com.alee.extended.panel;
 
 /**
- * Adapter for {@link CollapsiblePaneListener}.
- *
  * @author Mikle Garin
  */
+
 public abstract class CollapsiblePaneAdapter implements CollapsiblePaneListener
 {
     @Override
-    public void expanding ( final WebCollapsiblePane collapsiblePane )
+    public void expanding ( final WebCollapsiblePane pane )
     {
-        /**
-         * Do nothing by default.
-         */
+        //
     }
 
     @Override
-    public void expanded ( final WebCollapsiblePane collapsiblePane )
+    public void expanded ( final WebCollapsiblePane pane )
     {
-        /**
-         * Do nothing by default.
-         */
+        //
     }
 
     @Override
-    public void collapsing ( final WebCollapsiblePane collapsiblePane )
+    public void collapsing ( final WebCollapsiblePane pane )
     {
-        /**
-         * Do nothing by default.
-         */
+        //
     }
 
     @Override
-    public void collapsed ( final WebCollapsiblePane collapsiblePane )
+    public void collapsed ( final WebCollapsiblePane pane )
     {
-        /**
-         * Do nothing by default.
-         */
+        //
     }
 }

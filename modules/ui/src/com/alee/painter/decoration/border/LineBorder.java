@@ -20,7 +20,6 @@ package com.alee.painter.decoration.border;
 import com.alee.painter.decoration.IDecoration;
 import com.alee.utils.GraphicsUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
-import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
 import javax.swing.*;
 import java.awt.*;
@@ -28,61 +27,20 @@ import java.awt.*;
 /**
  * Simple line border implementation.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <D> decoration type
  * @param <I> border type
  * @author Mikle Garin
  */
+
 @XStreamAlias ( "LineBorder" )
-public class LineBorder<C extends JComponent, D extends IDecoration<C, D>, I extends LineBorder<C, D, I>> extends AbstractBorder<C, D, I>
+public class LineBorder<E extends JComponent, D extends IDecoration<E, D>, I extends LineBorder<E, D, I>> extends AbstractBorder<E, D, I>
 {
-    /**
-     * Border stroke.
-     */
-    @XStreamAsAttribute
-    protected Stroke stroke;
-
-    /**
-     * Border color.
-     */
-    @XStreamAsAttribute
-    protected Color color;
-
-    /**
-     * Returns {@link Stroke} used for this border.
-     *
-     * @return {@link Stroke} used for this border
-     */
-    public Stroke getStroke ()
-    {
-        return stroke;
-    }
-
-    /**
-     * Returns {@link Color} used for this border.
-     *
-     * @return {@link Color} used for this border
-     */
-    public Color getColor ()
-    {
-        return color != null ? color : new Color ( 210, 210, 210 );
-    }
-
     @Override
-    public BorderWidth getWidth ()
-    {
-        final float t = getOpacity ();
-        final Stroke s = getStroke ();
-        final float w = t > 0 ? s != null && s instanceof BasicStroke ? ( ( BasicStroke ) s ).getLineWidth () : 1 : 0;
-        final int bw = Math.round ( w );
-        return new BorderWidth ( bw, bw, bw, bw );
-    }
-
-    @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final C c, final D d, final Shape shape )
+    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final D d, final Shape shape )
     {
         final float opacity = getOpacity ();
-        if ( opacity > 0 && !getWidth ().isEmpty () )
+        if ( opacity > 0 && getWidth () > 0 )
         {
             final Stroke stroke = getStroke ();
             final Color color = getColor ();

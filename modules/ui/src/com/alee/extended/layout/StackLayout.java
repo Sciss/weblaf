@@ -72,11 +72,11 @@ public class StackLayout extends AbstractLayoutManager
     }
 
     @Override
-    public Dimension preferredLayoutSize ( final Container container )
+    public Dimension preferredLayoutSize ( final Container parent )
     {
-        final Insets insets = container.getInsets ();
+        final Insets insets = parent.getInsets ();
         final Dimension ps = new Dimension ( 0, 0 );
-        for ( final Component component : container.getComponents () )
+        for ( final Component component : parent.getComponents () )
         {
             if ( constraints.get ( component ) == null || !constraints.get ( component ).equals ( HIDDEN ) )
             {
@@ -89,15 +89,15 @@ public class StackLayout extends AbstractLayoutManager
     }
 
     @Override
-    public void layoutContainer ( final Container container )
+    public void layoutContainer ( final Container parent )
     {
-        final Insets insets = container.getInsets ();
-        for ( final Component component : container.getComponents () )
+        final Insets insets = parent.getInsets ();
+        for ( final Component component : parent.getComponents () )
         {
             if ( constraints.get ( component ) == null || !constraints.get ( component ).equals ( HIDDEN ) )
             {
-                component.setBounds ( insets.left, insets.top, container.getWidth () - insets.left - insets.right,
-                        container.getHeight () - insets.top - insets.bottom );
+                component.setBounds ( insets.left, insets.top, parent.getWidth () - insets.left - insets.right,
+                        parent.getHeight () - insets.top - insets.bottom );
             }
         }
     }

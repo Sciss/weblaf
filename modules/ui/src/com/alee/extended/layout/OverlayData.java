@@ -17,7 +17,7 @@
 
 package com.alee.extended.layout;
 
-import com.alee.api.jdk.Supplier;
+import com.alee.utils.swing.DataProvider;
 
 import java.awt.*;
 
@@ -30,7 +30,7 @@ public class OverlayData
     private OverlayLocation location;
     private int halign;
     private int valign;
-    private Supplier<Rectangle> boundsSupplier;
+    private DataProvider<Rectangle> rectangleProvider;
 
     public OverlayData ()
     {
@@ -46,21 +46,21 @@ public class OverlayData
         this.valign = valign;
     }
 
-    public OverlayData ( final Supplier<Rectangle> boundsSupplier )
+    public OverlayData ( final DataProvider<Rectangle> rectangleProvider )
     {
         super ();
         this.location = OverlayLocation.custom;
-        this.boundsSupplier = boundsSupplier;
+        this.rectangleProvider = rectangleProvider;
     }
 
     public OverlayData ( final OverlayLocation location, final int halign, final int valign,
-                         final Supplier<Rectangle> boundsSupplier )
+                         final DataProvider<Rectangle> rectangleProvider )
     {
         super ();
         this.location = location;
         this.halign = halign;
         this.valign = valign;
-        this.boundsSupplier = boundsSupplier;
+        this.rectangleProvider = rectangleProvider;
     }
 
     public OverlayLocation getLocation ()
@@ -93,13 +93,13 @@ public class OverlayData
         this.valign = valign;
     }
 
-    public Supplier<Rectangle> getBoundsSupplier ()
+    public DataProvider<Rectangle> getRectangleProvider ()
     {
-        return boundsSupplier;
+        return rectangleProvider;
     }
 
-    public void setBoundsSupplier ( final Supplier<Rectangle> boundsSupplier )
+    public void setRectangleProvider ( final DataProvider<Rectangle> rectangleProvider )
     {
-        this.boundsSupplier = boundsSupplier;
+        this.rectangleProvider = rectangleProvider;
     }
 }

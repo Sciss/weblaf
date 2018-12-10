@@ -17,30 +17,31 @@
 
 package com.alee.extended.panel;
 
-import com.alee.api.data.BoxOrientation;
-import com.alee.api.jdk.Supplier;
+import com.alee.extended.icon.OrientedIcon;
+import com.alee.global.StyleConstants;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.managers.hotkey.Hotkey;
-import com.alee.managers.icon.Icons;
+import com.alee.managers.language.LanguageManager;
 import com.alee.managers.language.LanguageMethods;
-import com.alee.managers.language.UILanguageManager;
 import com.alee.managers.language.updaters.LanguageUpdater;
-import com.alee.managers.settings.Configuration;
+import com.alee.managers.settings.DefaultValue;
+import com.alee.managers.settings.SettingsManager;
 import com.alee.managers.settings.SettingsMethods;
 import com.alee.managers.settings.SettingsProcessor;
-import com.alee.managers.settings.UISettingsManager;
-import com.alee.managers.style.BoundsType;
 import com.alee.managers.style.ChildStyleId;
+import com.alee.managers.style.ShapeProvider;
 import com.alee.managers.style.StyleId;
 import com.alee.painter.decoration.DecorationState;
 import com.alee.painter.decoration.DecorationUtils;
 import com.alee.painter.decoration.Stateful;
+import com.alee.managers.style.Bounds;
+import com.alee.painter.decoration.states.BoxOrientation;
 import com.alee.utils.CollectionUtils;
 import com.alee.utils.ImageUtils;
-import com.alee.utils.SwingUtils;
+import com.alee.utils.swing.DataProvider;
 import com.alee.utils.swing.WebTimer;
 
 import javax.swing.*;
@@ -57,7 +58,8 @@ import java.util.List;
  *
  * @author Mikle Garin
  */
-public class WebCollapsiblePane extends WebPanel implements SwingConstants, LanguageMethods, SettingsMethods
+
+public class WebCollapsiblePane extends WebPanel implements SwingConstants, ShapeProvider, LanguageMethods, SettingsMethods
 {
     /**
      * todo 1. Create CollapsiblePaneUI and its implementation
@@ -65,9 +67,29 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
      */
 
     /**
+     * Collapsed state icon.
+     */
+    public static ImageIcon EXPAND_ICON = new ImageIcon ( WebCollapsiblePane.class.getResource ( "icons/arrow.png" ) );
+
+    /**
+     * Expanded state icon.
+     */
+    public static ImageIcon COLLAPSE_ICON = ImageUtils.rotateImage180 ( EXPAND_ICON );
+
+    /**
      * Whether animate transition between states or not.
      */
     protected Boolean animate;
+
+    /**
+     * Collapsed state icon.
+     */
+    protected ImageIcon expandIcon;
+
+    /**
+     * Expanded state icon.
+     */
+    protected ImageIcon collapseIcon;
 
     /**
      * Whether rotate state icon according to title pane position or not.
@@ -95,9 +117,29 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
     protected List<CollapsiblePaneListener> listeners = new ArrayList<CollapsiblePaneListener> ( 1 );
 
     /**
+     * Cached collapsed state icon.
+     */
+    protected ImageIcon cachedExpandIcon = null;
+
+    /**
+     * Cached disabled collapsed state icon.
+     */
+    protected ImageIcon cachedDisabledExpandIcon = null;
+
+    /**
+     * Cached expanded state icon.
+     */
+    protected ImageIcon cachedCollapseIcon = null;
+
+    /**
+     * Cached disabled expanded state icon.
+     */
+    protected ImageIcon cachedDisabledCollapseIcon = null;
+
+    /**
      * Handler that dynamically enable and disable collapsible pane state changes by providing according boolean value.
      */
-    protected Supplier<Boolean> stateChangeHandler = null;
+    protected DataProvider<Boolean> stateChangeHandler = null;
 
     /**
      * Whether collapsible pane is expanded or not.
@@ -281,11 +323,6 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
     {
         super ( id, new BorderLayout ( 0, 0 ) );
 
-        this.animate = true;
-        this.rotateStateIcon = true;
-        this.showStateIcon = true;
-        this.stateIconPosition = RIGHT;
-        this.titlePanePosition = TOP;
         this.content = content;
 
         // todo Handle enable/disable
@@ -299,8 +336,7 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
             @Override
             public void mouseReleased ( final MouseEvent e )
             {
-                if ( SwingUtilities.isLeftMouseButton ( e ) &&
-                        BoundsType.margin.bounds ( WebCollapsiblePane.this ).contains ( e.getPoint () ) )
+                if ( SwingUtilities.isLeftMouseButton ( e ) && Bounds.margin.of ( WebCollapsiblePane.this ).contains ( e.getPoint () ) )
                 {
                     invertExpandState ();
                     takeFocus ();
@@ -322,7 +358,7 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
 
         updateDefaultTitleComponent ( icon, title );
 
-        expandButton = new WebButton ( StyleId.collapsiblepaneExpandButton.at ( this ), getExpandIcon () );
+        expandButton = new WebButton ( StyleId.collapsiblepaneExpandButton.at ( this ), getCollapseIcon () );
         expandButton.addActionListener ( new ActionListener ()
         {
             @Override
@@ -518,7 +554,7 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
             default:
                 throw new IllegalArgumentException ( "Unknown title pane position specified" );
         }
-        return new WebLabel ( id.at ( this ), title, icon );
+        return new WebLabel ( id.at ( this ), title, icon, WebLabel.LEADING );
     }
 
     /**
@@ -526,7 +562,7 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
      *
      * @return state change handler
      */
-    public Supplier<Boolean> getStateChangeHandler ()
+    public DataProvider<Boolean> getStateChangeHandler ()
     {
         return stateChangeHandler;
     }
@@ -536,7 +572,7 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
      *
      * @param stateChangeHandler new state change handler
      */
-    public void setStateChangeHandler ( final Supplier<Boolean> stateChangeHandler )
+    public void setStateChangeHandler ( final DataProvider<Boolean> stateChangeHandler )
     {
         this.stateChangeHandler = stateChangeHandler;
     }
@@ -548,7 +584,7 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
      */
     public boolean isStateChangeEnabled ()
     {
-        return stateChangeHandler == null || stateChangeHandler.get ();
+        return stateChangeHandler == null || stateChangeHandler.provide ();
     }
 
     /**
@@ -663,7 +699,7 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
 
         if ( animate && isShowing () )
         {
-            animator = new WebTimer ( "WebCollapsiblePane.collapseTimer", SwingUtils.frameRateDelay ( 48 ), new ActionListener ()
+            animator = new WebTimer ( "WebCollapsiblePane.collapseTimer", StyleConstants.fps48, new ActionListener ()
             {
                 @Override
                 public void actionPerformed ( final ActionEvent e )
@@ -762,7 +798,7 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
 
         if ( animate && isShowing () )
         {
-            animator = new WebTimer ( "WebCollapsiblePane.expandTimer", SwingUtils.frameRateDelay ( 48 ), new ActionListener ()
+            animator = new WebTimer ( "WebCollapsiblePane.expandTimer", StyleConstants.fps48, new ActionListener ()
             {
                 @Override
                 public void actionPerformed ( final ActionEvent e )
@@ -918,6 +954,50 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
     }
 
     /**
+     * Returns expanded state icon.
+     *
+     * @return expanded state icon
+     */
+    public ImageIcon getCollapseIcon ()
+    {
+        return collapseIcon != null ? collapseIcon : COLLAPSE_ICON;
+    }
+
+    /**
+     * Sets expanded state icon.
+     *
+     * @param collapseIcon new expanded state icon
+     */
+    public void setCollapseIcon ( final ImageIcon collapseIcon )
+    {
+        this.collapseIcon = collapseIcon;
+        clearCachedCollapseIcons ();
+        setStateIcons ();
+    }
+
+    /**
+     * Returns collapsed state icon.
+     *
+     * @return collapsed state icon
+     */
+    public ImageIcon getExpandIcon ()
+    {
+        return expandIcon != null ? expandIcon : EXPAND_ICON;
+    }
+
+    /**
+     * Sets collapsed state icon.
+     *
+     * @param expandIcon new collapsed state icon
+     */
+    public void setExpandIcon ( final ImageIcon expandIcon )
+    {
+        this.expandIcon = expandIcon;
+        clearCachedExpandIcons ();
+        setStateIcons ();
+    }
+
+    /**
      * Returns whether rotate state icon according to title pane position or not.
      *
      * @return true if stat icon must be rotated according to title pane position, false otherwise
@@ -985,6 +1065,8 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
      */
     protected void updateStateIcons ()
     {
+        clearCachedCollapseIcons ();
+        clearCachedExpandIcons ();
         setStateIcons ();
     }
 
@@ -995,58 +1077,116 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
     {
         if ( expandButton != null )
         {
-            final Icon expandIcon = getExpandIcon ();
-            expandButton.setIcon ( expandIcon );
-            expandButton.setDisabledIcon ( ImageUtils.createDisabledCopy ( ImageUtils.getImageIcon ( expandIcon ) ) );
+            if ( expanded )
+            {
+                expandButton.setIcon ( getCachedCollapseIcon () );
+                expandButton.setDisabledIcon ( getCachedDisabledCollapseIcon () );
+            }
+            else
+            {
+                expandButton.setIcon ( getCachedExpandIcon () );
+                expandButton.setDisabledIcon ( getCachedDisabledExpandIcon () );
+            }
         }
     }
 
     /**
-     * Returns expand {@link Icon}.
-     *
-     * @return expand {@link Icon}
+     * Clears cached expanded state icons.
      */
-    protected Icon getExpandIcon ()
+    protected void clearCachedCollapseIcons ()
     {
-        if ( rotateStateIcon )
+        cachedCollapseIcon = null;
+        cachedDisabledCollapseIcon = null;
+    }
+
+    /**
+     * Returns cached expanded state icon.
+     *
+     * @return cached expanded state icon
+     */
+    protected ImageIcon getCachedCollapseIcon ()
+    {
+        if ( cachedCollapseIcon == null )
         {
-            if ( titlePanePosition == TOP )
+            // todo Proper icon for RTL
+            // boolean ltr = getComponentOrientation ().isLeftToRight ();
+            if ( !rotateStateIcon || titlePanePosition == TOP || titlePanePosition == BOTTOM )
             {
-                return expanded ? Icons.upSmall : Icons.downSmall;
-            }
-            else if ( titlePanePosition == BOTTOM )
-            {
-                return expanded ? Icons.downSmall : Icons.upSmall;
+                cachedCollapseIcon = new OrientedIcon ( getCollapseIcon () );
             }
             else if ( titlePanePosition == LEFT )
             {
-                return expanded ? Icons.leftSmall : Icons.rightSmall;
+                cachedCollapseIcon = ImageUtils.rotateImage90CCW ( getCollapseIcon () );
             }
             else if ( titlePanePosition == RIGHT )
             {
-                return expanded ? Icons.rightSmall : Icons.leftSmall;
+                cachedCollapseIcon = ImageUtils.rotateImage90CW ( getCollapseIcon () );
             }
         }
-        else
+        return cachedCollapseIcon;
+    }
+
+    /**
+     * Returns cached disabled expanded state icon.
+     *
+     * @return cached disabled expanded state icon
+     */
+    protected ImageIcon getCachedDisabledCollapseIcon ()
+    {
+        if ( cachedDisabledCollapseIcon == null )
         {
-            if ( titlePanePosition == TOP )
+            cachedDisabledCollapseIcon = ImageUtils.createDisabledCopy ( getCachedCollapseIcon () );
+        }
+        return cachedDisabledCollapseIcon;
+    }
+
+    /**
+     * Clears cached collapsed state icons.
+     */
+    protected void clearCachedExpandIcons ()
+    {
+        cachedExpandIcon = null;
+        cachedDisabledExpandIcon = null;
+    }
+
+    /**
+     * Returns cached collapsed state icon.
+     *
+     * @return cached collapsed state icon
+     */
+    protected ImageIcon getCachedExpandIcon ()
+    {
+        if ( cachedExpandIcon == null )
+        {
+            final boolean ltr = getComponentOrientation ().isLeftToRight ();
+            if ( !rotateStateIcon || titlePanePosition == TOP || titlePanePosition == BOTTOM )
             {
-                return Icons.upSmall;
+                cachedExpandIcon = getExpandIcon ();
             }
-            else if ( titlePanePosition == BOTTOM )
+            else if ( ltr ? titlePanePosition == LEFT : titlePanePosition == RIGHT )
             {
-                return Icons.downSmall;
+                cachedExpandIcon = ImageUtils.rotateImage90CCW ( getExpandIcon () );
             }
-            else if ( titlePanePosition == LEFT )
+            else if ( ltr ? titlePanePosition == RIGHT : titlePanePosition == LEFT )
             {
-                return Icons.leftSmall;
-            }
-            else if ( titlePanePosition == RIGHT )
-            {
-                return expanded ? Icons.rightSmall : Icons.leftSmall;
+                cachedExpandIcon = ImageUtils.rotateImage90CW ( getExpandIcon () );
             }
         }
-        return Icons.downSmall;
+        return cachedExpandIcon;
+    }
+
+    /**
+     * Returns cached disabled collapsed state icon.
+     *
+     * @return cached disabled collapsed state icon
+     */
+    protected ImageIcon getCachedDisabledExpandIcon ()
+    {
+        if ( cachedDisabledExpandIcon == null )
+        {
+            cachedDisabledExpandIcon = ImageUtils.createDisabledCopy ( getCachedExpandIcon () );
+        }
+        return cachedDisabledExpandIcon;
     }
 
     /**
@@ -1121,7 +1261,7 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
         }
 
         this.content = content;
-        content.setVisible ( expanded || transitionProgress > 0f );
+        content.setVisible ( transitionProgress > 0f );
 
         contentPanel.add ( content, BorderLayout.CENTER );
         revalidate ();
@@ -1249,88 +1389,139 @@ public class WebCollapsiblePane extends WebPanel implements SwingConstants, Lang
     }
 
     @Override
-    public void setEnabled ( final boolean enabled )
-    {
-        super.setEnabled ( enabled );
-        expandButton.setEnabled ( enabled );
-    }
-
-    @Override
-    public String getLanguage ()
-    {
-        return UILanguageManager.getComponentKey ( this );
-    }
-
-    @Override
     public void setLanguage ( final String key, final Object... data )
     {
-        UILanguageManager.registerComponent ( this, key, data );
+        LanguageManager.registerComponent ( this, key, data );
     }
 
     @Override
     public void updateLanguage ( final Object... data )
     {
-        UILanguageManager.updateComponent ( this, data );
+        LanguageManager.updateComponent ( this, data );
     }
 
     @Override
     public void updateLanguage ( final String key, final Object... data )
     {
-        UILanguageManager.updateComponent ( this, key, data );
+        LanguageManager.updateComponent ( this, key, data );
     }
 
     @Override
     public void removeLanguage ()
     {
-        UILanguageManager.unregisterComponent ( this );
+        LanguageManager.unregisterComponent ( this );
     }
 
     @Override
     public boolean isLanguageSet ()
     {
-        return UILanguageManager.isRegisteredComponent ( this );
+        return LanguageManager.isRegisteredComponent ( this );
     }
 
     @Override
     public void setLanguageUpdater ( final LanguageUpdater updater )
     {
-        UILanguageManager.registerLanguageUpdater ( this, updater );
+        LanguageManager.registerLanguageUpdater ( this, updater );
     }
 
     @Override
     public void removeLanguageUpdater ()
     {
-        UILanguageManager.unregisterLanguageUpdater ( this );
+        LanguageManager.unregisterLanguageUpdater ( this );
     }
 
     @Override
-    public void registerSettings ( final Configuration configuration )
+    public void registerSettings ( final String key )
     {
-        UISettingsManager.registerComponent ( this, configuration );
+        SettingsManager.registerComponent ( this, key );
     }
 
     @Override
-    public void registerSettings ( final SettingsProcessor processor )
+    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass )
     {
-        UISettingsManager.registerComponent ( this, processor );
+        SettingsManager.registerComponent ( this, key, defaultValueClass );
+    }
+
+    @Override
+    public void registerSettings ( final String key, final Object defaultValue )
+    {
+        SettingsManager.registerComponent ( this, key, defaultValue );
+    }
+
+    @Override
+    public void registerSettings ( final String group, final String key )
+    {
+        SettingsManager.registerComponent ( this, group, key );
+    }
+
+    @Override
+    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValueClass );
+    }
+
+    @Override
+    public void registerSettings ( final String group, final String key, final Object defaultValue )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValue );
+    }
+
+    @Override
+    public void registerSettings ( final String key, final boolean loadInitialSettings, final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, key, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass,
+                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final String key, final Object defaultValue, final boolean loadInitialSettings,
+                                   final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, key, defaultValue, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass,
+                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final String group, final String key, final Object defaultValue, final boolean loadInitialSettings,
+                                   final boolean applySettingsChanges )
+    {
+        SettingsManager.registerComponent ( this, group, key, defaultValue, loadInitialSettings, applySettingsChanges );
+    }
+
+    @Override
+    public void registerSettings ( final SettingsProcessor settingsProcessor )
+    {
+        SettingsManager.registerComponent ( this, settingsProcessor );
     }
 
     @Override
     public void unregisterSettings ()
     {
-        UISettingsManager.unregisterComponent ( this );
+        SettingsManager.unregisterComponent ( this );
     }
 
     @Override
     public void loadSettings ()
     {
-        UISettingsManager.loadSettings ( this );
+        SettingsManager.loadComponentSettings ( this );
     }
 
     @Override
     public void saveSettings ()
     {
-        UISettingsManager.saveSettings ( this );
+        SettingsManager.saveComponentSettings ( this );
     }
 
     /**

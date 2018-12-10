@@ -17,11 +17,12 @@
 
 package com.alee.extended.list;
 
+import com.alee.global.GlobalConstants;
 import com.alee.laf.list.WebList;
 import com.alee.laf.list.editor.ListCellEditor;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.FileUtils;
-import com.alee.utils.filefilter.NonHiddenFilter;
+import com.alee.utils.file.FileThumbnailProvider;
 
 import javax.swing.*;
 import java.awt.*;
@@ -67,7 +68,7 @@ public class WebFileList extends WebList
     /**
      * File filter.
      */
-    protected FileFilter fileFilter = new NonHiddenFilter ();
+    protected FileFilter fileFilter = GlobalConstants.NON_HIDDEN_ONLY_FILTER;
 
     /**
      * Custom thumbnail provider.
@@ -258,7 +259,6 @@ public class WebFileList extends WebList
     public void setPreferredColumnCount ( final int preferredColumnCount )
     {
         this.preferredColumnCount = preferredColumnCount;
-        getUI ().updateListLayout ();
     }
 
     /**
@@ -279,7 +279,6 @@ public class WebFileList extends WebList
     public void setPreferredRowCount ( final int preferredRowCount )
     {
         this.preferredRowCount = preferredRowCount;
-        getUI ().updateListLayout ();
     }
 
     /**
@@ -587,7 +586,7 @@ public class WebFileList extends WebList
      */
     protected Dimension getPrototypeCellSize ()
     {
-        final ListCellRenderer renderer = getCellRenderer ();
-        return renderer instanceof JComponent ? ( ( JComponent ) renderer ).getPreferredSize () : null;
+        final FileListViewType vt = getFileListViewType ();
+        return vt == FileListViewType.icons ? WebFileListCellRenderer.iconCellSize : WebFileListCellRenderer.tileCellSize;
     }
 }

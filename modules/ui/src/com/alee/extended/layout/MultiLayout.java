@@ -24,12 +24,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Custom layout that allows multiple layout strategies to be applied to single container.
+ * Custom layout that allows multiply layout strategies to be applied to single container.
  * Be aware that standard Swing layouts aren't developed to be used together so they aren't suitable for this layout.
  * You will need custom layouts which work only with specific components and won't affect the same components.
  *
  * @author Mikle Garin
  */
+
 public class MultiLayout extends AbstractLayoutManager
 {
     /**
@@ -87,18 +88,47 @@ public class MultiLayout extends AbstractLayoutManager
     }
 
     @Override
+    public void addLayoutComponent ( final Component comp, final Object constraints )
+    {
+        for ( final LayoutManager layoutManager : layoutManagers )
+        {
+            if ( layoutManager instanceof LayoutManager2 )
+            {
+                ( ( LayoutManager2 ) layoutManager ).addLayoutComponent ( comp, constraints );
+            }
+        }
+    }
+
+    @Override
+    public void addLayoutComponent ( final String name, final Component comp )
+    {
+        for ( final LayoutManager layoutManager : layoutManagers )
+        {
+            layoutManager.addLayoutComponent ( name, comp );
+        }
+    }
+
+    @Override
+    public void removeLayoutComponent ( final Component comp )
+    {
+        for ( final LayoutManager layoutManager : layoutManagers )
+        {
+            layoutManager.removeLayoutComponent ( comp );
+        }
+    }
+
+    @Override
     public void addComponent ( final Component component, final Object constraints )
     {
         for ( final LayoutManager layoutManager : layoutManagers )
         {
             if ( layoutManager instanceof LayoutManager2 )
             {
-                final LayoutManager2 layoutManager2 = ( LayoutManager2 ) layoutManager;
-                layoutManager2.addLayoutComponent ( component, constraints );
+                ( ( LayoutManager2 ) layoutManager ).addLayoutComponent ( component, constraints );
             }
             else
             {
-                layoutManager.addLayoutComponent ( constraints != null ? constraints.toString () : null, component );
+                layoutManager.addLayoutComponent ( constraints == null ? null : constraints.toString (), component );
             }
         }
     }
@@ -113,59 +143,59 @@ public class MultiLayout extends AbstractLayoutManager
     }
 
     @Override
-    public Dimension preferredLayoutSize ( final Container container )
+    public Dimension preferredLayoutSize ( final Container parent )
     {
         Dimension ps = new Dimension ( 0, 0 );
         for ( final LayoutManager layoutManager : layoutManagers )
         {
-            ps = SwingUtils.max ( ps, layoutManager.preferredLayoutSize ( container ) );
+            ps = SwingUtils.max ( ps, layoutManager.preferredLayoutSize ( parent ) );
         }
         return ps;
     }
 
     @Override
-    public Dimension minimumLayoutSize ( final Container container )
+    public Dimension minimumLayoutSize ( final Container parent )
     {
         Dimension ms = new Dimension ( 0, 0 );
         for ( final LayoutManager layoutManager : layoutManagers )
         {
-            ms = SwingUtils.max ( ms, layoutManager.minimumLayoutSize ( container ) );
+            ms = SwingUtils.max ( ms, layoutManager.minimumLayoutSize ( parent ) );
         }
         return ms;
     }
 
     @Override
-    public Dimension maximumLayoutSize ( final Container container )
+    public Dimension maximumLayoutSize ( final Container parent )
     {
         Dimension ms = new Dimension ( Integer.MAX_VALUE, Integer.MAX_VALUE );
         for ( final LayoutManager layoutManager : layoutManagers )
         {
             if ( layoutManager instanceof LayoutManager2 )
             {
-                ms = SwingUtils.min ( ms, ( ( LayoutManager2 ) layoutManager ).maximumLayoutSize ( container ) );
+                ms = SwingUtils.min ( ms, ( ( LayoutManager2 ) layoutManager ).maximumLayoutSize ( parent ) );
             }
         }
         return ms;
     }
 
     @Override
-    public void invalidateLayout ( final Container container )
+    public void invalidateLayout ( final Container parent )
     {
         for ( final LayoutManager layoutManager : layoutManagers )
         {
             if ( layoutManager instanceof LayoutManager2 )
             {
-                ( ( LayoutManager2 ) layoutManager ).invalidateLayout ( container );
+                ( ( LayoutManager2 ) layoutManager ).invalidateLayout ( parent );
             }
         }
     }
 
     @Override
-    public void layoutContainer ( final Container container )
+    public void layoutContainer ( final Container parent )
     {
         for ( final LayoutManager layoutManager : layoutManagers )
         {
-            layoutManager.layoutContainer ( container );
+            layoutManager.layoutContainer ( parent );
         }
     }
 }

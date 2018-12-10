@@ -1,4 +1,4 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.laf.scroll.WebScrollBar -->
 
@@ -9,8 +9,8 @@
             <background>68,68,68</background>
         </component>
         <ui>
-            <displayButtons>true</displayButtons>
-            <displayTrack>false</displayTrack>
+            <paintButtons>true</paintButtons>
+            <paintTrack>false</paintTrack>
             <minimumThumbSize>25,25</minimumThumbSize>
         </ui>
         <painter>
@@ -78,16 +78,16 @@
             <opaque>true</opaque>
         </component>
         <ui>
-            <displayButtons>true</displayButtons>
-            <displayTrack>true</displayTrack>
+            <paintButtons>true</paintButtons>
+            <paintTrack>true</paintTrack>
         </ui>
     </style>
 
     <!-- Undecorated scrollbar -->
     <style type="scrollbar" id="undecorated">
         <ui>
-            <displayButtons>true</displayButtons>
-            <displayTrack>false</displayTrack>
+            <paintButtons>true</paintButtons>
+            <paintTrack>false</paintTrack>
         </ui>
     </style>
 
@@ -97,25 +97,17 @@
             <opaque>true</opaque>
         </component>
         <ui>
-            <displayButtons>false</displayButtons>
-            <displayTrack>true</displayTrack>
+            <paintButtons>false</paintButtons>
+            <paintTrack>true</paintTrack>
         </ui>
-        <painter>
-            <thumbRound>0</thumbRound>
-            <thumbMargin>1,1,1,1</thumbMargin>
-            <scrollBarWidth>11</scrollBarWidth>
-        </painter>
     </style>
 
     <!-- Undecorated button-less scrollbar -->
     <style type="scrollbar" id="undecorated-buttonless">
         <ui>
-            <displayButtons>false</displayButtons>
-            <displayTrack>false</displayTrack>
+            <paintButtons>false</paintButtons>
+            <paintTrack>false</paintTrack>
         </ui>
-        <painter>
-            <thumbRound>0</thumbRound>
-        </painter>
     </style>
 
 </skin>

@@ -17,6 +17,7 @@
 
 package com.alee.utils.xml;
 
+import com.alee.managers.log.Log;
 import com.alee.utils.TextUtils;
 import com.thoughtworks.xstream.converters.basic.AbstractSingleValueConverter;
 
@@ -24,7 +25,7 @@ import java.awt.*;
 import java.util.List;
 
 /**
- * Custom XStream converter for {@link Point}.
+ * Custom {@link java.awt.Point} object converter.
  *
  * @author Mikle Garin
  */
@@ -38,33 +39,22 @@ public class PointConverter extends AbstractSingleValueConverter
     }
 
     @Override
-    public String toString ( final Object obj )
-    {
-        return pointToString ( ( Point ) obj );
-    }
-
-    @Override
     public Object fromString ( final String str )
     {
         return pointFromString ( str );
     }
 
-    /**
-     * Returns {@link Point} converted into string.
-     *
-     * @param point {@link Point} to convert
-     * @return {@link Point} converted into string
-     */
-    public static String pointToString ( final Point point )
+    @Override
+    public String toString ( final Object obj )
     {
-        return point.x + "," + point.y;
+        return pointToString ( ( Point ) obj );
     }
 
     /**
-     * Returns {@link Point} read from string.
+     * Returns point read from string.
      *
-     * @param point {@link Point} string
-     * @return {@link Point} read from string
+     * @param point point string
+     * @return point read from string
      */
     public static Point pointFromString ( final String point )
     {
@@ -75,9 +65,21 @@ public class PointConverter extends AbstractSingleValueConverter
             final int y = Integer.parseInt ( points.get ( 1 ) );
             return new Point ( x, y );
         }
-        catch ( final Exception e )
+        catch ( final Throwable e )
         {
-            throw new XmlException ( "Unable to parse Point: " + point, e );
+            Log.get ().error ( "Unable to parse Point: " + point, e );
+            return new Point ();
         }
+    }
+
+    /**
+     * Returns point converted into string.
+     *
+     * @param point point to convert
+     * @return point converted into string
+     */
+    public static String pointToString ( final Point point )
+    {
+        return point.x + "," + point.y;
     }
 }

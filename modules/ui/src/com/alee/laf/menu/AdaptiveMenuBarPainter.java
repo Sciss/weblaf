@@ -6,19 +6,17 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link MenuBarPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WebMenuBarUI}.
+ * Simple MenuBarPainter adapter class.
+ * It is used to install simple non-specific painters into WebMenuBarUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveMenuBarPainter<C extends JMenuBar, U extends WebMenuBarUI> extends AdaptivePainter<C, U>
-        implements IMenuBarPainter<C, U>
+public final class AdaptiveMenuBarPainter<E extends JMenuBar, U extends WebMenuBarUI> extends AdaptivePainter<E, U>
+        implements IMenuBarPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveMenuBarPainter} for the specified painter.
+     * Constructs new AdaptiveMenuBarPainter for the specified painter.
      *
      * @param painter painter to adapt
      */

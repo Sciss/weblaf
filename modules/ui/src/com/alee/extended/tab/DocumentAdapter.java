@@ -18,46 +18,37 @@
 package com.alee.extended.tab;
 
 /**
- * Adapter for {@link DocumentListener}.
+ * Extension for WebDocumentPane documents state listener.
  *
- * @param <T> {@link DocumentData} type
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
- * @see DocumentListener
- * @see WebDocumentPane
+ * @see com.alee.extended.tab.WebDocumentPane
  */
+
 public abstract class DocumentAdapter<T extends DocumentData> implements DocumentListener<T>
 {
     @Override
     public void opened ( final T document, final PaneData<T> pane, final int index )
     {
-        /**
-         * Do nothing by default.
-         */
+        // Do nothing by default
     }
 
     @Override
     public void selected ( final T document, final PaneData<T> pane, final int index )
     {
-        /**
-         * Do nothing by default.
-         */
+        // Do nothing by default
     }
 
     @Override
     public boolean closing ( final T document, final PaneData<T> pane, final int index )
     {
-        /**
-         * Return {@code true} by default.
-         */
+        // Return true by default
         return true;
     }
 
     @Override
     public void closed ( final T document, final PaneData<T> pane, final int index )
     {
-        /**
-         * Do nothing by default.
-         */
+        // Do nothing by default
     }
 }

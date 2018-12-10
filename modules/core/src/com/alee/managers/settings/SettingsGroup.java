@@ -30,34 +30,35 @@ import java.util.Map;
  *
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-SettingsManager">How to use SettingsManager</a>
- * @see SettingsManager
+ * @see com.alee.managers.settings.SettingsManager
  */
-@XStreamAlias ( "SettingsGroup" )
-@XStreamConverter ( SettingsConverter.class )
+
+@XStreamAlias ("SettingsGroup")
+@XStreamConverter (SettingsConverter.class)
 public class SettingsGroup implements Serializable
 {
     /**
-     * Identifier prefix.
+     * ID prefix.
      */
     private static final String ID_PREFIX = "SG";
 
     /**
-     * Group identifier.
+     * Unique ID.
      */
     private String id;
 
     /**
-     * Group name.
+     * Unique name.
      */
     private String name;
 
     /**
      * Settings map.
      */
-    private HashMap<String, Object> settings;
+    private Map<String, Object> settings;
 
     /**
-     * Constructs new {@link SettingsGroup}.
+     * Constructs unnamed SettingsGroup.
      */
     public SettingsGroup ()
     {
@@ -65,9 +66,9 @@ public class SettingsGroup implements Serializable
     }
 
     /**
-     * Constructs new {@link SettingsGroup}.
+     * Constructs SettingsGroup with the specified name.
      *
-     * @param name group name
+     * @param name SettingsGroup name
      */
     public SettingsGroup ( final String name )
     {
@@ -77,10 +78,10 @@ public class SettingsGroup implements Serializable
     }
 
     /**
-     * Constructs new {@link SettingsGroup}.
+     * Constructs SettingsGroup with the specified name.
      *
-     * @param id   group identifier
-     * @param name group name
+     * @param id   SettingsGroup ID
+     * @param name SettingsGroup name
      */
     public SettingsGroup ( final String id, final String name )
     {
@@ -90,9 +91,9 @@ public class SettingsGroup implements Serializable
     }
 
     /**
-     * Returns group identifier.
+     * Returns SettingsGroup unique ID.
      *
-     * @return group identifier
+     * @return SettingsGroup unique ID
      */
     public String getId ()
     {
@@ -100,9 +101,9 @@ public class SettingsGroup implements Serializable
     }
 
     /**
-     * Sets group identifier.
+     * Sets unique ID.
      *
-     * @param id new group identifier
+     * @param id new unique ID
      */
     public void setId ( final String id )
     {
@@ -110,9 +111,9 @@ public class SettingsGroup implements Serializable
     }
 
     /**
-     * Returns group name.
+     * Returns unique name.
      *
-     * @return group name
+     * @return unique name
      */
     public String getName ()
     {
@@ -120,9 +121,9 @@ public class SettingsGroup implements Serializable
     }
 
     /**
-     * Sets group name.
+     * Sets unique name.
      *
-     * @param name new group name
+     * @param name new unique name
      */
     public void setName ( final String name )
     {
@@ -134,7 +135,7 @@ public class SettingsGroup implements Serializable
      *
      * @return settings map
      */
-    public Map<String, Object> settings ()
+    public Map<String, Object> getSettings ()
     {
         if ( settings == null )
         {
@@ -148,7 +149,7 @@ public class SettingsGroup implements Serializable
      *
      * @param settings new settings map
      */
-    public void setSettings ( final HashMap<String, Object> settings )
+    public void setSettings ( final Map<String, Object> settings )
     {
         this.settings = settings;
     }
@@ -157,24 +158,22 @@ public class SettingsGroup implements Serializable
      * Returns value for specified key.
      *
      * @param key key
-     * @param <T> value type
      * @return value for specified key
      */
-    public <T> T get ( final String key )
+    public Object get ( final String key )
     {
-        return ( T ) settings ().get ( key );
+        return getSettings ().get ( key );
     }
 
     /**
      * Removes settings saved under the specified key.
      *
      * @param key settings key
-     * @param <T> value type
      * @return settings previously saved under the specified key
      */
-    public <T> T remove ( final String key )
+    public Object remove ( final String key )
     {
-        return ( T ) settings ().remove ( key );
+        return getSettings ().remove ( key );
     }
 
     /**
@@ -187,6 +186,6 @@ public class SettingsGroup implements Serializable
      */
     public <T> T put ( final String key, final T object )
     {
-        return ( T ) settings ().put ( key, object );
+        return ( T ) getSettings ().put ( key, object );
     }
 }

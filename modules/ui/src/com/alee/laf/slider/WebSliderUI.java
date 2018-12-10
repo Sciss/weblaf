@@ -21,7 +21,7 @@ import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.api.jdk.Consumer;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -29,13 +29,12 @@ import javax.swing.plaf.basic.BasicSliderUI;
 import java.awt.*;
 
 /**
- * Custom UI for {@link JSlider} component.
- *
  * @author Mikle Garin
  * @author Michka Popoff
  * @author Alexandr Zernov
  */
-public class WebSliderUI extends BasicSliderUI implements ShapeSupport, MarginSupport, PaddingSupport
+
+public class WebSliderUI extends BasicSliderUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -44,11 +43,17 @@ public class WebSliderUI extends BasicSliderUI implements ShapeSupport, MarginSu
     protected ISliderPainter painter;
 
     /**
-     * Returns an instance of the {@link WebSliderUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Runtime variables.
+     */
+    protected Insets margin = null;
+    protected Insets padding = null;
+
+    /**
+     * Returns an instance of the WebSliderUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebSliderUI}
+     * @return instance of the WebSliderUI
      */
     public static ComponentUI createUI ( final JComponent c )
     {
@@ -65,6 +70,11 @@ public class WebSliderUI extends BasicSliderUI implements ShapeSupport, MarginSu
         super ( b );
     }
 
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
@@ -75,6 +85,11 @@ public class WebSliderUI extends BasicSliderUI implements ShapeSupport, MarginSu
         StyleManager.installSkin ( slider );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -86,45 +101,47 @@ public class WebSliderUI extends BasicSliderUI implements ShapeSupport, MarginSu
     }
 
     @Override
-    public Shape getShape ()
+    public StyleId getStyleId ()
+    {
+        return StyleManager.getStyleId ( slider );
+    }
+
+    @Override
+    public StyleId setStyleId ( final StyleId id )
+    {
+        return StyleManager.setStyleId ( slider, id );
+    }
+
+    @Override
+    public Shape provideShape ()
     {
         return PainterSupport.getShape ( slider, painter );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return PainterSupport.isShapeDetectionEnabled ( slider, painter );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        PainterSupport.setShapeDetectionEnabled ( slider, painter, enabled );
-    }
-
-    @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( slider );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( slider, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( slider );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( slider, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -134,7 +151,7 @@ public class WebSliderUI extends BasicSliderUI implements ShapeSupport, MarginSu
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -145,20 +162,14 @@ public class WebSliderUI extends BasicSliderUI implements ShapeSupport, MarginSu
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( slider, new Consumer<ISliderPainter> ()
+        PainterSupport.setPainter ( slider, new DataRunnable<ISliderPainter> ()
         {
             @Override
-            public void accept ( final ISliderPainter newPainter )
+            public void run ( final ISliderPainter newPainter )
             {
                 WebSliderUI.this.painter = newPainter;
             }
         }, this.painter, painter, ISliderPainter.class, AdaptiveSliderPainter.class );
-    }
-
-    @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
-    {
-        return PainterSupport.contains ( c, this, painter, x, y );
     }
 
     @Override
@@ -167,7 +178,7 @@ public class WebSliderUI extends BasicSliderUI implements ShapeSupport, MarginSu
         if ( painter != null )
         {
             painter.setDragging ( isDragging () );
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
     }
 

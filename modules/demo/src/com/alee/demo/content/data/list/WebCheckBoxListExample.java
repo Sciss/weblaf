@@ -17,8 +17,7 @@
 
 package com.alee.demo.content.data.list;
 
-import com.alee.demo.api.example.*;
-import com.alee.extended.list.CheckBoxCellData;
+import com.alee.demo.api.*;
 import com.alee.extended.list.CheckBoxListModel;
 import com.alee.extended.list.WebCheckBoxList;
 import com.alee.laf.scroll.WebScrollPane;
@@ -32,7 +31,8 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-public class WebCheckBoxListExample extends AbstractStylePreviewExample
+
+public class WebCheckBoxListExample extends AbstractExample
 {
     @Override
     public String getId ()
@@ -55,11 +55,10 @@ public class WebCheckBoxListExample extends AbstractStylePreviewExample
     @Override
     protected List<Preview> createPreviews ()
     {
-        return CollectionUtils.<Preview>asList (
-                new BasicList ( StyleId.checkboxlist ),
-                new ScrollableList ( StyleId.checkboxlist ),
-                new EditableList ( StyleId.checkboxlist )
-        );
+        final BasicList basic = new BasicList ( StyleId.checkboxlist );
+        final ScrollableList scrollable = new ScrollableList ( StyleId.checkboxlist );
+        final EditableList editable = new EditableList ( StyleId.checkboxlist );
+        return CollectionUtils.<Preview>asList ( basic, scrollable, editable );
     }
 
     /**
@@ -78,7 +77,7 @@ public class WebCheckBoxListExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebCheckBoxList list = new WebCheckBoxList ( getStyleId (), createModel ( createShortData () ) );
             return CollectionUtils.asList ( list );
@@ -101,7 +100,7 @@ public class WebCheckBoxListExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebCheckBoxList list = new WebCheckBoxList ( getStyleId (), createModel ( createLongData () ) );
             list.setVisibleRowCount ( 4 );
@@ -125,7 +124,7 @@ public class WebCheckBoxListExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final WebCheckBoxList list = new WebCheckBoxList ( getStyleId (), createModel ( createLongData () ) );
             list.setVisibleRowCount ( 4 );
@@ -145,7 +144,7 @@ public class WebCheckBoxListExample extends AbstractStylePreviewExample
         final CheckBoxListModel model = new CheckBoxListModel ();
         for ( final String element : data )
         {
-            model.add ( new CheckBoxCellData ( element ) );
+            model.addCheckBoxElement ( element );
         }
         return model;
     }

@@ -21,19 +21,18 @@ import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.api.jdk.Consumer;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
+import javax.swing.plaf.basic.BasicRadioButtonUI;
 import java.awt.*;
 
 /**
- * Custom UI for {@link JRadioButton} component.
- *
- * @param <C> component type
  * @author Mikle Garin
  */
-public class WebRadioButtonUI<C extends JRadioButton> extends WRadioButtonUI<C> implements ShapeSupport, MarginSupport, PaddingSupport
+
+public class WebRadioButtonUI extends BasicRadioButtonUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -42,77 +41,101 @@ public class WebRadioButtonUI<C extends JRadioButton> extends WRadioButtonUI<C> 
     protected IRadioButtonPainter painter;
 
     /**
-     * Returns an instance of the {@link WebRadioButtonUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Runtime variables.
+     */
+    protected JRadioButton radioButton;
+    protected Insets margin = null;
+    protected Insets padding = null;
+
+    /**
+     * Returns an instance of the WebRadioButtonUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebRadioButtonUI}
+     * @return instance of the WebRadioButtonUI
      */
+    @SuppressWarnings ( "UnusedParameters" )
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebRadioButtonUI ();
     }
 
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
-        // Installing UI
         super.installUI ( c );
 
+        // Saving radiobutton to local variable
+        radioButton = ( JRadioButton ) c;
+
         // Applying skin
-        StyleManager.installSkin ( button );
+        StyleManager.installSkin ( radioButton );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
         // Uninstalling applied skin
-        StyleManager.uninstallSkin ( button );
+        StyleManager.uninstallSkin ( radioButton );
+
+        radioButton = null;
 
         // Uninstalling UI
         super.uninstallUI ( c );
     }
 
     @Override
-    public Shape getShape ()
+    public StyleId getStyleId ()
     {
-        return PainterSupport.getShape ( button, painter );
+        return StyleManager.getStyleId ( radioButton );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
+    public StyleId setStyleId ( final StyleId id )
     {
-        return PainterSupport.isShapeDetectionEnabled ( button, painter );
+        return StyleManager.setStyleId ( radioButton, id );
     }
 
     @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
+    public Shape provideShape ()
     {
-        PainterSupport.setShapeDetectionEnabled ( button, painter, enabled );
+        return PainterSupport.getShape ( radioButton, painter );
     }
 
     @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( button );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( button, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( button );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( button, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -122,7 +145,7 @@ public class WebRadioButtonUI<C extends JRadioButton> extends WRadioButtonUI<C> 
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -133,10 +156,10 @@ public class WebRadioButtonUI<C extends JRadioButton> extends WRadioButtonUI<C> 
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( button, new Consumer<IRadioButtonPainter> ()
+        PainterSupport.setPainter ( radioButton, new DataRunnable<IRadioButtonPainter> ()
         {
             @Override
-            public void accept ( final IRadioButtonPainter newPainter )
+            public void run ( final IRadioButtonPainter newPainter )
             {
                 WebRadioButtonUI.this.painter = newPainter;
             }
@@ -144,45 +167,32 @@ public class WebRadioButtonUI<C extends JRadioButton> extends WRadioButtonUI<C> 
     }
 
     @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
-    {
-        return PainterSupport.contains ( c, this, painter, x, y );
-    }
-
-    @Override
-    public Rectangle getIconBounds ()
-    {
-        if ( painter != null )
-        {
-            return painter.getIconBounds ();
-        }
-        return null;
-    }
-
-    @Override
-    public int getBaseline ( final JComponent c, final int width, final int height )
-    {
-        return PainterSupport.getBaseline ( c, this, painter, width, height );
-    }
-
-    @Override
-    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
-    {
-        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
-    }
-
-    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
+    }
+
+    /**
+     * Returns icon bounds.
+     *
+     * @return icon bounds
+     */
+    public Rectangle getIconRect ()
+    {
+        if ( painter != null )
+        {
+            return painter.getIconRect ();
+        }
+
+        return null;
     }
 
     @Override
     public Dimension getPreferredSize ( final JComponent c )
     {
-        return PainterSupport.getPreferredSize ( c, painter );
+        return PainterSupport.getPreferredSize ( c, super.getPreferredSize ( c ), painter );
     }
 }

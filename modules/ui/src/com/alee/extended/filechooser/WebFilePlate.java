@@ -17,18 +17,17 @@
 
 package com.alee.extended.filechooser;
 
+import com.alee.extended.drag.FileDragAndDropHandler;
 import com.alee.extended.layout.TableLayout;
+import com.alee.global.StyleConstants;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
-import com.alee.managers.drag.transfer.FilesTransferHandler;
-import com.alee.managers.drag.transfer.ProxyDropHandler;
-import com.alee.managers.icon.Icons;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
+import com.alee.utils.DragUtils;
 import com.alee.utils.FileUtils;
 import com.alee.utils.GraphicsUtils;
-import com.alee.utils.SwingUtils;
 import com.alee.utils.swing.AncestorAdapter;
 import com.alee.utils.swing.WebTimer;
 
@@ -52,11 +51,13 @@ import java.util.List;
 
 public class WebFilePlate extends WebPanel
 {
+    public static final ImageIcon CROSS_ICON = new ImageIcon ( WebFilePlate.class.getResource ( "icons/cross.png" ) );
+
     protected final List<ActionListener> closeListeners = new ArrayList<ActionListener> ( 1 );
 
     protected boolean showRemoveButton = true;
     protected boolean showFileExtensions = false;
-    protected final boolean animate = true;
+    protected final boolean animate = StyleConstants.animate;
 
     protected boolean dragEnabled = false;
     protected int dragAction = TransferHandler.MOVE;
@@ -103,7 +104,7 @@ public class WebFilePlate extends WebPanel
                 }
                 if ( animate )
                 {
-                    animator = new WebTimer ( "WebFilePlate.fadeInTimer", SwingUtils.frameRateDelay ( 24 ), new ActionListener ()
+                    animator = new WebTimer ( "WebFilePlate.fadeInTimer", StyleConstants.fps24, new ActionListener ()
                     {
                         @Override
                         public void actionPerformed ( final ActionEvent e )
@@ -155,10 +156,8 @@ public class WebFilePlate extends WebPanel
         };
         addMouseListener ( ma );
         addMouseMotionListener ( ma );
-        setTransferHandler ( new FilesTransferHandler ( true, true )
+        setTransferHandler ( new FileDragAndDropHandler ( true, true )
         {
-            private final ProxyDropHandler dropProxy = new ProxyDropHandler ();
-
             @Override
             public boolean isDragEnabled ()
             {
@@ -171,12 +170,7 @@ public class WebFilePlate extends WebPanel
             }
 
             @Override
-            public int getSourceActions ( final JComponent component )
-            {
-                return getSourceActions ();
-            }
-
-            protected int getSourceActions ()
+            public int getDragAction ()
             {
                 final Container parent = WebFilePlate.this.getParent ();
                 if ( parent instanceof WebFileDrop )
@@ -187,10 +181,10 @@ public class WebFilePlate extends WebPanel
             }
 
             @Override
-            public File getDraggedFile ()
+            public File fileDragged ()
             {
                 // Remove this plate from WebFileDrop if it is a move action
-                if ( getSourceActions () == MOVE )
+                if ( getDragAction () == MOVE )
                 {
                     final Container parent = getParent ();
                     if ( parent instanceof WebFileDrop )
@@ -207,7 +201,7 @@ public class WebFilePlate extends WebPanel
             public boolean importData ( final TransferSupport info )
             {
                 // Special workaround to make this plate drop-transparent
-                return dropProxy.importData ( info );
+                return DragUtils.passDropAction ( WebFilePlate.this, info );
             }
         } );
     }
@@ -242,7 +236,7 @@ public class WebFilePlate extends WebPanel
     {
         if ( remove == null )
         {
-            remove = new WebButton ( StyleId.filedropPlateRemoveButton.at ( WebFilePlate.this ), Icons.crossSmall );
+            remove = new WebButton ( StyleId.filedropPlateRemoveButton.at ( WebFilePlate.this ), CROSS_ICON );
             remove.addActionListener ( new ActionListener ()
             {
                 @Override
@@ -263,7 +257,7 @@ public class WebFilePlate extends WebPanel
         }
         if ( animate )
         {
-            animator = new WebTimer ( "WebFilePlate.fadeOutTimer", SwingUtils.frameRateDelay ( 24 ), new ActionListener ()
+            animator = new WebTimer ( "WebFilePlate.fadeOutTimer", StyleConstants.fps24, new ActionListener ()
             {
                 @Override
                 public void actionPerformed ( final ActionEvent e )

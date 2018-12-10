@@ -17,7 +17,7 @@
 
 package com.alee.managers.proxy;
 
-import com.alee.api.clone.Clone;
+import com.alee.utils.MergeUtils;
 import com.alee.utils.TextUtils;
 import com.alee.utils.xml.PasswordConverter;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
@@ -31,10 +31,11 @@ import java.io.Serializable;
  *
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-ProxyManager">How to use ProxyManager</a>
- * @see ProxyManager
+ * @see com.alee.managers.proxy.ProxyManager
  */
+
 @XStreamAlias ( "ProxySettings" )
-public class ProxySettings implements Cloneable, Serializable
+public class ProxySettings implements Serializable, Cloneable
 {
     /**
      * Whether should use proxy settings or not.
@@ -195,7 +196,7 @@ public class ProxySettings implements Cloneable, Serializable
         {
             return Integer.parseInt ( proxyPort );
         }
-        catch ( final Exception e )
+        catch ( final Throwable e )
         {
             return 80;
         }
@@ -292,12 +293,6 @@ public class ProxySettings implements Cloneable, Serializable
     }
 
     @Override
-    public ProxySettings clone ()
-    {
-        return Clone.deep ().clone ( this );
-    }
-
-    @Override
     public String toString ()
     {
         if ( isUseProxy () )
@@ -310,5 +305,11 @@ public class ProxySettings implements Cloneable, Serializable
         {
             return "ProxySettings [ no proxy ]";
         }
+    }
+
+    @Override
+    protected ProxySettings clone ()
+    {
+        return MergeUtils.cloneByFieldsSafely ( this );
     }
 }

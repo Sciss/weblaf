@@ -3,27 +3,22 @@ package com.alee.laf.checkbox;
 import com.alee.laf.button.AbstractButtonPainter;
 import com.alee.laf.radiobutton.IAbstractStateButtonPainter;
 import com.alee.painter.DefaultPainter;
-import com.alee.painter.SectionPainter;
 import com.alee.painter.decoration.IDecoration;
+import com.alee.painter.PainterSupport;
+import com.alee.painter.SectionPainter;
 import com.alee.utils.GraphicsUtils;
 
 import javax.swing.*;
-import javax.swing.plaf.ButtonUI;
+import javax.swing.plaf.basic.BasicButtonUI;
 import java.awt.*;
 import java.util.List;
 
 /**
- * Abstract painter for stateful {@link AbstractButton} implementations.
- *
- * @param <C> component type
- * @param <U> component UI type
- * @param <D> decoration type
  * @author Alexandr Zernov
- * @author Mikle Garin
  */
 
-public abstract class AbstractStateButtonPainter<C extends AbstractButton, U extends ButtonUI, D extends IDecoration<C, D>>
-        extends AbstractButtonPainter<C, U, D> implements IAbstractStateButtonPainter<C, U>
+public abstract class AbstractStateButtonPainter<E extends AbstractButton, U extends BasicButtonUI, D extends IDecoration<E, D>>
+        extends AbstractButtonPainter<E, U, D> implements IAbstractStateButtonPainter<E, U>
 {
     /**
      * State icon painter.
@@ -31,29 +26,34 @@ public abstract class AbstractStateButtonPainter<C extends AbstractButton, U ext
     @DefaultPainter ( ButtonStatePainter.class )
     protected IButtonStatePainter checkStatePainter;
 
-    /**
-     * Runtime icon bounds.
-     */
-    protected transient Rectangle iconBounds;
-
     @Override
-    protected List<SectionPainter<C, U>> getSectionPainters ()
+    public void install ( final E c, final U ui )
     {
-        return asList ( checkStatePainter );
-    }
+        super.install ( c, ui );
 
-    @Override
-    protected void installPropertiesAndListeners ()
-    {
-        super.installPropertiesAndListeners ();
+        // Properly installing section painters
+        this.checkStatePainter = PainterSupport.installSectionPainter ( this, checkStatePainter, null, c, ui );
+
+        // State icon that uses {@code checkStatePainter}
         component.setIcon ( createIcon () );
     }
 
     @Override
-    protected void uninstallPropertiesAndListeners ()
+    public void uninstall ( final E c, final U ui )
     {
+        // Removing custom icon
         component.setIcon ( null );
-        super.uninstallPropertiesAndListeners ();
+
+        // Properly uninstalling section painters
+        this.checkStatePainter = PainterSupport.uninstallSectionPainter ( checkStatePainter, c, ui );
+
+        super.uninstall ( c, ui );
+    }
+
+    @Override
+    protected List<SectionPainter<E, U>> getSectionPainters ()
+    {
+        return asList ( checkStatePainter );
     }
 
     /**
@@ -62,9 +62,9 @@ public abstract class AbstractStateButtonPainter<C extends AbstractButton, U ext
      * @return icon bounds
      */
     @Override
-    public Rectangle getIconBounds ()
+    public Rectangle getIconRect ()
     {
-        return iconBounds != null ? new Rectangle ( iconBounds ) : new Rectangle ();
+        return iconRect != null ? new Rectangle ( iconRect ) : new Rectangle ();
     }
 
     /**
@@ -86,14 +86,14 @@ public abstract class AbstractStateButtonPainter<C extends AbstractButton, U ext
         public void paintIcon ( final Component c, final Graphics g, final int x, final int y )
         {
             // Updating actual icon rect
-            iconBounds = new Rectangle ( new Point ( x, y ), getSize () );
+            iconRect = new Rectangle ( new Point ( x, y ), getSize () );
 
             // Painting check state icon
             if ( checkStatePainter != null )
             {
                 final Graphics2D g2d = ( Graphics2D ) g;
                 final Object aa = GraphicsUtils.setupAntialias ( g2d );
-                paintSection ( checkStatePainter, g2d, iconBounds );
+                checkStatePainter.paint ( g2d, iconRect, component, ui );
                 GraphicsUtils.restoreAntialias ( g2d, aa );
             }
         }

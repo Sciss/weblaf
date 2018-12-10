@@ -17,11 +17,9 @@
 
 package com.alee.extended.magnifier;
 
-import com.alee.api.jdk.Objects;
-import com.alee.laf.WebLookAndFeel;
+import com.alee.global.StyleConstants;
 import com.alee.managers.glasspane.GlassPaneManager;
 import com.alee.managers.glasspane.WebGlassPane;
-import com.alee.managers.language.LM;
 import com.alee.utils.*;
 import com.alee.utils.ninepatch.NinePatchIcon;
 import com.alee.utils.swing.WebTimer;
@@ -34,18 +32,16 @@ import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
-import java.text.DecimalFormat;
-import java.util.Map;
 
 /**
  * Custom component that allows you to display a magnifier within your application window.
- * {@link MagnifierGlass} can zoom in any part of the UI displayed within the window.
- *
- * {@link JComponent} is used instead of {@link Window} for three reasons:
- * 1. It is easy to sink events from {@link JComponent} to underlying UI elements
- * 2. It is easy to snapshot UI elements, but magnifying screen parts will not work like that
+ * That magnifier can zoom in any part of the UI displayed within the window.
+ * <p>
+ * JComponent is used instead of separate window for three reasons:
+ * 1. It is easy to sink events from JComponent to underlying UI elements
+ * 2. It is easy to snapshot Swing UI, but magnifying screen parts will not work like that
  * 3. Not all OS support window per-pixel translucency which will limit the usage of this feature
- *
+ * <p>
  * This component might be extended in future to support windowed mode, but for now it is limited to Swing window bounds.
  *
  * @author Mikle Garin
@@ -56,43 +52,37 @@ public class MagnifierGlass extends JComponent
     /**
      * todo 1. Extend common panel and provide shade painting there
      * todo 2. Add custom background painter that will display zoomed area
-     * todo 3. Replace cursor icon with set icon
      */
 
     /**
      * Icons.
      */
-    protected static final ImageIcon cursorIcon = new ImageIcon ( MagnifierGlass.class.getResource ( "icons/cursor.png" ) );
-
-    /**
-     * Milliseconds display format.
-     */
-    protected static final DecimalFormat msFormat = new DecimalFormat ( "0.00" );
+    public static final ImageIcon cursorIcon = new ImageIcon ( MagnifierGlass.class.getResource ( "icons/cursor.png" ) );
 
     /**
      * Zoom area size.
      */
-    protected Dimension size;
+    protected Dimension size = new Dimension ( 159, 159 );
 
     /**
      * Zoom area shape type.
      */
-    protected MagnifierType type;
+    protected MagnifierType type = MagnifierType.rectangular;
 
     /**
-     * {@link MagnifierGlass} position.
+     * Magnifier position.
      */
-    protected MagnifierPosition position;
+    protected MagnifierPosition position = MagnifierPosition.nearCursor;
 
     /**
-     * {@link MagnifierGlass} shade width.
+     * Magnifier shade width.
      */
-    protected int shadeWidth;
+    protected int shadeWidth = 25;
 
     /**
-     * {@link MagnifierGlass} corners round.
+     * Rectangular magnifier round.
      */
-    protected int round;
+    protected int round = 10;
 
     /**
      * Zoom factor.
@@ -103,40 +93,34 @@ public class MagnifierGlass extends JComponent
      * Whether or not dummy cursor should be displayed on magnified image.
      * Note that displayed cursor will not represent exact system cursor.
      */
-    protected boolean displayDummyCursor;
-
-    /**
-     * Whether or not captured area painting time metrics should be displayed.
-     */
-    protected boolean displayTimeMetrics;
+    protected boolean displayDummyCursor = true;
 
     /**
      * Dummy cursor opacity.
      */
-    protected float dummyCursorOpacity;
+    protected float dummyCursorOpacity = 0.5f;
 
     /**
-     * Milliseconds to forcefully update {@link MagnifierGlass} buffer.
+     * Milliseconds to forcefully update magnifier buffer.
      * Set to zero to disable forced updates.
      */
-    protected long forceUpdateFrequency;
+    protected long forceUpdateFrequency = 100;
 
     /**
      * Runtime variables.
      */
-    protected transient JComponent zoomProvider;
-    protected transient Cursor defaultCursor;
-    protected transient BufferedImage buffer;
-    protected transient Long time;
-    protected transient BufferedImage view;
-    protected transient Icon shadeIcon;
-    protected transient int lastShadeWidth;
-    protected transient boolean rendered;
-    protected transient final AWTEventListener listener;
-    protected transient final WebTimer forceUpdater;
+    protected JComponent zoomProvider;
+    protected Cursor defaultCursor;
+    protected BufferedImage buffer;
+    protected BufferedImage view;
+    protected AWTEventListener listener;
+    protected WebTimer forceUpdater;
+    protected Icon shadeIcon;
+    protected int lastShadeWidth;
+    protected boolean rendered;
 
     /**
-     * Constructs new {@link MagnifierGlass} that will work over the specified component.
+     * Constructs magnifier that will work over the specified component.
      * Note that zoom will only display elements which are contained inside of the specified component.
      */
     public MagnifierGlass ()
@@ -145,10 +129,8 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Constructs new {@link MagnifierGlass} that will work over the specified component.
+     * Constructs magnifier that will work over the specified component.
      * Note that zoom will only display elements which are contained inside of the specified component.
-     *
-     * @param zoomFactor zoom factor
      */
     public MagnifierGlass ( final int zoomFactor )
     {
@@ -156,17 +138,8 @@ public class MagnifierGlass extends JComponent
         setOpaque ( false );
         setBackground ( new Color ( 237, 237, 237 ) );
 
-        // Initial settings
-        this.size = new Dimension ( 159, 159 );
-        this.type = MagnifierType.rectangular;
-        this.position = MagnifierPosition.nearCursor;
-        this.shadeWidth = 25;
-        this.round = 10;
+        // Initial zoom factor
         this.zoomFactor = zoomFactor;
-        this.displayDummyCursor = true;
-        this.displayTimeMetrics = true;
-        this.dummyCursorOpacity = 0.5f;
-        this.forceUpdateFrequency = 100;
 
         // Magnifier is initially disabled
         setEnabled ( false );
@@ -196,15 +169,12 @@ public class MagnifierGlass extends JComponent
                     // Forcing later update within EDT
                     // We are already within EDT here, but this is necessary
                     // UI update will look laggy due to event handling specifics without this
-                    CoreSwingUtils.invokeLater ( new Runnable ()
+                    SwingUtilities.invokeLater ( new Runnable ()
                     {
                         @Override
                         public void run ()
                         {
-                            // Updating preview
                             updatePreview ();
-
-                            // Restarting forceful updater to delay next update
                             restartForceUpdater ();
                         }
                     } );
@@ -230,7 +200,7 @@ public class MagnifierGlass extends JComponent
      */
     public void setZoomAreaSize ( final Dimension size )
     {
-        if ( Objects.notEquals ( this.size, size ) )
+        if ( !CompareUtils.equals ( this.size, size ) )
         {
             this.size = size;
             updatePreview ();
@@ -262,9 +232,9 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Returns {@link MagnifierGlass} position.
+     * Returns magnifier position.
      *
-     * @return {@link MagnifierGlass} position
+     * @return magnifier position
      */
     public MagnifierPosition getPosition ()
     {
@@ -272,9 +242,9 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Sets {@link MagnifierGlass} position.
+     * Sets magnifier position.
      *
-     * @param position {@link MagnifierGlass} position
+     * @param position magnifier position
      */
     public void setPosition ( final MagnifierPosition position )
     {
@@ -295,9 +265,9 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Returns {@link MagnifierGlass} shade width.
+     * Returns magnifier shade width.
      *
-     * @return {@link MagnifierGlass} shade width
+     * @return magnifier shade width
      */
     public int getShadeWidth ()
     {
@@ -305,9 +275,9 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Sets {@link MagnifierGlass} shade width.
+     * Sets magnifier shade width.
      *
-     * @param shadeWidth {@link MagnifierGlass} shade width
+     * @param shadeWidth magnifier shade width
      */
     public void setShadeWidth ( final int shadeWidth )
     {
@@ -319,9 +289,9 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Returns {@link MagnifierGlass} corners round.
+     * Returns rectangular magnifier round.
      *
-     * @return {@link MagnifierGlass} corners round
+     * @return rectangular magnifier round
      */
     public int getRound ()
     {
@@ -329,9 +299,9 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Sets {@link MagnifierGlass} corners round.
+     * Sets rectangular magnifier round.
      *
-     * @param round {@link MagnifierGlass} corners round
+     * @param round rectangular magnifier round
      */
     public void setRound ( final int round )
     {
@@ -369,7 +339,7 @@ public class MagnifierGlass extends JComponent
     /**
      * Returns whether or not dummy cursor should be displayed on magnified image.
      *
-     * @return {@code true} if dummy cursor should be displayed on magnified image, {@code false} otherwise
+     * @return true if dummy cursor should be displayed on magnified image, false otherwise
      */
     public boolean isDisplayDummyCursor ()
     {
@@ -386,30 +356,6 @@ public class MagnifierGlass extends JComponent
         if ( this.displayDummyCursor != display )
         {
             this.displayDummyCursor = display;
-            updatePreview ();
-        }
-    }
-
-    /**
-     * Returns whether or not captured area painting time metrics should be displayed.
-     *
-     * @return {@code true} if captured area painting time metrics should be displayed, {@code false} otherwise
-     */
-    public boolean isDisplayTimeMetrics ()
-    {
-        return displayTimeMetrics;
-    }
-
-    /**
-     * Sets whether or not captured area painting time metrics should be displayed.
-     *
-     * @param display whether or not captured area painting time metrics should be displayed
-     */
-    public void setDisplayTimeMetrics ( final boolean display )
-    {
-        if ( this.displayTimeMetrics != display )
-        {
-            this.displayTimeMetrics = display;
             updatePreview ();
         }
     }
@@ -439,9 +385,9 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Returns milliseconds to forcefully update {@link MagnifierGlass} buffer.
+     * Returns milliseconds to forcefully update magnifier buffer.
      *
-     * @return milliseconds to forcefully update {@link MagnifierGlass} buffer
+     * @return milliseconds to forcefully update magnifier buffer
      */
     public long getForceUpdateFrequency ()
     {
@@ -449,9 +395,9 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Sets milliseconds to forcefully update {@link MagnifierGlass} buffer.
+     * Sets milliseconds to forcefully update magnifier buffer.
      *
-     * @param forceUpdateFrequency milliseconds to forcefully update {@link MagnifierGlass} buffer
+     * @param forceUpdateFrequency milliseconds to forcefully update magnifier buffer
      */
     public void setForceUpdateFrequency ( final long forceUpdateFrequency )
     {
@@ -463,7 +409,7 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Properly restarts forceful preview updater.
+     * Properly restarts
      */
     protected void restartForceUpdater ()
     {
@@ -499,39 +445,28 @@ public class MagnifierGlass extends JComponent
             final Dimension bs = getBufferSize ();
             if ( buffer == null || buffer.getWidth () != bs.width || buffer.getHeight () != bs.height )
             {
-                buffer = ImageUtils.createCompatibleImage ( bs.width, bs.height, Transparency.OPAQUE );
+                buffer = ImageUtils.createCompatibleImage ( bs.width, bs.height, Transparency.TRANSLUCENT );
             }
 
             // Filling-in image content
-            final Point mp = CoreSwingUtils.getMouseLocation ();
-            final Rectangle gb = CoreSwingUtils.getBoundsOnScreen ( zoomProvider );
+            final Point mp = MouseInfo.getPointerInfo ().getLocation ();
+            final Rectangle gb = SwingUtils.getBoundsOnScreen ( zoomProvider );
             if ( gb.contains ( mp ) )
             {
-                // Configuring graphics
+                // Rendering UI snapshot
                 final Graphics2D g2d = buffer.createGraphics ();
-                g2d.setBackground ( Color.WHITE );
+                g2d.setBackground ( StyleConstants.transparent );
                 g2d.clearRect ( 0, 0, bs.width, bs.height );
-                g2d.setClip ( 0, 0, bs.width, bs.height );
-
-                // Translating graphics to the magnifier position on the UI
                 final int x = mp.x - gb.x - bs.width / 2;
                 final int y = mp.y - gb.y - bs.height / 2;
                 g2d.translate ( -x, -y );
-
-                // Rendering UI snapshot
-                time = System.nanoTime ();
                 zoomProvider.paintAll ( g2d );
-                time = System.nanoTime () - time;
-
-                // Adding dummy cursor
-                if ( isDisplayDummyCursor () )
+                if ( displayDummyCursor )
                 {
                     g2d.translate ( x, y );
                     GraphicsUtils.setupAlphaComposite ( g2d, dummyCursorOpacity );
                     g2d.drawImage ( cursorIcon.getImage (), bs.width / 2, bs.height / 2, null );
                 }
-
-                // Disposing graphics
                 g2d.dispose ();
 
                 // Marking as rendered
@@ -541,7 +476,7 @@ public class MagnifierGlass extends JComponent
             {
                 // Clearing buffer
                 final Graphics2D g2d = buffer.createGraphics ();
-                g2d.setBackground ( Color.WHITE );
+                g2d.setBackground ( StyleConstants.transparent );
                 g2d.clearRect ( 0, 0, bs.width, bs.height );
                 g2d.dispose ();
 
@@ -554,7 +489,7 @@ public class MagnifierGlass extends JComponent
             {
                 // Displaying magnifier straight on top of the cursor
                 final WebGlassPane glassPane = GlassPaneManager.getGlassPane ( zoomProvider );
-                final Point rel = CoreSwingUtils.getRelativeLocation ( zoomProvider, glassPane );
+                final Point rel = SwingUtils.getRelativeLocation ( zoomProvider, glassPane );
                 final Dimension ps = getPreferredSize ();
                 final int mx = mp.x - gb.x + rel.x - ps.width / 2;
                 final int my = mp.y - gb.y + rel.y - ps.height / 2;
@@ -563,7 +498,7 @@ public class MagnifierGlass extends JComponent
             else if ( position == MagnifierPosition.nearCursor )
             {
                 final WebGlassPane glassPane = GlassPaneManager.getGlassPane ( zoomProvider );
-                final Rectangle bos = CoreSwingUtils.getBoundsOnScreen ( glassPane );
+                final Rectangle bos = SwingUtils.getBoundsOnScreen ( glassPane );
                 final Point rmp = new Point ( mp.x - bos.x, mp.y - bos.y );
                 final Dimension ps = getPreferredSize ();
                 final int mx;
@@ -592,8 +527,8 @@ public class MagnifierGlass extends JComponent
             }
 
             // Updating cursor on the window
-            final Cursor cursor = position == MagnifierPosition.atCursor ? SystemUtils.getTransparentCursor () : defaultCursor;
-            CoreSwingUtils.getWindowAncestor ( zoomProvider ).setCursor ( cursor );
+            SwingUtils.getWindowAncestor ( zoomProvider )
+                    .setCursor ( position == MagnifierPosition.atCursor ? SystemUtils.getTransparentCursor () : defaultCursor );
 
             // Repainting magnifier
             // This is required in addition to bounds change repaint
@@ -603,7 +538,7 @@ public class MagnifierGlass extends JComponent
         else if ( buffer != null )
         {
             // Restoring cursor
-            CoreSwingUtils.getWindowAncestor ( zoomProvider ).setCursor ( defaultCursor );
+            SwingUtils.getWindowAncestor ( zoomProvider ).setCursor ( defaultCursor );
 
             // Resetting buffer if magnifier is hidden
             buffer.flush ();
@@ -641,20 +576,6 @@ public class MagnifierGlass extends JComponent
             final Shape oldClip = GraphicsUtils.setupClip ( g2d, fillShape, round > 0 );
             g2d.drawImage ( buffer, shadeWidth, shadeWidth, size.width, size.height, null );
             GraphicsUtils.restoreClip ( g2d, oldClip, round > 0 );
-
-            // Painting time metrics
-            if ( isDisplayTimeMetrics () )
-            {
-                final Map taa = SwingUtils.setupTextAntialias ( g2d );
-                g2d.setColor ( Color.BLACK );
-                final double ms = ( double ) time / TimeUtils.nsInMillisecond;
-                final String text = msFormat.format ( ms ) + " " + LM.get ( "weblaf.time.units.short.millisecond" );
-                final int x = getComponentOrientation ().isLeftToRight () ? shadeWidth + 5 :
-                        shadeWidth + size.width - g2d.getFontMetrics ().stringWidth ( text ) - 5;
-                final int y = shadeWidth + size.height - 5;
-                g2d.drawString ( text, x, y );
-                SwingUtils.restoreTextAntialias ( g2d, taa );
-            }
 
             // Painting shade
             final Icon icon = getShadeIcon ();
@@ -694,7 +615,7 @@ public class MagnifierGlass extends JComponent
             {
                 final Dimension ps = getPreferredSize ();
                 final Ellipse2D.Double shape = new Ellipse2D.Double ( shadeWidth, shadeWidth, size.width, size.height );
-                shadeIcon = new ImageIcon ( ImageUtils.createShadowImage ( ps.width, ps.height, shape, shadeWidth, 0.75f, true ) );
+                shadeIcon = new ImageIcon ( ImageUtils.createShadeImage ( ps.width, ps.height, shape, shadeWidth, 0.75f, true ) );
                 lastShadeWidth = shadeWidth;
             }
         }
@@ -702,9 +623,9 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Initializes or disposes {@link MagnifierGlass} on the specified {@link Window}.
+     * Initializes or disposes magnifier on the specified window.
      *
-     * @param window {@link Window} for {@link MagnifierGlass}
+     * @param window magnifier window
      */
     public void displayOrDispose ( final Window window )
     {
@@ -712,26 +633,26 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Initializes or disposes {@link MagnifierGlass} on the {@link Window} where specified component is located.
+     * Initializes or disposes magnifier on the window where specified component is located.
      *
-     * @param component {@link JComponent} for {@link MagnifierGlass}
+     * @param component magnifier provider
      */
     public void displayOrDispose ( final JComponent component )
     {
-        if ( !isEnabled () )
+        if ( isEnabled () )
         {
-            display ( component );
+            dispose ();
         }
         else
         {
-            dispose ();
+            display ( component );
         }
     }
 
     /**
-     * Initializes {@link MagnifierGlass} on the specified {@link Window}.
+     * Initializes magnifier on the specified window.
      *
-     * @param window {@link Window} for {@link MagnifierGlass}
+     * @param window magnifier window
      */
     public void display ( final Window window )
     {
@@ -739,15 +660,12 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Initializes {@link MagnifierGlass} on the {@link Window} where specified component is located.
+     * Initializes magnifier on the window where specified component is located.
      *
-     * @param component {@link JComponent} for {@link MagnifierGlass}
+     * @param component magnifier provider
      */
     public void display ( final JComponent component )
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
         // Performing various checks
         if ( component == null )
         {
@@ -759,9 +677,9 @@ public class MagnifierGlass extends JComponent
             // Checking that component is currently displayed
             throw new IllegalArgumentException ( "Provided component is not displayed on screen: " + component );
         }
-        if ( CoreSwingUtils.getRootPane ( component ) == null )
+        if ( SwingUtils.getRootPane ( component ) == null )
         {
-            // Checking rootpane existence
+            // Checking rootpane existance
             throw new IllegalArgumentException ( "Provided component is not placed within any window: " + component );
         }
 
@@ -770,7 +688,7 @@ public class MagnifierGlass extends JComponent
 
         // Retrieving component that will be providing us the area to use magnifier within
         zoomProvider = component instanceof JRootPane ? ( ( JRootPane ) component ).getLayeredPane () : component;
-        defaultCursor = CoreSwingUtils.getWindowAncestor ( zoomProvider ).getCursor ();
+        defaultCursor = SwingUtils.getWindowAncestor ( zoomProvider ).getCursor ();
 
         // Updating buffer image
         updatePreview ();
@@ -789,13 +707,10 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Disposes {@link MagnifierGlass}.
+     * Hides magnifier.
      */
     public void dispose ()
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
         // Changing visibility flag
         setEnabled ( false );
 
@@ -817,11 +732,11 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Returns whether or not this {@link MagnifierGlass} is currently displayed.
-     * Be aware that this method only says whether or not this {@link MagnifierGlass} is active.
+     * Returns whether or not this magnifier is currently displayed.
+     * Be aware that this method only says whether or not this magnifier is active.
      * Actual visibility state can be retrieved through {@link #isShowing()} method like in any other Swing component.
      *
-     * @return {@code true} if this {@link MagnifierGlass} is currently displayed, {@code false} otherwise
+     * @return true if this magnifier is currently displayed, false otherwise
      */
     public boolean isDisplayed ()
     {
@@ -858,7 +773,7 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Display {@link MagnifierGlass} on the glass pane.
+     * Display magnifier on the glass pane.
      */
     protected void displayOnGlassPane ()
     {
@@ -869,7 +784,7 @@ public class MagnifierGlass extends JComponent
     }
 
     /**
-     * Dispose {@link MagnifierGlass} from the glass pane.
+     * Dispose magnifier from the glass pane.
      */
     protected void disposeFromGlassPane ()
     {

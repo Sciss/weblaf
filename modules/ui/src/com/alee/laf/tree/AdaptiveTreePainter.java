@@ -9,20 +9,18 @@ import javax.swing.tree.TreePath;
 import java.util.Hashtable;
 
 /**
- * Simple {@link TreePainter} adapter class.
- * It is used to install simple non-specific painters into {@link WTreeUI}.
+ * Simple TreePainter adapter class.
+ * It is used to install simple non-specific painters into WebTreeUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveTreePainter<C extends JTree, U extends WTreeUI> extends AdaptivePainter<C, U> implements ITreePainter<C, U>
+public final class AdaptiveTreePainter<E extends JTree, U extends WebTreeUI> extends AdaptivePainter<E, U> implements ITreePainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveTreePainter} for the specified painter.
+     * Constructs new AdaptiveTreePainter for the specified painter.
      *
-     * @param painter {@link Painter} to adapt
+     * @param painter painter to adapt
      */
     public AdaptiveTreePainter ( final Painter painter )
     {
@@ -30,7 +28,7 @@ public final class AdaptiveTreePainter<C extends JTree, U extends WTreeUI> exten
     }
 
     @Override
-    public boolean isRowHoverDecorationSupported ()
+    public boolean isHoverDecorationSupported ()
     {
         return false;
     }

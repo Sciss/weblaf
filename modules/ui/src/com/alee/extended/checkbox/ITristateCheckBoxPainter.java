@@ -2,17 +2,16 @@ package com.alee.extended.checkbox;
 
 import com.alee.laf.radiobutton.IAbstractStateButtonPainter;
 
+import javax.swing.*;
+
 /**
- * Base interface for {@link WebTristateCheckBox} component painters.
+ * Base interface for JCheckBox component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
-public interface ITristateCheckBoxPainter<C extends WebTristateCheckBox, U extends WTristateCheckBoxUI<C>>
-        extends IAbstractStateButtonPainter<C, U>
+
+public interface ITristateCheckBoxPainter<E extends JCheckBox, U extends WebTristateCheckBoxUI> extends IAbstractStateButtonPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

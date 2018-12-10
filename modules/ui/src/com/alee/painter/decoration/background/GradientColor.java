@@ -17,6 +17,7 @@
 
 package com.alee.painter.decoration.background;
 
+import com.alee.utils.MergeUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 import com.thoughtworks.xstream.annotations.XStreamConverter;
@@ -30,23 +31,24 @@ import java.io.Serializable;
  *
  * @author Mikle Garin
  */
-@XStreamAlias ( "GradientColor" )
-@XStreamConverter ( value = ToAttributedValueConverter.class, strings = { "color" } )
-public class GradientColor implements Cloneable, Serializable
+
+@XStreamAlias ("GradientColor")
+@XStreamConverter (value = ToAttributedValueConverter.class, strings = { "color" })
+public class GradientColor implements Serializable, Cloneable
 {
     /**
-     * Position of the color between the starting and end points.
+     * Color fraction.
      * It is not used when gradient has only one color specified.
      * Also it might not be specified for multi-color separator to use even fractions.
      */
     @XStreamAsAttribute
-    protected Float fraction;
+    private Float fraction;
 
     /**
-     * Gradient color for the specified position.
+     * Fraction color.
      * Must always be provided to properly render separator.
      */
-    protected Color color;
+    private Color color;
 
     /**
      * Returns color fraction on the line.
@@ -86,5 +88,11 @@ public class GradientColor implements Cloneable, Serializable
     public void setColor ( final Color color )
     {
         this.color = color;
+    }
+
+    @Override
+    public GradientColor clone ()
+    {
+        return MergeUtils.cloneByFieldsSafely ( this );
     }
 }

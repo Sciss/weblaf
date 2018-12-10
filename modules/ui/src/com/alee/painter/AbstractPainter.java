@@ -17,11 +17,13 @@
 
 package com.alee.painter;
 
-import com.alee.api.jdk.Objects;
 import com.alee.laf.WebLookAndFeel;
-import com.alee.managers.style.Bounds;
-import com.alee.utils.*;
+import com.alee.utils.CollectionUtils;
+import com.alee.utils.CompareUtils;
+import com.alee.utils.LafUtils;
+import com.alee.utils.SwingUtils;
 import com.alee.utils.laf.WebBorder;
+import com.alee.utils.swing.BorderMethods;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -30,36 +32,34 @@ import java.awt.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
- * This abstract {@link Painter} implementation provides a few basic commonly used features.
- * You might want to extended this class instead of implementing {@link Painter} interface directly.
+ * This abstract painter provides a few additional useful features atop of the Painter interface.
+ * Usually this class is extended by various painters instead of implementing Painter interface directly.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Mikle Garin
- * @author Alexandr Zernov
- * @see Painter
+ * @see com.alee.painter.Painter
  */
-public abstract class AbstractPainter<C extends JComponent, U extends ComponentUI> implements Painter<C, U>
+
+public abstract class AbstractPainter<E extends JComponent, U extends ComponentUI> implements Painter<E, U>, BorderMethods
 {
+    /**
+     * Painter listeners.
+     */
+    protected transient final List<PainterListener> listeners = new ArrayList<PainterListener> ( 1 );
+
     /**
      * Listeners.
      */
     protected transient PropertyChangeListener propertyChangeListener;
 
     /**
-     * Whether or not this painter is installed onto some component.
-     */
-    protected transient boolean installed;
-
-    /**
      * Component reference.
      */
-    protected transient C component;
+    protected transient E component;
 
     /**
      * Component UI reference.
@@ -67,114 +67,37 @@ public abstract class AbstractPainter<C extends JComponent, U extends ComponentU
     protected transient U ui;
 
     /**
-     * Installed section painters.
-     */
-    protected transient Map<String, SectionPainter<C, U>> sectionPainters;
-
-    /**
      * Whether or not painted component has LTR orientation.
      */
     protected transient boolean ltr;
 
     @Override
-    public void install ( final C c, final U ui )
+    public void install ( final E c, final U ui )
     {
-        // Event Dispatch Thread checkers
-        WebLookAndFeel.installEventDispatchThreadCheckers ( c );
-
         // Saving references
         this.component = c;
         this.ui = ui;
 
-        // Additional actions before installation
-        beforeInstall ();
+        // Updating orientation
+        updateOrientation ();
+        saveOrientation ();
 
-        // Installing section painters
-        // This must always be done first, before we try installing any listeners
-        installSectionPainters ();
+        // Updating border
+        updateBorder ();
 
-        // Installing properties and listeners
-        installPropertiesAndListeners ();
-
-        // Additional actions after installation
-        afterInstall ();
+        // Installing listeners
+        installPropertyChangeListener ();
     }
 
     @Override
-    public void uninstall ( final C c, final U ui )
+    public void uninstall ( final E c, final U ui )
     {
-        // Event Dispatch Thread checkers
-        WebLookAndFeel.uninstallEventDispatchThreadCheckers ( c );
-
-        // Additional actions before uninstallation
-        beforeUninstall ();
-
-        // Uninstalling properties and listeners
-        uninstallPropertiesAndListeners ();
-
-        // Uninstalling section painters
-        // This must always be done last, after we uninstall all listeners
-        uninstallSectionPainters ();
-
-        // Additional actions after uninstallation
-        afterUninstall ();
+        // Uninstalling listeners
+        uninstallPropertyChangeListener ();
 
         // Cleaning up references
         this.component = null;
         this.ui = null;
-    }
-
-    /**
-     * Performs additional actions before installation starts.
-     * This is an additional method for override convenience.
-     */
-    protected void beforeInstall ()
-    {
-        /**
-         * Updating installation mark.
-         */
-        this.installed = true;
-    }
-
-    /**
-     * Performs additional actions after installation ends.
-     * This is an additional method for override convenience.
-     */
-    protected void afterInstall ()
-    {
-        /**
-         * Updating initial border.
-         */
-        updateBorder ();
-    }
-
-    /**
-     * Performs additional actions before uninstallation starts.
-     * This is an additional method for override convenience.
-     */
-    protected void beforeUninstall ()
-    {
-        /**
-         * Do nothing by default.
-         */
-    }
-
-    /**
-     * Performs additional actions after uninstallation ends.
-     * This is an additional method for override convenience.
-     */
-    protected void afterUninstall ()
-    {
-        /**
-         * Updating installation mark.
-         */
-        this.installed = false;
-    }
-
-    @Override
-    public boolean isInstalled ()
-    {
-        return installed;
     }
 
     @Override
@@ -183,247 +106,32 @@ public abstract class AbstractPainter<C extends JComponent, U extends ComponentU
         return null;
     }
 
+    @Override
+    public Insets getBorders ()
+    {
+        return null;
+    }
+
     /**
      * Returns whether or not this painter is allowed to update component settings and visual state.
      * By default it is determined by the painter type, for example any SectionPainter should avoid updating settings.
      *
-     * @return {@code true} if this painter is allowed to update component settings and visual state, {@code false} otherwise
+     * @return true if this painter is allowed to update component settings and visual state, false otherwise
      */
     protected boolean isSettingsUpdateAllowed ()
     {
-        // Event Dispatch Thread check
-        WebLookAndFeel.checkEventDispatchThread ();
-
-        // Actual updateability check
-        return isInstalled () && !isSectionPainter ();
+        return !isSectionPainter ();
     }
 
     /**
      * Returns whether or not this is a section painter.
      * Some internal behaviors might vary depending on what this method returns.
      *
-     * @return {@code true} if this is a section painter, {@code false} otherwise
+     * @return true if this is a section painter, false otherwise
      */
     protected boolean isSectionPainter ()
     {
         return this instanceof SectionPainter;
-    }
-
-    /**
-     * Installs {@link SectionPainter}s used by this {@link Painter}.
-     */
-    protected final void installSectionPainters ()
-    {
-        final List<SectionPainter<C, U>> sectionPainters = getSectionPainters ();
-        if ( CollectionUtils.notEmpty ( sectionPainters ) )
-        {
-            for ( final SectionPainter<C, U> sectionPainter : sectionPainters )
-            {
-                installSectionPainter ( sectionPainter );
-            }
-        }
-    }
-
-    /**
-     * Uninstalls {@link SectionPainter}s used by this {@link Painter}.
-     */
-    protected final void uninstallSectionPainters ()
-    {
-        final List<SectionPainter<C, U>> sectionPainters = getInstalledSectionPainters ();
-        if ( CollectionUtils.notEmpty ( sectionPainters ) )
-        {
-            for ( final SectionPainter<C, U> sectionPainter : sectionPainters )
-            {
-                uninstallSectionPainter ( sectionPainter );
-            }
-        }
-    }
-
-    /**
-     * Returns {@link SectionPainter}s used by this painter or {@code null} if none are used.
-     * Do not return any {@code null} {@link SectionPainter}s here, it will cause an exception.
-     * You can use {@link #asList(SectionPainter[])} method to conveniently form a list filtering out {@link null}s.
-     *
-     * @return {@link SectionPainter}s used by this painter or {@code null} if none are used
-     */
-    protected List<SectionPainter<C, U>> getSectionPainters ()
-    {
-        return null;
-    }
-
-    /**
-     * Returns section painters list in a most optimal way.
-     * Utility method for usage inside of classed extending this one.
-     *
-     * @param sections section painters, some or all of them can be {@code null}
-     * @return section painters list in a most optimal way
-     */
-    protected final List<SectionPainter<C, U>> asList ( final SectionPainter<C, U>... sections )
-    {
-        ArrayList<SectionPainter<C, U>> list = null;
-        if ( sections != null )
-        {
-            for ( final SectionPainter<C, U> section : sections )
-            {
-                if ( section != null )
-                {
-                    if ( list == null )
-                    {
-                        list = new ArrayList<SectionPainter<C, U>> ( sections.length );
-                    }
-                    list.add ( section );
-                }
-            }
-        }
-        return list;
-    }
-
-    /**
-     * Returns {@link SectionPainter}s installed within this painter or {@code null} if none are installed.
-     * This method is used for various internal update mechanisms involving {@link SectionPainter}s.
-     *
-     * @return {@link SectionPainter}s installed within this painter or {@code null} if none are installed
-     */
-    protected final List<SectionPainter<C, U>> getInstalledSectionPainters ()
-    {
-        return MapUtils.notEmpty ( sectionPainters ) ? new ArrayList<SectionPainter<C, U>> ( sectionPainters.values () ) : null;
-    }
-
-    /**
-     * Installs {@link SectionPainter} onto this {@link Painter}.
-     *
-     * @param painter {@link SectionPainter} to install
-     */
-    protected final void installSectionPainter ( final SectionPainter<C, U> painter )
-    {
-        // Ensure painter exists
-        if ( painter == null )
-        {
-            throw new PainterException ( "Installed Painter cannot be null" );
-        }
-
-        // Initializing cache map
-        if ( sectionPainters == null )
-        {
-            sectionPainters = new HashMap<String, SectionPainter<C, U>> ( 3 );
-        }
-
-        // Section identifier
-        final String sectionId = painter.getSectionId ();
-
-        // Uninstalling previous section painter under same section identifier
-        final SectionPainter<C, U> old = sectionPainters.get ( sectionId );
-        if ( old != null )
-        {
-            old.uninstall ( component, ui, AbstractPainter.this );
-        }
-
-        // Installing new section painter
-        painter.install ( component, ui, AbstractPainter.this );
-
-        // Caching new section painter
-        sectionPainters.put ( sectionId, painter );
-    }
-
-    /**
-     * Uninstalls {@link SectionPainter} from this {@link Painter}.
-     *
-     * @param painter {@link SectionPainter} to uninstall
-     */
-    protected final void uninstallSectionPainter ( final SectionPainter<C, U> painter )
-    {
-        // Ensure painter exists
-        if ( painter == null )
-        {
-            throw new PainterException ( "Uninstalled Painter cannot be null" );
-        }
-
-        // Section identifier
-        final String sectionId = painter.getSectionId ();
-
-        // Removing section painter cache
-        sectionPainters.remove ( sectionId );
-
-        // Uninstalling section painter
-        painter.uninstall ( component, ui, AbstractPainter.this );
-    }
-
-    /**
-     * Paints {@link com.alee.painter.SectionPainter} at the specified bounds.
-     * This method was introduced as one of the measures to fix #401 issue appearing on Linux systems.
-     *
-     * @param painter {@link com.alee.painter.SectionPainter}
-     * @param g2d     graphics context
-     * @param bounds  section bounds relative to component coordinates system
-     */
-    protected void paintSection ( final SectionPainter painter, final Graphics2D g2d, final Rectangle bounds )
-    {
-        if ( SystemUtils.isUnix () )
-        {
-            /**
-             * This part of code is only here until #401 issue fix for Unix systems.
-             * The problem with this workaround is that it provides bounds which are only relevant within paint run.
-             */
-
-            // Translating to section coordinates
-            g2d.translate ( bounds.x, bounds.y );
-
-            // Clipping area
-            final Rectangle section = new Rectangle ( 0, 0, bounds.width, bounds.height );
-            final Shape oc = GraphicsUtils.intersectClip ( g2d, section );
-
-            // Creating appropriate bounds for painter
-            final Bounds componentBounds = new Bounds ( component, -bounds.x, -bounds.y );
-            final Bounds sectionBounds = new Bounds ( componentBounds, section );
-
-            // Painting section
-            painter.paint ( g2d, component, ui, sectionBounds );
-
-            // Restoring old clip
-            GraphicsUtils.restoreClip ( g2d, oc );
-
-            // Translating back
-            g2d.translate ( -bounds.x, -bounds.y );
-        }
-        else
-        {
-            // Clipping area
-            final Shape oc = GraphicsUtils.intersectClip ( g2d, bounds );
-
-            // Creating appropriate bounds for painter
-            final Bounds componentBounds = new Bounds ( component );
-            final Bounds sectionBounds = new Bounds ( componentBounds, bounds );
-
-            // Painting section
-            painter.paint ( g2d, component, ui, sectionBounds );
-
-            // Restoring old clip
-            GraphicsUtils.restoreClip ( g2d, oc );
-        }
-    }
-
-    /**
-     * Installs properties and listeners used by this {@link Painter} implementation.
-     * Override this method instead of {@link #install(JComponent, ComponentUI)} to install additional properties and listeners.
-     */
-    protected void installPropertiesAndListeners ()
-    {
-        // Updating orientation
-        updateOrientation ();
-        saveOrientation ();
-
-        // Install property change listener
-        installPropertyChangeListener ();
-    }
-
-    /**
-     * Uninstalls properties and listeners used by this {@link Painter} implementation.
-     * Override this method instead of {@link #uninstall(JComponent, ComponentUI)} to uninstall additional properties and listeners.
-     */
-    protected void uninstallPropertiesAndListeners ()
-    {
-        // Uninstall property change listener
-        uninstallPropertyChangeListener ();
     }
 
     /**
@@ -437,47 +145,10 @@ public abstract class AbstractPainter<C extends JComponent, U extends ComponentU
             @Override
             public void propertyChange ( final PropertyChangeEvent evt )
             {
-                // Event Dispatch Thread check
-                WebLookAndFeel.checkEventDispatchThread ();
-
-                // Ensure component is still available
-                // This might happen if painter is replaced from another PropertyChangeListener
-                if ( component != null )
-                {
-                    // Inform about property change event
-                    AbstractPainter.this.propertyChanged ( evt.getPropertyName (), evt.getOldValue (), evt.getNewValue () );
-                }
+                AbstractPainter.this.propertyChange ( evt.getPropertyName (), evt.getOldValue (), evt.getNewValue () );
             }
         };
         component.addPropertyChangeListener ( propertyChangeListener );
-    }
-
-    /**
-     * Informs about {@link #component} property change.
-     *
-     * @param property modified property
-     * @param oldValue old property value
-     * @param newValue new property value
-     */
-    protected void propertyChanged ( final String property, final Object oldValue, final Object newValue )
-    {
-        // Forcing orientation visual updates
-        if ( Objects.equals ( property, WebLookAndFeel.COMPONENT_ORIENTATION_PROPERTY ) )
-        {
-            orientationChange ();
-        }
-
-        // Tracking component border changes
-        if ( Objects.equals ( property, WebLookAndFeel.BORDER_PROPERTY ) )
-        {
-            borderChange ( ( Border ) newValue );
-        }
-
-        // Tracking component margin and padding changes
-        if ( Objects.equals ( property, WebLookAndFeel.LAF_MARGIN_PROPERTY, WebLookAndFeel.LAF_PADDING_PROPERTY ) )
-        {
-            updateBorder ();
-        }
     }
 
     /**
@@ -490,6 +161,28 @@ public abstract class AbstractPainter<C extends JComponent, U extends ComponentU
     }
 
     /**
+     * Performs various updates on property changes.
+     *
+     * @param property modified property
+     * @param oldValue old property value
+     * @param newValue new property value
+     */
+    protected void propertyChange ( final String property, final Object oldValue, final Object newValue )
+    {
+        // Forcing orientation visual updates
+        if ( CompareUtils.equals ( property, WebLookAndFeel.COMPONENT_ORIENTATION_PROPERTY ) )
+        {
+            orientationChange ();
+        }
+
+        // Tracking component border changes
+        if ( CompareUtils.equals ( property, WebLookAndFeel.BORDER_PROPERTY ) )
+        {
+            borderChange ( ( Border ) newValue );
+        }
+    }
+
+    /**
      * Performs various updates on orientation change.
      */
     protected void orientationChange ()
@@ -497,10 +190,30 @@ public abstract class AbstractPainter<C extends JComponent, U extends ComponentU
         // Saving new orientation
         saveOrientation ();
 
-        // Updating component view
-        // Revalidate includes border update so we don't need to call it separately
-        revalidate ();
-        repaint ();
+        // Updating only if allowed
+        if ( isSettingsUpdateAllowed () )
+        {
+            // Updating component view
+            // Revalidate includes border update so we don't need to call it separately
+            revalidate ();
+            repaint ();
+        }
+    }
+
+    /**
+     * Performs various border-related operations.
+     *
+     * @param border new border
+     */
+    protected void borderChange ( final Border border )
+    {
+        // First of all checking that it is not a UI resource
+        // If it is not that means new component border was set from outside
+        // We might want to keep that border and avoid automated WebLaF border to be set in future until old border is removed
+        if ( !SwingUtils.isUIResource ( border ) )
+        {
+            SwingUtils.setHonorUserBorders ( component, true );
+        }
     }
 
     /**
@@ -514,7 +227,7 @@ public abstract class AbstractPainter<C extends JComponent, U extends ComponentU
     /**
      * Updates component orientation based on global orientation.
      */
-    protected void updateOrientation ()
+    public void updateOrientation ()
     {
         if ( isSettingsUpdateAllowed () )
         {
@@ -523,123 +236,11 @@ public abstract class AbstractPainter<C extends JComponent, U extends ComponentU
     }
 
     /**
-     * Performs various border-related operations.
-     *
-     * @param border new border
-     */
-    protected void borderChange ( final Border border )
-    {
-        /**
-         * Managing {@link JComponent}'s client property to preserve customized component {@link Border}s.
-         * Any {@link Border} that is not {@code null} and not a {@link javax.swing.plaf.UIResource} is considered to be custom.
-         * This is necessary to prevent WebLaF from overwriting those custom borders.
-         */
-        final boolean oldHonor = SwingUtils.getHonorUserBorders ( component );
-        final boolean newHonor = !SwingUtils.isUIResource ( border );
-        if ( oldHonor != newHonor )
-        {
-            // Updating client property
-            SwingUtils.setHonorUserBorders ( component, newHonor );
-        }
-        if ( !newHonor && !( border instanceof WebBorder ) )
-        {
-            // Restoring WebLaF's border
-            updateBorder ();
-        }
-    }
-
-    /**
-     * Returns {@link Painter} border according to component's margin, padding and {@link Painter}'s borders.
-     * It is used to update component's border within {@link #updateBorder()} and to calculated default preferred size.
-     *
-     * @return {@link Painter} border according to component's margin, padding and {@link Painter}'s borders
-     */
-    protected Insets getCompleteBorder ()
-    {
-        final Insets border;
-        if ( component != null && !SwingUtils.isPreserveBorders ( component ) )
-        {
-            // Initializing empty border
-            border = new Insets ( 0, 0, 0, 0 );
-
-            // Adding margin size
-            if ( !isSectionPainter () )
-            {
-                final Insets margin = PainterSupport.getMargin ( component, true );
-                SwingUtils.increase ( border, margin );
-            }
-
-            // Adding painter border size
-            final Insets borders = getBorder ();
-            if ( borders != null )
-            {
-                border.top += borders.top;
-                border.left += ltr ? borders.left : borders.right;
-                border.bottom += borders.bottom;
-                border.right += ltr ? borders.right : borders.left;
-            }
-
-            // Adding padding size
-            if ( !isSectionPainter () )
-            {
-                final Insets padding = PainterSupport.getPadding ( component, true );
-                SwingUtils.increase ( border, padding );
-            }
-        }
-        else
-        {
-            // Null border to prevent updates
-            border = null;
-        }
-        return border;
-    }
-
-    /**
-     * Returns border required for the view provided by this {@link Painter} or {@code null} in case it is not needed.     *
-     * This border should not include possible component margin and padding, but only border provided by painter.
-     * This border is added to component's margin and padding in {@link #getCompleteBorder()} calculations.
-     * This border should not take component orientation into account, painter will take care of it later.
-     *
-     * @return border required for the view provided by this {@link Painter} or {@code null} in case it is not needed
-     */
-    protected Insets getBorder ()
-    {
-        return null;
-    }
-
-    /**
-     * Custom check is written to avoid {@link Component#inside(int, int)} deprecated method usage.
-     * Default implementation simply checks that point is within component bounds.
-     */
-    @Override
-    public boolean contains ( final C c, final U ui, final Bounds bounds, final int x, final int y )
-    {
-        return bounds.get ().contains ( x, y );
-    }
-
-    @Override
-    public int getBaseline ( final C c, final U ui, final Bounds bounds )
-    {
-        return -1;
-    }
-
-    @Override
-    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final C c, final U ui )
-    {
-        return Component.BaselineResizeBehavior.OTHER;
-    }
-
-    @Override
-    public Dimension getPreferredSize ()
-    {
-        return SwingUtils.increase ( new Dimension ( 0, 0 ), getCompleteBorder () );
-    }
-
-    /**
      * Updates component with complete border.
      * This border takes painter borders and component margin and padding into account.
      */
-    protected void updateBorder ()
+    @Override
+    public void updateBorder ()
     {
         if ( isSettingsUpdateAllowed () )
         {
@@ -647,7 +248,7 @@ public abstract class AbstractPainter<C extends JComponent, U extends ComponentU
             if ( border != null )
             {
                 final Border old = component.getBorder ();
-                if ( !( old instanceof WebBorder ) || Objects.notEquals ( ( ( WebBorder ) old ).getBorderInsets (), border ) )
+                if ( !( old instanceof WebBorder ) || !CompareUtils.equals ( ( ( WebBorder ) old ).getBorderInsets (), border ) )
                 {
                     component.setBorder ( new WebBorder ( border ) );
                 }
@@ -656,11 +257,74 @@ public abstract class AbstractPainter<C extends JComponent, U extends ComponentU
     }
 
     /**
-     * Should be called when whole painter visual representation changes.
+     * Updates component border according to component's margin and padding and painter's borders.
+     *
+     * @return complete painter border
      */
-    protected void repaint ()
+    public Insets getCompleteBorder ()
     {
-        repaint ( 0, 0, component.getWidth (), component.getHeight () );
+        if ( component != null && !SwingUtils.isPreserveBorders ( component ) )
+        {
+            final Insets border = i ( 0, 0, 0, 0 );
+
+            // Calculating margin borders
+            if ( !isSectionPainter () )
+            {
+                final Insets margin = LafUtils.getMargin ( component );
+                if ( margin != null )
+                {
+                    border.top += margin.top;
+                    border.left += ltr ? margin.left : margin.right;
+                    border.bottom += margin.bottom;
+                    border.right += ltr ? margin.right : margin.left;
+                }
+            }
+
+            // Painter borders
+            final Insets borders = getBorders ();
+            if ( borders != null )
+            {
+                border.top += borders.top;
+                border.left += ltr ? borders.left : borders.right;
+                border.bottom += borders.bottom;
+                border.right += ltr ? borders.right : borders.left;
+            }
+
+            // Calculating padding borders
+            if ( !isSectionPainter () )
+            {
+                final Insets padding = LafUtils.getPadding ( component );
+                if ( padding != null )
+                {
+                    border.top += padding.top;
+                    border.left += ltr ? padding.left : padding.right;
+                    border.bottom += padding.bottom;
+                    border.right += ltr ? padding.right : padding.left;
+                }
+            }
+
+            // Return final border
+            return border;
+        }
+        else
+        {
+            // Return {@code null} to prevent border updates
+            return null;
+        }
+    }
+
+    /**
+     * Should be called when painter visual representation changes.
+     */
+    public void repaint ()
+    {
+        if ( isSettingsUpdateAllowed () && component != null && component.isShowing () )
+        {
+            for ( final PainterListener listener : CollectionUtils.copy ( listeners ) )
+            {
+                listener.repaint ();
+            }
+        }
     }
 
     /**
@@ -668,7 +332,7 @@ public abstract class AbstractPainter<C extends JComponent, U extends ComponentU
      *
      * @param bounds part bounds
      */
-    protected void repaint ( final Rectangle bounds )
+    public void repaint ( final Rectangle bounds )
     {
         repaint ( bounds.x, bounds.y, bounds.width, bounds.height );
     }
@@ -681,50 +345,153 @@ public abstract class AbstractPainter<C extends JComponent, U extends ComponentU
      * @param width  part bounds width
      * @param height part bounds height
      */
-    protected void repaint ( final int x, final int y, final int width, final int height )
+    public void repaint ( final int x, final int y, final int width, final int height )
     {
         if ( isSettingsUpdateAllowed () && component.isShowing () )
         {
-            component.repaint ( x, y, width, height );
+            for ( final PainterListener listener : CollectionUtils.copy ( listeners ) )
+            {
+                listener.repaint ( x, y, width, height );
+            }
         }
     }
 
     /**
      * Should be called when painter size or border changes.
      */
-    protected void revalidate ()
+    public void revalidate ()
     {
-        updateBorder ();
         if ( isSettingsUpdateAllowed () )
         {
-            component.revalidate ();
+            // Updating border to have correct size
+            updateBorder ();
+
+            // Revalidating layout
+            for ( final PainterListener listener : CollectionUtils.copy ( listeners ) )
+            {
+                listener.revalidate ();
+            }
         }
     }
 
     /**
      * Should be called when painter opacity changes.
-     * todo Use this instead of the outer border updates?
      */
-    protected void updateOpacity ()
+    public void updateOpacity ()
     {
         if ( isSettingsUpdateAllowed () )
         {
-            final Boolean opaque = isOpaque ();
-            if ( opaque != null )
+            for ( final PainterListener listener : CollectionUtils.copy ( listeners ) )
             {
-                LookAndFeel.installProperty ( component, WebLookAndFeel.OPAQUE_PROPERTY, opaque ? Boolean.TRUE : Boolean.FALSE );
+                listener.updateOpacity ();
             }
         }
     }
 
     /**
      * Should be called when painter size, border and visual representation changes.
-     * Makes sure that everything in the component view is up to date.
+     * Calls both revalidate and update listener methods.
      */
-    protected void updateAll ()
+    public void updateAll ()
     {
-        updateOpacity ();
-        revalidate ();
-        repaint ();
+        if ( isSettingsUpdateAllowed () )
+        {
+            updateBorder ();
+            for ( final PainterListener listener : CollectionUtils.copy ( listeners ) )
+            {
+                listener.updateOpacity ();
+                listener.revalidate ();
+                if ( component.isShowing () )
+                {
+                    listener.repaint ();
+                }
+            }
+        }
+    }
+
+    @Override
+    public Dimension getPreferredSize ()
+    {
+        final Insets b = getCompleteBorder ();
+        return b != null ? new Dimension ( b.left + b.right, b.top + b.bottom ) : new Dimension ();
+    }
+
+    @Override
+    public void addPainterListener ( final PainterListener listener )
+    {
+        listeners.add ( listener );
+    }
+
+    @Override
+    public void removePainterListener ( final PainterListener listener )
+    {
+        listeners.remove ( listener );
+    }
+
+    /**
+     * Returns point for the specified coordinates.
+     *
+     * @param x X coordinate
+     * @param y Y coordinate
+     * @return point for the specified coordinates
+     */
+    protected Point p ( final int x, final int y )
+    {
+        return new Point ( x, y );
+    }
+
+    /**
+     * Returns insets with the specified settings.
+     *
+     * @param top    the inset from the top
+     * @param left   the inset from the left
+     * @param bottom the inset from the bottom
+     * @param right  the inset from the right
+     * @return insets with the specified settings
+     */
+    protected Insets i ( final int top, final int left, final int bottom, final int right )
+    {
+        return new Insets ( top, left, bottom, right );
+    }
+
+    /**
+     * Returns combined insets with the specified settings.
+     *
+     * @param insets base insets
+     * @param top    the inset from the top
+     * @param left   the inset from the left
+     * @param bottom the inset from the bottom
+     * @param right  the inset from the right
+     * @return combined insets with the specified settings
+     */
+    protected Insets i ( final Insets insets, final int top, final int left, final int bottom, final int right )
+    {
+        return insets != null ? new Insets ( insets.top + top, insets.left + left, insets.bottom + bottom, insets.right + right ) :
+                new Insets ( top, left, bottom, right );
+    }
+
+    /**
+     * Returns combined insets.
+     *
+     * @param i1 first insets
+     * @param i2 second insets
+     * @return combined insets
+     */
+    protected Insets i ( final Insets i1, final Insets i2 )
+    {
+        return i1 != null && i2 != null ? new Insets ( i1.top + i2.top, i1.left + i2.left, i1.bottom + i2.bottom, i1.right + i2.right ) :
+                i1 != null ? i1 : i2;
+    }
+
+    /**
+     * Returns bounds reduced by specified insets.
+     *
+     * @param bounds bounds to reduce
+     * @param limit  limiting insets
+     * @return bounds reduced by specified insets
+     */
+    protected Rectangle b ( final Rectangle bounds, final Insets limit )
+    {
+        return SwingUtils.shrink ( bounds, limit );
     }
 }

@@ -17,38 +17,59 @@
 
 package com.alee.laf.scroll;
 
-import com.alee.api.data.Corner;
-import com.alee.api.jdk.Consumer;
-import com.alee.extended.canvas.WebCanvas;
-import com.alee.laf.LookAndFeelException;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
 import com.alee.utils.LafUtils;
-import com.alee.utils.SwingUtils;
+import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
 import javax.swing.plaf.basic.BasicScrollPaneUI;
 import java.awt.*;
-import java.awt.event.ContainerAdapter;
-import java.awt.event.ContainerEvent;
-import java.awt.event.MouseWheelEvent;
-import java.awt.event.MouseWheelListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Custom UI for {@link JScrollPane} component.
+ * Custom UI for JScrollPane component.
  *
  * @author Mikle Garin
  */
-public class WebScrollPaneUI extends BasicScrollPaneUI implements ShapeSupport, MarginSupport, PaddingSupport
+
+public class WebScrollPaneUI extends BasicScrollPaneUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
 {
+    /**
+     * Style settings.
+     */
+    protected Color cornerBackground;
+    protected Color cornerLineColor;
+
+    public Color getCornerBackground ()
+    {
+        return cornerBackground;
+    }
+
+    public void setCornerBackground ( Color cornerBackground )
+    {
+        this.cornerBackground = cornerBackground;
+        updateCornerColors ();
+    }
+
+    public Color getCornerLineColor ()
+    {
+        return cornerLineColor;
+    }
+
+    public void setCornerLineColor ( Color cornerLineColor )
+    {
+        this.cornerLineColor = cornerLineColor;
+        updateCornerColors ();
+    }
+
     /**
      * Component painter.
      */
@@ -58,31 +79,46 @@ public class WebScrollPaneUI extends BasicScrollPaneUI implements ShapeSupport, 
     /**
      * Listeners.
      */
-    protected transient PropertyChangeListener propertyChangeListener;
-    protected transient ContainerAdapter viewListener;
+    protected PropertyChangeListener propertyChangeListener;
 
     /**
      * Runtime variables.
      */
-    protected transient Map<Corner, JComponent> cornersCache = new HashMap<Corner, JComponent> ( 4 );
+    protected Insets margin = null;
+    protected Insets padding = null;
+    protected Component view = null;
+    protected Map<String, JComponent> cornersCache = new HashMap<String, JComponent> ( 4 );
 
     /**
-     * Returns an instance of the {@link WebScrollPaneUI} for the specified component.
-     * This tricky method is used by {@link UIManager} to create component UIs when needed.
+     * Returns an instance of the WebScrollPaneUI for the specified component.
+     * This tricky method is used by UIManager to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the {@link WebScrollPaneUI}
+     * @return instance of the WebScrollPaneUI
      */
+    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebScrollPaneUI ();
     }
 
+    /**
+     * Installs UI in the specified component.
+     *
+     * @param c component for this UI
+     */
     @Override
     public void installUI ( final JComponent c )
     {
         // Installing UI
         super.installUI ( c );
+
+        // Link to view
+        final JViewport viewport = scrollpane.getViewport ();
+        if ( viewport != null )
+        {
+            view = viewport.getView ();
+        }
 
         // Scroll bars styling
         StyleId.scrollpaneViewport.at ( scrollpane ).set ( scrollpane.getViewport () );
@@ -92,65 +128,21 @@ public class WebScrollPaneUI extends BasicScrollPaneUI implements ShapeSupport, 
         // Updating scrollpane corner
         updateCorners ();
 
-        // Viewport listener
-        viewListener = new ContainerAdapter ()
-        {
-            @Override
-            public void componentAdded ( final ContainerEvent e )
-            {
-                removeCorners ();
-                updateCorners ();
-            }
-
-            @Override
-            public void componentRemoved ( final ContainerEvent e )
-            {
-                removeCorners ();
-                updateCorners ();
-            }
-        };
-        final JViewport viewport = scrollpane.getViewport ();
-        if ( viewport != null )
-        {
-            viewport.addContainerListener ( viewListener );
-        }
-
         // Property change listener
         propertyChangeListener = new PropertyChangeListener ()
         {
             @Override
             public void propertyChange ( final PropertyChangeEvent evt )
             {
-                final String property = evt.getPropertyName ();
-                if ( property.equals ( WebLookAndFeel.COMPONENT_ORIENTATION_PROPERTY ) )
+                if ( evt.getPropertyName ().equals ( WebLookAndFeel.COMPONENT_ORIENTATION_PROPERTY ) )
                 {
-                    // Simply updating corners
-                    removeCorners ();
                     updateCorners ();
                 }
-                else if ( property.equals ( WebLookAndFeel.VIEWPORT_PROPERTY ) )
+                else if ( evt.getPropertyName ().equals ( WebLookAndFeel.VIEWPORT_PROPERTY ) )
                 {
-                    // Updating old viewport style and removing listener
-                    if ( evt.getOldValue () != null )
-                    {
-                        final JViewport viewport = ( JViewport ) evt.getOldValue ();
-                        viewport.removeContainerListener ( viewListener );
-                        StyleId.viewport.set ( viewport );
-                    }
-
-                    // Updating new viewport style and adding listener
-                    if ( evt.getNewValue () != null )
-                    {
-                        final JViewport viewport = ( JViewport ) evt.getNewValue ();
-                        viewport.addContainerListener ( viewListener );
-                        StyleId.scrollpaneViewport.at ( scrollpane ).set ( scrollpane.getViewport () );
-                    }
-
-                    // Updating corners
-                    removeCorners ();
-                    updateCorners ();
+                    StyleId.scrollpaneViewport.at ( scrollpane ).set ( scrollpane.getViewport () );
                 }
-                else if ( property.equals ( WebLookAndFeel.VERTICAL_SCROLLBAR_PROPERTY ) )
+                else if ( evt.getPropertyName ().equals ( WebLookAndFeel.VERTICAL_SCROLLBAR_PROPERTY ) )
                 {
                     final JScrollBar vsb = scrollpane.getVerticalScrollBar ();
                     if ( vsb != null )
@@ -158,7 +150,7 @@ public class WebScrollPaneUI extends BasicScrollPaneUI implements ShapeSupport, 
                         StyleId.scrollpaneVerticalBar.at ( scrollpane ).set ( vsb );
                     }
                 }
-                else if ( property.equals ( WebLookAndFeel.HORIZONTAL_SCROLLBAR_PROPERTY ) )
+                else if ( evt.getPropertyName ().equals ( WebLookAndFeel.HORIZONTAL_SCROLLBAR_PROPERTY ) )
                 {
                     final JScrollBar hsb = scrollpane.getHorizontalScrollBar ();
                     if ( hsb != null )
@@ -174,6 +166,11 @@ public class WebScrollPaneUI extends BasicScrollPaneUI implements ShapeSupport, 
         StyleManager.installSkin ( scrollpane );
     }
 
+    /**
+     * Uninstalls UI from the specified component.
+     *
+     * @param c component with this UI
+     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -186,335 +183,55 @@ public class WebScrollPaneUI extends BasicScrollPaneUI implements ShapeSupport, 
         // Removing listener and custom corners
         removeCorners ();
 
-        // Resetting layout to default used within JScrollPane
-        // This update will ensure that we properly cleanup custom layout
-        scrollpane.setLayout ( new ScrollPaneLayout.UIResource () );
+        // Removing link to view
+        view = null;
 
         // Uninstalling UI
         super.uninstallUI ( c );
     }
 
     @Override
-    protected MouseWheelListener createMouseWheelListener ()
+    public StyleId getStyleId ()
     {
-        return new MouseWheelListener ()
-        {
-            @Override
-            public void mouseWheelMoved ( final MouseWheelEvent e )
-            {
-                if ( scrollpane.isWheelScrollingEnabled () && e.getWheelRotation () != 0 )
-                {
-                    // Determining scroll orientation
-                    // This is the only part of the original {@link BasicScrollPaneUI} which is modified
-                    // It provides HORIZONTAL instead of VERTICAL in case `SHIFT` modified is available
-                    int orientation = SwingConstants.VERTICAL;
-                    JScrollBar toScroll = scrollpane.getVerticalScrollBar ();
-                    if ( toScroll == null || !toScroll.isVisible () || SwingUtils.isShift ( e ) )
-                    {
-                        toScroll = scrollpane.getHorizontalScrollBar ();
-                        if ( toScroll == null || !toScroll.isVisible () )
-                        {
-                            return;
-                        }
-                        orientation = SwingConstants.HORIZONTAL;
-                    }
-
-                    // Properly consuming event
-                    e.consume ();
-
-                    // Performing scroll
-                    final int direction = e.getWheelRotation () < 0 ? -1 : 1;
-                    if ( e.getScrollType () == MouseWheelEvent.WHEEL_UNIT_SCROLL )
-                    {
-                        final JViewport vp = scrollpane.getViewport ();
-                        if ( vp == null )
-                        {
-                            return;
-                        }
-                        final Component component = vp.getView ();
-                        final int units = Math.abs ( e.getUnitsToScroll () );
-
-                        // When the scrolling speed is set to maximum, it's possible for a single wheel click to scroll by more units than
-                        // will fit in the visible area. This makes it hard/impossible to get to certain parts of the scrolling
-                        // Component with the wheel. To make for more accurate low-speed scrolling, we limit scrolling to the block
-                        // increment if the wheel was only rotated one click.
-                        final boolean limitScroll = Math.abs ( e.getWheelRotation () ) == 1;
-
-                        // Check if we should use the visibleRect trick
-                        final Object fastWheelScroll = toScroll.getClientProperty ( "JScrollBar.fastWheelScrolling" );
-                        if ( Boolean.TRUE == fastWheelScroll && component instanceof Scrollable )
-                        {
-                            // 5078454: Under maximum acceleration, we may scroll by many 100s of units in ~1 second.
-                            // BasicScrollBarUI.scrollByUnits() can bog down the EDT with repaints in this situation.
-                            // However, the Scrollable interface allows us to pass in an arbitrary visibleRect.
-                            // This allows us to accurately calculate the total scroll amount, and then update the GUI once.
-                            // This technique provides much faster accelerated wheel scrolling.
-                            final Scrollable scrollComp = ( Scrollable ) component;
-                            final Rectangle viewRect = vp.getViewRect ();
-                            final int startingX = viewRect.x;
-                            final boolean leftToRight = component.getComponentOrientation ().isLeftToRight ();
-                            int scrollMin = toScroll.getMinimum ();
-                            int scrollMax = toScroll.getMaximum () - toScroll.getModel ().getExtent ();
-
-                            if ( limitScroll )
-                            {
-                                final int blockIncr = scrollComp.getScrollableBlockIncrement ( viewRect, orientation, direction );
-                                if ( direction < 0 )
-                                {
-                                    scrollMin = Math.max ( scrollMin, toScroll.getValue () - blockIncr );
-                                }
-                                else
-                                {
-                                    scrollMax = Math.min ( scrollMax, toScroll.getValue () + blockIncr );
-                                }
-                            }
-
-                            for ( int i = 0; i < units; i++ )
-                            {
-                                // Modify the visible rect for the next unit, and check to see if we're at the end already
-                                final int unitIncr = scrollComp.getScrollableUnitIncrement ( viewRect, orientation, direction );
-                                if ( orientation == SwingConstants.VERTICAL )
-                                {
-                                    if ( direction < 0 )
-                                    {
-                                        viewRect.y -= unitIncr;
-                                        if ( viewRect.y <= scrollMin )
-                                        {
-                                            viewRect.y = scrollMin;
-                                            break;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        viewRect.y += unitIncr;
-                                        if ( viewRect.y >= scrollMax )
-                                        {
-                                            viewRect.y = scrollMax;
-                                            break;
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    if ( leftToRight && direction < 0 || !leftToRight && direction > 0 )
-                                    {
-                                        // Scroll left
-                                        viewRect.x -= unitIncr;
-                                        if ( leftToRight )
-                                        {
-                                            if ( viewRect.x < scrollMin )
-                                            {
-                                                viewRect.x = scrollMin;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    else if ( leftToRight && direction > 0 || !leftToRight && direction < 0 )
-                                    {
-                                        // Scroll right
-                                        viewRect.x += unitIncr;
-                                        if ( leftToRight )
-                                        {
-                                            if ( viewRect.x > scrollMax )
-                                            {
-                                                viewRect.x = scrollMax;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        throw new LookAndFeelException ( "Non-sensical ComponentOrientation / scroll direction" );
-                                    }
-                                }
-                            }
-
-                            // Set the final view position on the ScrollBar
-                            if ( orientation == SwingConstants.VERTICAL )
-                            {
-                                toScroll.setValue ( viewRect.y );
-                            }
-                            else
-                            {
-                                if ( leftToRight )
-                                {
-                                    toScroll.setValue ( viewRect.x );
-                                }
-                                else
-                                {
-                                    // RTL scrollbars are oriented with minValue on the right and maxValue on the left
-                                    int newPos = toScroll.getValue () - ( viewRect.x - startingX );
-                                    if ( newPos < scrollMin )
-                                    {
-                                        newPos = scrollMin;
-                                    }
-                                    else if ( newPos > scrollMax )
-                                    {
-                                        newPos = scrollMax;
-                                    }
-                                    toScroll.setValue ( newPos );
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // Viewport's view is not a Scrollable, or fast wheel scrolling is not enabled
-                            scrollByUnits ( toScroll, direction, units, limitScroll );
-                        }
-                    }
-                    else if ( e.getScrollType () == MouseWheelEvent.WHEEL_BLOCK_SCROLL )
-                    {
-                        scrollByBlock ( toScroll, direction );
-                    }
-                }
-            }
-        };
-    }
-
-    /**
-     * Method for scrolling by a unit increment.
-     * Added for mouse wheel scrolling support, RFE 4202656.
-     *
-     * This method is called from {@link BasicScrollPaneUI} to implement wheel scrolling, as well as from scrollByUnit().
-     *
-     * If {@code limitByBlock} is set to {@code true}, the scrollbar will scroll at least 1 unit increment,
-     * but will not scroll farther than the block increment.
-     *
-     * This is a full copy of {@link javax.swing.plaf.basic.BasicScrollBarUI#scrollByUnits(javax.swing.JScrollBar, int, int, boolean)}.
-     *
-     * @param scrollbar    scroll bar
-     * @param direction    scroll direction
-     * @param units        scrolled untins
-     * @param limitToBlock whether or not should limit scroll to block increment
-     */
-    protected void scrollByUnits ( final JScrollBar scrollbar, final int direction,
-                                   final int units, final boolean limitToBlock )
-    {
-        int delta;
-        int limit = -1;
-
-        if ( limitToBlock )
-        {
-            if ( direction < 0 )
-            {
-                limit = scrollbar.getValue () - scrollbar.getBlockIncrement ( direction );
-            }
-            else
-            {
-                limit = scrollbar.getValue () + scrollbar.getBlockIncrement ( direction );
-            }
-        }
-
-        for ( int i = 0; i < units; i++ )
-        {
-            if ( direction > 0 )
-            {
-                delta = scrollbar.getUnitIncrement ( direction );
-            }
-            else
-            {
-                delta = -scrollbar.getUnitIncrement ( direction );
-            }
-
-            final int oldValue = scrollbar.getValue ();
-            int newValue = oldValue + delta;
-
-            // Check for overflow.
-            if ( delta > 0 && newValue < oldValue )
-            {
-                newValue = scrollbar.getMaximum ();
-            }
-            else if ( delta < 0 && newValue > oldValue )
-            {
-                newValue = scrollbar.getMinimum ();
-            }
-            if ( oldValue == newValue )
-            {
-                break;
-            }
-
-            if ( limitToBlock && i > 0 )
-            {
-                if ( direction < 0 && newValue < limit || direction > 0 && newValue > limit )
-                {
-                    break;
-                }
-            }
-            scrollbar.setValue ( newValue );
-        }
-    }
-
-    /**
-     * Method for scrolling by a block increment.
-     * Added for mouse wheel scrolling support, RFE 4202656.
-     *
-     * This method is called from {@link BasicScrollPaneUI} to implement wheel scrolling, and also from scrollByBlock().
-     *
-     * This is a full copy of {@link javax.swing.plaf.basic.BasicScrollBarUI#scrollByBlock(javax.swing.JScrollBar, int)}.
-     *
-     * @param scrollbar scroll bar
-     * @param direction scroll direction
-     */
-    protected void scrollByBlock ( final JScrollBar scrollbar, final int direction )
-    {
-        final int oldValue = scrollbar.getValue ();
-        final int blockIncrement = scrollbar.getBlockIncrement ( direction );
-        final int delta = blockIncrement * ( direction > 0 ? +1 : -1 );
-        int newValue = oldValue + delta;
-
-        // Check for overflow.
-        if ( delta > 0 && newValue < oldValue )
-        {
-            newValue = scrollbar.getMaximum ();
-        }
-        else if ( delta < 0 && newValue > oldValue )
-        {
-            newValue = scrollbar.getMinimum ();
-        }
-
-        scrollbar.setValue ( newValue );
+        return StyleManager.getStyleId ( scrollpane );
     }
 
     @Override
-    public Shape getShape ()
+    public StyleId setStyleId ( final StyleId id )
+    {
+        return StyleManager.setStyleId ( scrollpane, id );
+    }
+
+    @Override
+    public Shape provideShape ()
     {
         return PainterSupport.getShape ( scrollpane, painter );
     }
 
     @Override
-    public boolean isShapeDetectionEnabled ()
-    {
-        return PainterSupport.isShapeDetectionEnabled ( scrollpane, painter );
-    }
-
-    @Override
-    public void setShapeDetectionEnabled ( final boolean enabled )
-    {
-        PainterSupport.setShapeDetectionEnabled ( scrollpane, painter, enabled );
-    }
-
-    @Override
     public Insets getMargin ()
     {
-        return PainterSupport.getMargin ( scrollpane );
+        return margin;
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        PainterSupport.setMargin ( scrollpane, margin );
+        this.margin = margin;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return PainterSupport.getPadding ( scrollpane );
+        return padding;
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        PainterSupport.setPadding ( scrollpane, padding );
+        this.padding = padding;
+        PainterSupport.updateBorder ( getPainter () );
     }
 
     /**
@@ -524,7 +241,7 @@ public class WebScrollPaneUI extends BasicScrollPaneUI implements ShapeSupport, 
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getPainter ( painter );
+        return PainterSupport.getAdaptedPainter ( painter );
     }
 
     /**
@@ -535,10 +252,10 @@ public class WebScrollPaneUI extends BasicScrollPaneUI implements ShapeSupport, 
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( scrollpane, new Consumer<IScrollPanePainter> ()
+        PainterSupport.setPainter ( scrollpane, new DataRunnable<IScrollPanePainter> ()
         {
             @Override
-            public void accept ( final IScrollPanePainter newPainter )
+            public void run ( final IScrollPanePainter newPainter )
             {
                 WebScrollPaneUI.this.painter = newPainter;
             }
@@ -550,58 +267,20 @@ public class WebScrollPaneUI extends BasicScrollPaneUI implements ShapeSupport, 
      */
     protected void updateCorners ()
     {
-        final ScrollPaneCornerProvider provider = getScrollCornerProvider ();
-        for ( final Corner type : Corner.values () )
-        {
-            JComponent corner = cornersCache.get ( type );
-            if ( corner == null )
-            {
-                if ( provider != null )
-                {
-                    corner = provider.getCorner ( type );
-                }
-                if ( corner == null )
-                {
-                    // todo Make this corner optional
-                    if ( type == Corner.lowerLeading || type == Corner.lowerTrailing || type == Corner.upperTrailing )
-                    {
-                        corner = new WebCanvas ( StyleId.scrollpaneCorner.at ( scrollpane ), type.name () );
-                    }
-                }
-            }
-            if ( corner != null )
-            {
-                cornersCache.put ( type, corner );
-                scrollpane.setCorner ( type.getScrollPaneConstant (), corner );
-            }
-        }
+        final ScrollCornerProvider scp = getScrollCornerProvider ();
+        updateCorner ( LOWER_LEADING_CORNER, scp );
+        updateCorner ( LOWER_TRAILING_CORNER, scp );
+        updateCorner ( UPPER_TRAILING_CORNER, scp );
     }
 
     /**
-     * Returns scroll corner provider.
-     *
-     * @return scroll corner provider
+     * Updates corner colors.
      */
-    protected ScrollPaneCornerProvider getScrollCornerProvider ()
+    protected void updateCornerColors ()
     {
-        ScrollPaneCornerProvider scp = null;
-        if ( scrollpane.getViewport () != null && scrollpane.getViewport ().getView () != null )
-        {
-            final Component view = scrollpane.getViewport ().getView ();
-            if ( view instanceof ScrollPaneCornerProvider )
-            {
-                scp = ( ScrollPaneCornerProvider ) view;
-            }
-            else if ( view instanceof JComponent )
-            {
-                final ComponentUI ui = LafUtils.getUI ( ( JComponent ) view );
-                if ( ui != null && ui instanceof ScrollPaneCornerProvider )
-                {
-                    scp = ( ScrollPaneCornerProvider ) ui;
-                }
-            }
-        }
-        return scp;
+        updateCornerColor ( LOWER_LEADING_CORNER );
+        updateCornerColor ( LOWER_TRAILING_CORNER );
+        updateCornerColor ( UPPER_TRAILING_CORNER );
     }
 
     /**
@@ -609,19 +288,115 @@ public class WebScrollPaneUI extends BasicScrollPaneUI implements ShapeSupport, 
      */
     protected void removeCorners ()
     {
-        // We do not remove corners by types here by components directly
-        // This is required since internal types will be shifted upon component orientation change
-        for ( final JComponent corner : cornersCache.values () )
+        for ( final Component corner : cornersCache.values () )
         {
-            scrollpane.remove ( corner );
+            if ( corner != null )
+            {
+                scrollpane.remove ( corner );
+            }
         }
+
         cornersCache.clear ();
     }
 
-    @Override
-    public boolean contains ( final JComponent c, final int x, final int y )
+    /**
+     * Returns scroll corner provider.
+     *
+     * @return scroll corner provider
+     */
+    protected ScrollCornerProvider getScrollCornerProvider ()
     {
-        return PainterSupport.contains ( c, this, painter, x, y );
+        // Check if component provide corners
+        ScrollCornerProvider scp = null;
+        if ( view != null )
+        {
+            if ( view instanceof ScrollCornerProvider )
+            {
+                scp = ( ScrollCornerProvider ) view;
+            }
+            else
+            {
+                final ComponentUI ui = LafUtils.getUI ( view );
+                if ( ui != null && ui instanceof ScrollCornerProvider )
+                {
+                    scp = ( ScrollCornerProvider ) ui;
+                }
+            }
+        }
+        return scp;
+    }
+
+    /**
+     * Updates corner for the specified key.
+     *
+     * @param key      corner key
+     * @param provider scroll corner provider
+     */
+    protected void updateCorner ( final String key, final ScrollCornerProvider provider )
+    {
+        JComponent corner = cornersCache.get ( key );
+        if ( corner == null )
+        {
+            if ( provider != null )
+            {
+                corner = provider.getCorner ( key );
+            }
+            if ( corner == null )
+            {
+                final WebScrollPaneCorner wc = new WebScrollPaneCorner ( key );
+                if ( cornerBackground != null ) wc.setBackground ( cornerBackground );
+                if ( cornerLineColor != null ) wc.setBorderColor ( cornerLineColor );
+                corner = wc;
+            }
+            cornersCache.put ( key, corner );
+        }
+
+        scrollpane.setCorner ( key, corner );
+    }
+
+    /**
+     * Updates corner colors for the specified key.
+     *
+     * @param key      corner key
+     */
+    protected void updateCornerColor ( final String key )
+    {
+        JComponent corner = cornersCache.get ( key );
+        if ( corner != null && corner instanceof WebScrollPaneCorner )
+        {
+            final WebScrollPaneCorner wc = ( WebScrollPaneCorner ) corner;
+            if ( cornerBackground != null ) wc.setBackground ( cornerBackground );
+            if ( cornerLineColor != null ) wc.setBorderColor ( cornerLineColor );
+        }
+    }
+
+    @Override
+    protected void syncScrollPaneWithViewport ()
+    {
+        super.syncScrollPaneWithViewport ();
+
+        final JViewport viewport = scrollpane.getViewport ();
+
+        if ( viewport != null )
+        {
+            final Component newView = viewport.getView ();
+            if ( newView != null && !newView.equals ( view ) )
+            {
+                view = newView;
+                updateCorners ();
+            }
+        }
+    }
+
+    @Override
+    protected void updateViewport ( final PropertyChangeEvent e )
+    {
+        super.updateViewport ( e );
+
+        if ( e.getOldValue () != e.getNewValue () )
+        {
+            syncScrollPaneWithViewport ();
+        }
     }
 
     @Override
@@ -629,7 +404,7 @@ public class WebScrollPaneUI extends BasicScrollPaneUI implements ShapeSupport, 
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
         }
     }
 

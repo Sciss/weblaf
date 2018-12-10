@@ -23,26 +23,23 @@ import com.alee.painter.decoration.IDecoration;
 import javax.swing.*;
 
 /**
- * Simple tree selector painter based on {@link AbstractSectionDecorationPainter}.
+ * Simple tree selector painter based on {@link com.alee.painter.decoration.AbstractDecorationPainter}.
  * It is used within {@link TreePainter} to paint nodes selector.
  *
- * @param <C> component type
- * @param <U> component UI type
- * @param <D> decoration type
  * @author Mikle Garin
  */
 
-public class TreeSelectorPainter<C extends JTree, U extends WTreeUI, D extends IDecoration<C, D>>
-        extends AbstractSectionDecorationPainter<C, U, D> implements ITreeSelectorPainter<C, U>
+public class TreeSelectorPainter<E extends JTree, U extends WebTreeUI, D extends IDecoration<E, D>>
+        extends AbstractSectionDecorationPainter<E, U, D> implements ITreeSelectorPainter<E, U>
 {
     @Override
-    public String getSectionId ()
+    protected boolean isFocused ()
     {
-        return "selector";
+        return false;
     }
 
     @Override
-    protected boolean isFocused ()
+    protected boolean isPlainBackgroundPaintAllowed ( final E c )
     {
         return false;
     }

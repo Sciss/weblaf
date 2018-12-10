@@ -17,7 +17,7 @@
 
 package com.alee.skin.flat;
 
-import com.alee.managers.style.XmlSkin;
+import com.alee.managers.style.CustomSkin;
 
 /**
  * Flat WebLaF skin.
@@ -25,13 +25,13 @@ import com.alee.managers.style.XmlSkin;
  * @author Mikle Garin
  */
 
-public class FlatSkin extends XmlSkin
+public class FlatSkin extends CustomSkin
 {
     /**
      * Constructs skin.
      */
     public FlatSkin ()
     {
-        super ( FlatSkin.class, "resources/skin.xml" );
+        super ( "resources/skin.xml" );
     }
 }

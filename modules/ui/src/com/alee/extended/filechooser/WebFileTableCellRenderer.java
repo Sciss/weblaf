@@ -17,112 +17,68 @@
 
 package com.alee.extended.filechooser;
 
-import com.alee.api.jdk.Objects;
 import com.alee.laf.table.renderers.WebTableCellRenderer;
 import com.alee.managers.language.LM;
 import com.alee.utils.FileUtils;
 
 import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 
 /**
- * Default {@link javax.swing.table.TableCellRenderer} implementation for {@link WebFileTable}.
+ * File table cell renderer.
  *
- * @param <V> {@link File} type
- * @param <C> {@link WebFileTable} type
- * @param <P> {@link FileTableCellParameters} type
  * @author Mikle Garin
- * @see FileTableCellParameters
  */
-public class WebFileTableCellRenderer<V extends File, C extends WebFileTable, P extends FileTableCellParameters<V, C>>
-        extends WebTableCellRenderer<V, C, P>
+
+public class WebFileTableCellRenderer extends WebTableCellRenderer
 {
     @Override
-    protected int horizontalAlignmentForValue ( final P parameters )
+    public Component getTableCellRendererComponent ( final JTable table, final Object value, final boolean isSelected,
+                                                     final boolean hasFocus, final int row, final int column )
     {
-        final int alignment;
-        if ( Objects.equals ( parameters.columnId (), WebFileTableModel.NUMBER_COLUMN, WebFileTableModel.SIZE_COLUMN ) )
-        {
-            alignment = SwingConstants.TRAILING;
-        }
-        else
-        {
-            alignment = SwingConstants.LEADING;
-        }
-        return alignment;
-    }
+        super.getTableCellRendererComponent ( table, value, isSelected, hasFocus, row, column );
 
-    @Override
-    protected Icon iconForValue ( final P parameters )
-    {
-        final Icon icon;
-        if ( Objects.equals ( parameters.columnId (), WebFileTableModel.NAME_COLUMN ) )
+        final File file = ( File ) value;
+        final String columnId = ( String ) table.getColumnModel ().getColumn ( column ).getIdentifier ();
+        final boolean isFile = FileUtils.isFile ( file );
+        if ( columnId.equals ( WebFileTableModel.NUMBER_COLUMN ) )
         {
-            icon = FileUtils.getFileIcon ( parameters.value () );
+            setIcon ( null );
+            setText ( "" + ( row + 1 ) );
+            setHorizontalAlignment ( TRAILING );
         }
-        else
+        else if ( columnId.equals ( WebFileTableModel.NAME_COLUMN ) )
         {
-            icon = null;
+            setIcon ( FileUtils.getFileIcon ( file ) );
+            setText ( FileUtils.getDisplayFileName ( file ) );
+            setHorizontalAlignment ( LEADING );
         }
-        return icon;
-    }
+        else if ( columnId.equals ( WebFileTableModel.SIZE_COLUMN ) )
+        {
+            setIcon ( null );
+            setText ( isFile ? FileUtils.getDisplayFileSize ( file ) : "" );
+            setHorizontalAlignment ( LEADING );
+        }
+        else if ( columnId.equals ( WebFileTableModel.EXTENSION_COLUMN ) )
+        {
+            setIcon ( null );
+            setText ( isFile ? FileUtils.getFileExtPart ( file.getName (), true ) : LM.get ( "weblaf.file.type.folder" ) );
+            setHorizontalAlignment ( LEADING );
+        }
+        else if ( columnId.equals ( WebFileTableModel.CREATION_DATE_COLUMN ) )
+        {
+            setIcon ( null );
+            setText ( FileUtils.getDisplayFileCreationDate ( file ) );
+            setHorizontalAlignment ( LEADING );
+        }
+        else if ( columnId.equals ( WebFileTableModel.MODIFICATION_DATE_COLUMN ) )
+        {
+            setIcon ( null );
+            setText ( FileUtils.getDisplayFileModificationDate ( file ) );
+            setHorizontalAlignment ( LEADING );
+        }
 
-    @Override
-    protected String textForValue ( final P parameters )
-    {
-        final String text;
-        final boolean isFile = FileUtils.isFile ( parameters.value () );
-        if ( Objects.equals ( parameters.columnId (), WebFileTableModel.NUMBER_COLUMN ) )
-        {
-            text = Integer.toString ( parameters.row () + 1 );
-        }
-        else if ( Objects.equals ( parameters.columnId (), WebFileTableModel.NAME_COLUMN ) )
-        {
-            text = FileUtils.getDisplayFileName ( parameters.value () );
-        }
-        else if ( Objects.equals ( parameters.columnId (), WebFileTableModel.SIZE_COLUMN ) )
-        {
-            text = isFile ? FileUtils.getDisplayFileSize ( parameters.value () ) : "";
-        }
-        else if ( Objects.equals ( parameters.columnId (), WebFileTableModel.EXTENSION_COLUMN ) )
-        {
-            text = isFile ? FileUtils.getFileExtPart ( parameters.value ().getName (), true ) : LM.get ( "weblaf.file.type.folder" );
-        }
-        else if ( Objects.equals ( parameters.columnId (), WebFileTableModel.CREATION_DATE_COLUMN ) )
-        {
-            text = FileUtils.getDisplayFileCreationDate ( parameters.value () );
-        }
-        else if ( Objects.equals ( parameters.columnId (), WebFileTableModel.MODIFICATION_DATE_COLUMN ) )
-        {
-            text = FileUtils.getDisplayFileModificationDate ( parameters.value () );
-        }
-        else
-        {
-            throw new IllegalArgumentException ( "Unknown column identifier: " + parameters.columnId () );
-        }
-        return text;
-    }
-
-    @Override
-    protected P getRenderingParameters ( final WebFileTable table, final File value, final boolean isSelected,
-                                         final boolean hasFocus, final int row, final int column )
-    {
-        return ( P ) new FileTableCellParameters ( table, value, row, column, isSelected, hasFocus );
-    }
-
-    /**
-     * A subclass of {@link WebFileTableCellRenderer} that implements {@link javax.swing.plaf.UIResource}.
-     * It is used to determine cell renderer provided by the UI class to properly uninstall it on UI uninstall.
-     *
-     * @param <V> {@link File} type
-     * @param <C> {@link WebFileTable} type
-     * @param <P> {@link FileTableCellParameters} type
-     */
-    public static final class UIResource<V extends File, C extends WebFileTable, P extends FileTableCellParameters<V, C>>
-            extends WebFileTableCellRenderer<V, C, P> implements javax.swing.plaf.UIResource
-    {
-        /**
-         * Implementation is used completely from {@link WebFileTableCellRenderer}.
-         */
+        return this;
     }
 }

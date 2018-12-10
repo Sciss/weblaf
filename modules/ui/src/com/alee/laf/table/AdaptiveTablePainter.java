@@ -6,20 +6,18 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link TablePainter} adapter class.
- * It is used to install simple non-specific painters into {@link WebTableUI}.
+ * Simple TablePainter adapter class.
+ * It is used to install simple non-specific painters into WebTableUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveTablePainter<C extends JTable, U extends WebTableUI> extends AdaptivePainter<C, U> implements ITablePainter<C, U>
+public final class AdaptiveTablePainter<E extends JTable, U extends WebTableUI> extends AdaptivePainter<E, U> implements ITablePainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveTablePainter} for the specified painter.
+     * Constructs new AdaptiveTablePainter for the specified painter.
      *
-     * @param painter {@link Painter} to adapt
+     * @param painter painter to adapt
      */
     public AdaptiveTablePainter ( final Painter painter )
     {

@@ -17,27 +17,21 @@
 
 package com.alee.extended.tree;
 
-import com.alee.utils.file.FileComparator;
+import com.alee.global.GlobalConstants;
 
 import java.util.Comparator;
 
 /**
- * {@link FileTreeNode}s comparator based on {@link FileComparator}.
+ * Custom comparator for file tree nodes.
  *
  * @author Mikle Garin
- * @see FileComparator
  */
 
 public class FileTreeNodeComparator implements Comparator<FileTreeNode>
 {
-    /**
-     * Actual comparator.
-     */
-    protected FileComparator fileComparator = new FileComparator ();
-
     @Override
     public int compare ( final FileTreeNode o1, final FileTreeNode o2 )
     {
-        return fileComparator.compare ( o1.getFile (), o2.getFile () );
+        return GlobalConstants.FILE_COMPARATOR.compare ( o1.getFile (), o2.getFile () );
     }
 }

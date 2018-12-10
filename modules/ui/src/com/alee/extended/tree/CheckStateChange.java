@@ -19,21 +19,20 @@ package com.alee.extended.tree;
 
 import com.alee.laf.checkbox.CheckState;
 
-import javax.swing.tree.MutableTreeNode;
+import javax.swing.tree.DefaultMutableTreeNode;
 
 /**
- * {@link WebCheckBoxTree} node state change information object.
+ * WebCheckBoxTree node state change information object.
  *
- * @param <N> node type
  * @author Mikle Garin
  */
 
-public final class CheckStateChange<N extends MutableTreeNode>
+public final class CheckStateChange<E extends DefaultMutableTreeNode>
 {
     /**
      * Node which state was changed.
      */
-    private final N node;
+    private final E node;
 
     /**
      * Old node check state.
@@ -52,7 +51,7 @@ public final class CheckStateChange<N extends MutableTreeNode>
      * @param oldState old node check state
      * @param newState new node check state
      */
-    public CheckStateChange ( final N node, final CheckState oldState, final CheckState newState )
+    public CheckStateChange ( final E node, final CheckState oldState, final CheckState newState )
     {
         super ();
         this.node = node;
@@ -65,7 +64,7 @@ public final class CheckStateChange<N extends MutableTreeNode>
      *
      * @return node which state was changed
      */
-    public N getNode ()
+    public E getNode ()
     {
         return node;
     }

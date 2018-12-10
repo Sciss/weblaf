@@ -1,172 +1,113 @@
 package com.alee.laf.progressbar;
 
-import com.alee.api.jdk.Objects;
-import com.alee.extended.window.TestFrame;
+import com.alee.global.StyleConstants;
 import com.alee.laf.WebLookAndFeel;
-import com.alee.managers.style.BoundsType;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.DefaultPainter;
+import com.alee.painter.PainterSupport;
 import com.alee.painter.SectionPainter;
 import com.alee.painter.decoration.AbstractDecorationPainter;
 import com.alee.painter.decoration.DecorationState;
 import com.alee.painter.decoration.IDecoration;
+import com.alee.utils.CompareUtils;
+import com.alee.utils.GraphicsUtils;
+import com.alee.utils.LafUtils;
 import com.alee.utils.SwingUtils;
 
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Basic painter for {@link JProgressBar} component.
- * It is used as {@link WProgressBarUI} default painter.
+ * Basic painter for JProgressBar component.
+ * It is used as WebProgressBarUI default painter.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @param <D> decoration type
  * @author Alexandr Zernov
  * @author Mikle Garin
  */
-public class ProgressBarPainter<C extends JProgressBar, U extends WProgressBarUI, D extends IDecoration<C, D>>
-        extends AbstractDecorationPainter<C, U, D> implements IProgressBarPainter<C, U>, ChangeListener
+
+public class ProgressBarPainter<E extends JProgressBar, U extends WebProgressBarUI, D extends IDecoration<E, D>>
+        extends AbstractDecorationPainter<E, U, D> implements IProgressBarPainter<E, U>
 {
     /**
      * Style settings.
-     * todo Replace with general getMinimumSize method in painters
      */
     protected Dimension minimumContentSize;
 
     /**
      * Progress line painter.
      */
-    @DefaultPainter ( ProgressPainter.class )
+    @DefaultPainter (ProgressPainter.class)
     protected IProgressPainter progressPainter;
 
-    /**
-     * Progress text painter.
-     */
-    @DefaultPainter ( ProgressTextPainter.class )
-    protected IProgressTextPainter progressTextPainter;
-
-    /**
-     * Cached last progress bar value.
-     */
-    protected transient int value;
-
     @Override
-    protected List<SectionPainter<C, U>> getSectionPainters ()
+    public void install ( final E c, final U ui )
     {
-        return asList ( progressPainter, progressTextPainter );
+        super.install ( c, ui );
+
+        // Properly installing section painters
+        this.progressPainter = PainterSupport.installSectionPainter ( this, progressPainter, null, c, ui );
     }
 
     @Override
-    protected void installPropertiesAndListeners ()
+    public void uninstall ( final E c, final U ui )
     {
-        super.installPropertiesAndListeners ();
-        installProgressBarValueListeners ();
+        // Properly uninstalling section painters
+        this.progressPainter = PainterSupport.uninstallSectionPainter ( progressPainter, c, ui );
+
+        super.uninstall ( c, ui );
     }
 
     @Override
-    protected void uninstallPropertiesAndListeners ()
-    {
-        uninstallProgressBarValueListeners ();
-        super.uninstallPropertiesAndListeners ();
-    }
-
-    @Override
-    protected void propertyChanged ( final String property, final Object oldValue, final Object newValue )
+    protected void propertyChange ( final String property, final Object oldValue, final Object newValue )
     {
         // Perform basic actions on property changes
-        super.propertyChanged ( property, oldValue, newValue );
+        super.propertyChange ( property, oldValue, newValue );
 
         // Update animator on progress state changes
-        if ( Objects.equals ( property, WebLookAndFeel.INDETERMINATE_PROPERTY, WebLookAndFeel.ORIENTATION_PROPERTY ) )
+        if ( CompareUtils.equals ( property, WebLookAndFeel.INDETERMINATE_PROPERTY, WebLookAndFeel.ORIENTATION_PROPERTY ) )
         {
             updateDecorationState ();
         }
     }
 
-    /**
-     * Installs custom {@link JProgressBar} value listeners which will perform decoration state updates when needed.
-     */
-    protected void installProgressBarValueListeners ()
+    @Override
+    protected List<SectionPainter<E, U>> getSectionPainters ()
     {
-        value = component.getValue ();
-        component.addChangeListener ( this );
-    }
-
-    /**
-     * Uninstalls custom {@link JProgressBar} value listeners.
-     */
-    protected void uninstallProgressBarValueListeners ()
-    {
-        component.removeChangeListener ( this );
-        value = -1;
+        return asList ( progressPainter );
     }
 
     @Override
-    public void stateChanged ( final ChangeEvent e )
-    {
-        // Ensure component is still available
-        // This might happen if painter is replaced from another ChangeListener
-        if ( component != null )
-        {
-            // Check value change
-            final int newValue = component.getValue ();
-            if ( newValue != value )
-            {
-                // Perform states update only for non-indeterminate progress bar
-                if ( !component.isIndeterminate () )
-                {
-                    // Update decoration on border value changes
-                    final int min = component.getMinimum ();
-                    final int max = component.getMaximum ();
-                    if ( value == min || value == max || newValue == min || newValue == max )
-                    {
-                        updateDecorationState ();
-                    }
-                }
-
-                // Save current value
-                value = newValue;
-            }
-        }
-    }
-
-    @Override
-    public List<String> getDecorationStates ()
+    protected List<String> getDecorationStates ()
     {
         final List<String> states = super.getDecorationStates ();
-        states.add ( isHorizontal () ? DecorationState.horizontal : DecorationState.vertical );
-        states.add ( component.isIndeterminate () ? DecorationState.indeterminate : DecorationState.progress );
-        if ( !component.isIndeterminate () )
+        if ( isHorizontal () )
         {
-            final boolean min = component.getValue () == component.getMinimum ();
-            final boolean max = component.getValue () == component.getMaximum ();
-            if ( min )
-            {
-                states.add ( DecorationState.minimum );
-            }
-            if ( max )
-            {
-                states.add ( DecorationState.maximum );
-            }
-            if ( !min && !max )
-            {
-                states.add ( DecorationState.intermediate );
-            }
+            states.add ( DecorationState.horizontal );
+        }
+        else
+        {
+            states.add ( DecorationState.vertical );
+        }
+        if ( component.isIndeterminate () )
+        {
+            states.add ( DecorationState.indeterminate );
         }
         return states;
     }
 
     @Override
-    protected void paintContent ( final Graphics2D g2d, final Rectangle bounds, final C c, final U ui )
+    protected void paintContent ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
     {
         // Painting progress line
-        paintProgress ( g2d, BoundsType.border.bounds ( c ) );
+        paintProgress ( g2d, Bounds.border.of ( c ) );
 
         // Painting text
-        paintText ( g2d, BoundsType.padding.bounds ( c ) );
+        paintText ( g2d, Bounds.padding.of ( c ) );
     }
 
     /**
@@ -182,7 +123,7 @@ public class ProgressBarPainter<C extends JProgressBar, U extends WProgressBarUI
             if ( component.isIndeterminate () )
             {
                 // Painting indeterminate progress
-                paintSection ( progressPainter, g2d, bounds );
+                progressPainter.paint ( g2d, bounds, component, ui );
             }
             else
             {
@@ -214,7 +155,7 @@ public class ProgressBarPainter<C extends JProgressBar, U extends WProgressBarUI
                         }
                         bounds.height = p;
                     }
-                    paintSection ( progressPainter, g2d, bounds );
+                    progressPainter.paint ( g2d, bounds, component, ui );
                 }
             }
         }
@@ -230,8 +171,36 @@ public class ProgressBarPainter<C extends JProgressBar, U extends WProgressBarUI
     {
         if ( component.isStringPainted () )
         {
-            // Painting progress text
-            paintSection ( progressTextPainter, g2d, bounds );
+            final Map aa = SwingUtils.setupTextAntialias ( g2d );
+            final Shape oc = GraphicsUtils.setupClip ( g2d, bounds );
+
+            final Point mid = new Point ( bounds.x + bounds.width / 2, bounds.y + bounds.height / 2 );
+            final boolean hor = isHorizontal ();
+            if ( !hor )
+            {
+                g2d.translate ( mid.x, mid.y );
+                g2d.rotate ( ( ltr ? -1 : 1 ) * Math.PI / 2 );
+                g2d.translate ( -mid.x, -mid.y );
+            }
+
+            final String string = component.getString ();
+            final Point ts = LafUtils.getTextCenterShift ( g2d.getFontMetrics (), string );
+
+            if ( !component.isEnabled () )
+            {
+                g2d.setPaint ( Color.WHITE );
+                g2d.drawString ( string, mid.x + ts.x + 1, mid.y + ts.y + 1 );
+            }
+            g2d.setPaint ( component.isEnabled () ? component.getForeground () : StyleConstants.disabledTextColor );
+            g2d.drawString ( string, mid.x + ts.x, mid.y + ts.y );
+
+            if ( !hor )
+            {
+                g2d.rotate ( ( ltr ? 1 : -1 ) * Math.PI / 2 );
+            }
+
+            GraphicsUtils.restoreClip ( g2d, oc );
+            SwingUtils.restoreTextAntialias ( g2d, aa );
         }
     }
 
@@ -270,7 +239,6 @@ public class ProgressBarPainter<C extends JProgressBar, U extends WProgressBarUI
         int h = min.height;
 
         // Text size
-        // todo Retrieve size from painter
         if ( component.isStringPainted () )
         {
             final boolean hor = isHorizontal ();
@@ -285,16 +253,5 @@ public class ProgressBarPainter<C extends JProgressBar, U extends WProgressBarUI
         // Final size
         final Insets border = component.getInsets ();
         return new Dimension ( border.left + w + border.right, border.top + h + border.bottom );
-    }
-
-    public static void main ( String[] args )
-    {
-        WebLookAndFeel.install ();
-        final WebProgressBar progressBar = new WebProgressBar ();
-        progressBar.setIndeterminate ( true );
-        progressBar.setStringPainted ( true );
-        progressBar.setString ( "" );
-        progressBar.setString ( null );
-        TestFrame.show ( progressBar );
     }
 }

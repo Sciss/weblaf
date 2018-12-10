@@ -18,44 +18,33 @@
 package com.alee.extended.tree;
 
 import com.alee.laf.checkbox.CheckState;
-import com.alee.laf.tree.NodesAcceptPolicy;
 
-import javax.swing.tree.MutableTreeNode;
+import javax.swing.tree.DefaultMutableTreeNode;
 import java.util.Collection;
 import java.util.List;
 
 /**
- * Special checking model for {@link WebCheckBoxTree}.
+ * Special checking model for WebCheckBoxTree.
  *
- * @param <N> node type
  * @author Mikle Garin
  */
-public interface TreeCheckingModel<N extends MutableTreeNode>
+
+public interface TreeCheckingModel<E extends DefaultMutableTreeNode>
 {
     /**
-     * Returns list of nodes for the specified state.
+     * Returns list of checked nodes.
      *
-     * @param state  {@link CheckState} to return nodes for
-     * @param policy {@link NodesAcceptPolicy} that defines a way to filter nodes
-     * @return list of nodes for the specified state
+     * @param optimize whether should optimize the resulting list by removing checked node children or not
+     * @return list of checked nodes
      */
-    public List<N> getNodes ( CheckState state, NodesAcceptPolicy policy );
+    public List<E> getCheckedNodes ( boolean optimize );
 
     /**
-     * Returns specified tree node check state.
+     * Returns list of nodes in mixed state.
      *
-     * @param node tree node to process
-     * @return specified tree node check state
+     * @return list of nodes in mixed state
      */
-    public CheckState getCheckState ( N node );
-
-    /**
-     * Sets whether the specified tree node is checked or not.
-     *
-     * @param node    tree node to process
-     * @param checked whether the specified tree node should be checked or not
-     */
-    public void setChecked ( N node, boolean checked );
+    public List<E> getMixedNodes ();
 
     /**
      * Sets specified nodes state to checked.
@@ -63,31 +52,47 @@ public interface TreeCheckingModel<N extends MutableTreeNode>
      * @param nodes   nodes to check
      * @param checked whether the specified tree nodes should be checked or not
      */
-    public void setChecked ( Collection<N> nodes, boolean checked );
+    public void setChecked ( Collection<E> nodes, boolean checked );
+
+    /**
+     * Returns specified tree node check state.
+     *
+     * @param node tree node to process
+     * @return specified tree node check state
+     */
+    public CheckState getCheckState ( E node );
+
+    /**
+     * Sets whether the specified tree node is checked or not.
+     *
+     * @param node    tree node to process
+     * @param checked whether the specified tree node should be checked or not
+     */
+    public void setChecked ( E node, boolean checked );
 
     /**
      * Inverts tree node check.
      *
      * @param node tree node to process
      */
-    public void invertCheck ( N node );
+    public void invertCheck ( E node );
 
     /**
      * Inverts tree nodes check.
      *
      * @param nodes list of tree nodes to process
      */
-    public void invertCheck ( Collection<N> nodes );
-
-    /**
-     * Checks all tree nodes.
-     */
-    public void checkAll ();
+    public void invertCheck ( Collection<E> nodes );
 
     /**
      * Unchecks all tree nodes.
      */
     public void uncheckAll ();
+
+    /**
+     * Checks all tree nodes.
+     */
+    public void checkAll ();
 
     /**
      * Notifies model about checking mode change.

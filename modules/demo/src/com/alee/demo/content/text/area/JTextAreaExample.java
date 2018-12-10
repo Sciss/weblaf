@@ -17,9 +17,7 @@
 
 package com.alee.demo.content.text.area;
 
-import com.alee.demo.api.example.*;
-import com.alee.demo.api.example.wiki.OracleWikiPage;
-import com.alee.demo.api.example.wiki.WikiPage;
+import com.alee.demo.api.*;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
@@ -30,7 +28,8 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-public class JTextAreaExample extends AbstractStylePreviewExample
+
+public class JTextAreaExample extends AbstractExample
 {
     @Override
     public String getId ()
@@ -51,20 +50,13 @@ public class JTextAreaExample extends AbstractStylePreviewExample
     }
 
     @Override
-    public WikiPage getWikiPage ()
-    {
-        return new OracleWikiPage ( "How to Use Text Areas", "textarea" );
-    }
-
-    @Override
     protected List<Preview> createPreviews ()
     {
-        return CollectionUtils.<Preview>asList (
-                new BasicArea ( "basic", StyleId.textarea ),
-                new FixedArea ( "fixed", StyleId.textarea ),
-                new ScrollableArea ( "scrollable", StyleId.textarea ),
-                new ReadOnlyArea ( "readonly", StyleId.textarea )
-        );
+        final BasicArea e1 = new BasicArea ( "basic", StyleId.textarea );
+        final FixedArea e2 = new FixedArea ( "fixed", StyleId.textarea );
+        final ScrollableArea e3 = new ScrollableArea ( "scrollable", StyleId.textarea );
+        final ReadOnlyArea e4 = new ReadOnlyArea ( "readonly", StyleId.textarea );
+        return CollectionUtils.<Preview>asList ( e1, e2, e3, e4 );
     }
 
     /**
@@ -84,7 +76,7 @@ public class JTextAreaExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final JTextArea textArea = new JTextArea ( "Sample text" );
             textArea.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
@@ -109,7 +101,7 @@ public class JTextAreaExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final JTextArea textArea = new JTextArea ( 3, 20 );
             textArea.setText ( "Sample\nmultiline\ntext" );
@@ -135,7 +127,7 @@ public class JTextAreaExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final JTextArea textArea = new JTextArea ( 3, 20 );
             textArea.setText ( "Sample\nmultiline\ntext" );
@@ -161,7 +153,7 @@ public class JTextAreaExample extends AbstractStylePreviewExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ()
+        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
         {
             final JTextArea textArea = new JTextArea ( "Read/copy only" );
             textArea.setEditable ( false );

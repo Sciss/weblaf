@@ -21,15 +21,15 @@ import java.awt.*;
 
 /**
  * @author Mikle Garin
- * @see com.alee.extended.layout.VerticalFlowLayout
  */
+
 public class HorizontalFlowLayout extends AbstractLayoutManager
 {
     /**
-     * todo 1. Add horizontal alignment setting
+     * todo 1. Alignment
      */
 
-    protected int hgap;
+    protected int gap;
     protected boolean fillLast;
 
     public HorizontalFlowLayout ()
@@ -37,25 +37,25 @@ public class HorizontalFlowLayout extends AbstractLayoutManager
         this ( 2 );
     }
 
-    public HorizontalFlowLayout ( final int hgap )
+    public HorizontalFlowLayout ( final int gap )
     {
-        this ( hgap, false );
+        this ( gap, false );
     }
 
-    public HorizontalFlowLayout ( final int hgap, final boolean fillLast )
+    public HorizontalFlowLayout ( final int gap, final boolean fillLast )
     {
-        this.hgap = hgap;
+        this.gap = gap;
         this.fillLast = fillLast;
     }
 
     public int getHorizontalGap ()
     {
-        return hgap;
+        return gap;
     }
 
-    public void setHorizontalGap ( final int hgap )
+    public void setHorizGap ( final int gap )
     {
-        this.hgap = hgap;
+        this.gap = gap;
     }
 
     public boolean isFillLast ()
@@ -69,17 +69,29 @@ public class HorizontalFlowLayout extends AbstractLayoutManager
     }
 
     @Override
-    public void layoutContainer ( final Container container )
+    public Dimension preferredLayoutSize ( final Container parent )
+    {
+        return getLayoutSize ( parent, false );
+    }
+
+    @Override
+    public Dimension minimumLayoutSize ( final Container parent )
+    {
+        return getLayoutSize ( parent, true );
+    }
+
+    @Override
+    public void layoutContainer ( final Container parent )
     {
         // Required size
-        final Dimension required = preferredLayoutSize ( container );
+        final Dimension required = preferredLayoutSize ( parent );
 
         // Available size (limiting width to required)
-        final Dimension available = new Dimension ( required.width, container.getSize ().height );
+        final Dimension available = new Dimension ( required.width, parent.getSize ().height );
 
         // Additional variables
-        final boolean ltr = container.getComponentOrientation ().isLeftToRight ();
-        final Insets insets = container.getInsets ();
+        final boolean ltr = parent.getComponentOrientation ().isLeftToRight ();
+        final Insets insets = parent.getInsets ();
         final int ls = ltr ? insets.left : insets.right;
         final int rs = ltr ? insets.right : insets.left;
         final boolean min = required.width < available.width;
@@ -89,68 +101,52 @@ public class HorizontalFlowLayout extends AbstractLayoutManager
         final int xsWidth = available.width - required.width;
 
         // Layouting components
-        final int count = container.getComponentCount ();
+        final int count = parent.getComponentCount ();
         for ( int i = 0; i < count; i++ )
         {
-            final Component c = container.getComponent ( i );
+            final Component c = parent.getComponent ( i );
             if ( c.isVisible () )
             {
-                int w = min ? c.getMinimumSize ().width : c.getPreferredSize ().width;
+                int w = ( min ) ? c.getMinimumSize ().width : c.getPreferredSize ().width;
                 if ( xsWidth > 0 )
                 {
                     w += w * xsWidth / required.width;
                 }
 
                 final int width = fillLast && i == count - 1 &&
-                        container.getWidth () - x - rs > 0 ? container.getWidth () - x - rs : w;
+                        parent.getWidth () - x - rs > 0 ? parent.getWidth () - x - rs : w;
                 if ( ltr )
                 {
                     c.setBounds ( x, y, width, height );
                 }
                 else
                 {
-                    c.setBounds ( container.getWidth () - x - width, y, width, height );
+                    c.setBounds ( parent.getWidth () - x - width, y, width, height );
                 }
                 x += w + getHorizontalGap ();
             }
         }
     }
 
-    @Override
-    public Dimension preferredLayoutSize ( final Container container )
+    protected Dimension getLayoutSize ( final Container parent, final boolean min )
     {
-        return getLayoutSize ( container, false );
-    }
-
-    @Override
-    public Dimension minimumLayoutSize ( final Container container )
-    {
-        return getLayoutSize ( container, true );
-    }
-
-    protected Dimension getLayoutSize ( final Container container, final boolean minimum )
-    {
+        final int count = parent.getComponentCount ();
         final Dimension size = new Dimension ( 0, 0 );
-
-        for ( int i = 0; i < container.getComponentCount (); i++ )
+        for ( int i = 0; i < count; i++ )
         {
-            final Component c = container.getComponent ( i );
-            if ( c.isVisible () )
+            final Component c = parent.getComponent ( i );
+            final Dimension tmp = ( min ) ? c.getMinimumSize () : c.getPreferredSize ();
+            size.height = Math.max ( tmp.height, size.height );
+            size.width += tmp.width;
+
+            if ( i != 0 )
             {
-                final Dimension tmp = minimum ? c.getMinimumSize () : c.getPreferredSize ();
-                size.width += tmp.width;
-                if ( i > 0 )
-                {
-                    size.width += getHorizontalGap ();
-                }
-                size.height = Math.max ( tmp.height, size.height );
+                size.width += getHorizontalGap ();
             }
         }
-
-        final Insets border = container.getInsets ();
+        final Insets border = parent.getInsets ();
         size.width += border.left + border.right;
         size.height += border.top + border.bottom;
-
         return size;
     }
 }

@@ -20,39 +20,36 @@ package com.alee.extended.tab;
 import java.awt.*;
 
 /**
- * Special listener that tracks {@link DocumentData} changes.
- * Its general purpose is to keep {@link WebDocumentPane} updated with {@link DocumentData} changes.
+ * Special listener that tracks DocumentData changes.
+ * Its general purpose is to keep WebDocumentPane updated with DocumentData changes.
  *
- * @param <T> {@link DocumentData} type
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
- * @see WebDocumentPane
  */
+
 public interface DocumentDataListener<T extends DocumentData>
 {
     /**
-     * Informs about {@link DocumentData} title change.
-     * todo Provide old and new title similar to other methods?
+     * Informs about data changes which affects document tab view.
      *
-     * @param document modified {@link DocumentData}
+     * @param document modified document
      */
-    public void titleChanged ( T document );
+    public void titleChanged ( final T document );
 
     /**
-     * Inform about {@link DocumentData} background {@link Color} change.
+     * Inform about tab background changes.
      *
-     * @param document      modified {@link DocumentData}
-     * @param oldBackground previous background {@link Color}
-     * @param newBackground new background {@link Color}
+     * @param document      modified document
+     * @param oldBackground previous background color
+     * @param newBackground new background color
      */
-    public void backgroundChanged ( T document, Color oldBackground, Color newBackground );
+    public void backgroundChanged ( final T document, final Color oldBackground, final Color newBackground );
 
     /**
-     * Informs about {@link DocumentData} content {@link Component} change.
+     * Informs about tab component changes.
      *
-     * @param document     modified {@link DocumentData}
-     * @param oldComponent previous tab content {@link Component}
-     * @param newComponent new tab content {@link Component}
+     * @param document     modified document
+     * @param oldComponent previous tab content
+     * @param newComponent new tab content
      */
-    public void contentChanged ( T document, Component oldComponent, Component newComponent );
+    public void contentChanged ( final T document, final Component oldComponent, final Component newComponent );
 }

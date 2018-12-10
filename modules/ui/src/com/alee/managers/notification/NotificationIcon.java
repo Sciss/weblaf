@@ -17,9 +17,9 @@
 
 package com.alee.managers.notification;
 
-import com.alee.utils.swing.EnumLazyIconProvider;
-
 import javax.swing.*;
+import java.util.EnumMap;
+import java.util.Map;
 
 /**
  * This enumeration represents available predefined notification icons.
@@ -27,6 +27,7 @@ import javax.swing.*;
  * @author Mikle Garin
  * @see NotificationManager
  */
+
 public enum NotificationIcon
 {
     /**
@@ -150,12 +151,27 @@ public enum NotificationIcon
     map;
 
     /**
+     * Map of cached icons.
+     * Icon is created only when used first time, there is no point to load it before that moment - that will be memory waste.
+     */
+    private static final Map<NotificationIcon, ImageIcon> iconsCache = new EnumMap<NotificationIcon, ImageIcon> ( NotificationIcon.class );
+
+    /**
      * Returns cached icon for this notification type.
      *
      * @return cached icon for this notification type
      */
     public ImageIcon getIcon ()
     {
-        return EnumLazyIconProvider.getIcon ( this, "icons/types/" );
+        if ( iconsCache.containsKey ( this ) )
+        {
+            return iconsCache.get ( this );
+        }
+        else
+        {
+            final ImageIcon icon = new ImageIcon ( NotificationIcon.class.getResource ( "icons/types/" + this + ".png" ) );
+            iconsCache.put ( this, icon );
+            return icon;
+        }
     }
 }

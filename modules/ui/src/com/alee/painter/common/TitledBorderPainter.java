@@ -17,7 +17,6 @@
 
 package com.alee.painter.common;
 
-import com.alee.managers.style.Bounds;
 import com.alee.utils.GraphicsUtils;
 import com.alee.utils.SwingUtils;
 
@@ -31,15 +30,14 @@ import java.util.Map;
 /**
  * Titled border painter.
  *
- * @param <C> component type
- * @param <U> component UI type
+ * @param <E> component type
  * @author Mikle Garin
  * @see com.alee.painter.common.BorderPainter
  * @see com.alee.painter.AbstractPainter
  * @see com.alee.painter.Painter
  */
 
-public class TitledBorderPainter<C extends JComponent, U extends ComponentUI> extends BorderPainter<C, U> implements SwingConstants
+public class TitledBorderPainter<E extends JComponent, U extends ComponentUI> extends BorderPainter<E, U> implements SwingConstants
 {
     /**
      * todo 1. Left/Right title position
@@ -95,19 +93,19 @@ public class TitledBorderPainter<C extends JComponent, U extends ComponentUI> ex
     /**
      * Runtime variables.
      */
-    protected transient int w;
-    protected transient int h;
-    protected transient int sw;
-    protected transient boolean emptyTitle;
-    protected transient FontMetrics fontMetrics;
-    protected transient int titleAreaHeight;
-    protected transient int titleWidth;
-    protected transient int titleX;
-    protected transient int titleY;
-    protected transient double borderCenter;
-    protected transient double borderPosition;
-    protected transient Shape borderShape;
-    protected transient boolean doClip;
+    protected int w;
+    protected int h;
+    protected int sw;
+    protected boolean emptyTitle;
+    protected FontMetrics fontMetrics;
+    protected int titleAreaHeight;
+    protected int titleWidth;
+    protected int titleX;
+    protected int titleY;
+    protected double borderCenter;
+    protected double borderPosition;
+    protected Shape borderShape;
+    protected boolean doClip;
 
     public TitledBorderPainter ()
     {
@@ -232,9 +230,9 @@ public class TitledBorderPainter<C extends JComponent, U extends ComponentUI> ex
     }
 
     @Override
-    protected Insets getBorder ()
+    public Insets getBorders ()
     {
-        final Insets m = super.getBorder ();
+        final Insets m = super.getBorders ();
         if ( !isEmptyTitle () )
         {
             switch ( titleSide )
@@ -265,7 +263,7 @@ public class TitledBorderPainter<C extends JComponent, U extends ComponentUI> ex
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final C c, final U ui, final Bounds bounds )
+    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
     {
         // Initializing values
         w = c.getWidth ();
@@ -275,7 +273,7 @@ public class TitledBorderPainter<C extends JComponent, U extends ComponentUI> ex
         fontMetrics = emptyTitle ? null : c.getFontMetrics ( c.getFont () );
         titleWidth = emptyTitle ? 0 : fontMetrics.stringWidth ( titleText );
         titleAreaHeight = getTitleAreaHeight ( c );
-        titleX = getTitleX ();
+        titleX = getTitleX ( c );
         titleY = getTitleY ();
         borderCenter = ( double ) sw / 2;
         borderPosition = getBorderPosition ();
@@ -337,17 +335,17 @@ public class TitledBorderPainter<C extends JComponent, U extends ComponentUI> ex
         }
     }
 
-    protected int getTitleX ()
+    protected int getTitleX ( final E c )
     {
         if ( titleAlignment == LEFT || titleAlignment == LEADING && ltr ||
                 titleAlignment == TRAILING && !ltr )
         {
-            return Math.max ( sw, getRound () ) + titleOffset + titleBorderGap;
+            return Math.max ( sw, round ) + titleOffset + titleBorderGap;
         }
         else if ( titleAlignment == RIGHT || titleAlignment == TRAILING && ltr ||
                 titleAlignment == LEADING && !ltr )
         {
-            return w - Math.max ( sw, getRound () ) - titleOffset - titleBorderGap -
+            return w - Math.max ( sw, round ) - titleOffset - titleBorderGap -
                     titleWidth;
         }
         else
@@ -407,7 +405,7 @@ public class TitledBorderPainter<C extends JComponent, U extends ComponentUI> ex
         }
     }
 
-    protected int getTitleAreaHeight ( final C c )
+    protected int getTitleAreaHeight ( final E c )
     {
         if ( isEmptyTitle () )
         {
@@ -451,9 +449,9 @@ public class TitledBorderPainter<C extends JComponent, U extends ComponentUI> ex
                 break;
             }
         }
-        final int round = getRound ();
-        return round <= 0 ? rect :
-                new RoundRectangle2D.Double ( rect.getX (), rect.getY (), rect.getWidth (), rect.getHeight (), round * 2, round * 2 );
+        return round > 0 ?
+                new RoundRectangle2D.Double ( rect.getX (), rect.getY (), rect.getWidth (), rect.getHeight (), round * 2, round * 2 ) :
+                rect;
     }
 
     protected Shape getBorderClipShape ()
@@ -502,7 +500,7 @@ public class TitledBorderPainter<C extends JComponent, U extends ComponentUI> ex
         {
             final int titleAreaHeight = getTitleAreaHeight ( component );
             final int titleWidth = component.getFontMetrics ( component.getFont () ).stringWidth ( titleText );
-            final int border = Math.max ( getStrokeWidth (), getRound () );
+            final int border = Math.max ( getStrokeWidth (), round );
             final int title = Math.max ( titleAreaHeight, border );
             switch ( titleSide )
             {

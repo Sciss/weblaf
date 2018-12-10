@@ -19,48 +19,51 @@ package com.alee.extended.tab;
 
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.io.IOException;
 
 /**
- * {@link Transferable} implementation {@link DocumentData}.
+ * Custom Transferable for WebDocumentPane documents.
  *
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
- * @see WebDocumentPane
- * @see DocumentData
- * @see DocumentPaneTransferInfo
+ * @see com.alee.extended.tab.WebDocumentPane
+ * @see com.alee.extended.tab.DocumentData
+ * @see com.alee.extended.tab.DocumentPaneTransferInfo
  */
+
 public class DocumentTransferable implements Transferable
 {
     /**
-     * {@link WebDocumentPane} drag operation information flavor.
+     * {@link com.alee.extended.tab.WebDocumentPane} drag operation information flavor.
      */
     public static final DataFlavor transferFlavor = new DataFlavor ( DocumentPaneTransferInfo.class, "DocumentPaneTransferInfo" );
 
     /**
-     * {@link DocumentData} flavor.
+     * {@link com.alee.extended.tab.DocumentData} flavor.
      */
     public static final DataFlavor dataFlavor = new DataFlavor ( DocumentData.class, "DocumentData" );
 
     /**
-     * {@link DocumentData} data flavors array.
+     * DocumentData data flavors array.
      */
     public static final DataFlavor[] flavors = new DataFlavor[]{ dataFlavor, transferFlavor };
 
     /**
-     * Dragged {@link DocumentData} instance.
+     * Dragged DocumentData instance.
      */
     private final DocumentData data;
 
     /**
-     * {@link DocumentPaneTransferInfo}.
+     * Document pane transfer info
      */
     private final DocumentPaneTransferInfo transferInfo;
 
     /**
-     * Constructs new {@link DocumentTransferable} for the specified {@link DocumentData} and {@link DocumentPaneTransferInfo}.
+     * Constructs new DocumentTransferable for the specified DocumentData.
      *
-     * @param data         dragged {@link DocumentData}
-     * @param transferInfo {@link DocumentPaneTransferInfo}
+     * @param data         dragged {@link com.alee.extended.tab.DocumentData}
+     * @param transferInfo {@link com.alee.extended.tab.DocumentPaneTransferInfo}
      */
     public DocumentTransferable ( final DocumentData data, final DocumentPaneTransferInfo transferInfo )
     {
@@ -78,11 +81,11 @@ public class DocumentTransferable implements Transferable
     @Override
     public boolean isDataFlavorSupported ( final DataFlavor flavor )
     {
-        return transferFlavor.equals ( flavor ) || dataFlavor.equals ( flavor );
+        return DocumentTransferable.dataFlavor.equals ( flavor );
     }
 
     @Override
-    public Object getTransferData ( final DataFlavor flavor )
+    public Object getTransferData ( final DataFlavor flavor ) throws UnsupportedFlavorException, IOException
     {
         if ( flavor == transferFlavor )
         {

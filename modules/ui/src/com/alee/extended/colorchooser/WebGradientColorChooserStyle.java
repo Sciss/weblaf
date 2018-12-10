@@ -17,6 +17,7 @@
 
 package com.alee.extended.colorchooser;
 
+import com.alee.global.StyleConstants;
 import com.alee.laf.WebLookAndFeel;
 
 import java.awt.*;

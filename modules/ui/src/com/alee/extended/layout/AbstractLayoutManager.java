@@ -20,8 +20,7 @@ package com.alee.extended.layout;
 import java.awt.*;
 
 /**
- * Abstract {@link LayoutManager2} implementation that hides some less frequently used methods.
- * It also unifies different underlying component addition and removal methods.
+ * This an abstract layout manager that hides some less frequently used methods.
  *
  * @author Mikle Garin
  */
@@ -29,21 +28,21 @@ import java.awt.*;
 public abstract class AbstractLayoutManager implements LayoutManager2
 {
     @Override
-    public final void addLayoutComponent ( final Component component, final Object constraints )
+    public void addLayoutComponent ( final Component comp, final Object constraints )
     {
-        addComponent ( component, constraints );
+        addComponent ( comp, constraints );
     }
 
     @Override
-    public final void addLayoutComponent ( final String constraints, final Component component )
+    public void addLayoutComponent ( final String name, final Component comp )
     {
-        addComponent ( component, constraints );
+        addComponent ( comp, name );
     }
 
     @Override
-    public final void removeLayoutComponent ( final Component component )
+    public void removeLayoutComponent ( final Component comp )
     {
-        removeComponent ( component );
+        removeComponent ( comp );
     }
 
     /**
@@ -54,7 +53,7 @@ public abstract class AbstractLayoutManager implements LayoutManager2
      */
     public void addComponent ( final Component component, final Object constraints )
     {
-        // Do nothing by default
+        // Do nothing
     }
 
     /**
@@ -64,36 +63,36 @@ public abstract class AbstractLayoutManager implements LayoutManager2
      */
     public void removeComponent ( final Component component )
     {
-        // Do nothing by default
+        // Do nothing
     }
 
     @Override
-    public Dimension minimumLayoutSize ( final Container container )
+    public Dimension minimumLayoutSize ( final Container parent )
     {
-        return preferredLayoutSize ( container );
+        return preferredLayoutSize ( parent );
     }
 
     @Override
-    public Dimension maximumLayoutSize ( final Container container )
+    public Dimension maximumLayoutSize ( final Container target )
     {
         return new Dimension ( Integer.MAX_VALUE, Integer.MAX_VALUE );
     }
 
     @Override
-    public float getLayoutAlignmentX ( final Container container )
+    public float getLayoutAlignmentX ( final Container target )
     {
         return 0.5f;
     }
 
     @Override
-    public float getLayoutAlignmentY ( final Container container )
+    public float getLayoutAlignmentY ( final Container target )
     {
         return 0.5f;
     }
 
     @Override
-    public void invalidateLayout ( final Container container )
+    public void invalidateLayout ( final Container target )
     {
-        // Do nothing by default
+        //
     }
 }

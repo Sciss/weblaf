@@ -18,21 +18,19 @@
 package com.alee.extended.tab;
 
 /**
- * Custom runnable that provides information about {@link DocumentData}.
+ * Custom runnable that provides information about DocumentData.
  *
- * @param <T> {@link DocumentData} type
  * @author Mikle Garin
- * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
- * @see WebDocumentPane
  */
+
 public interface DocumentDataRunnable<T extends DocumentData>
 {
     /**
      * Performs action according to provided event data.
      *
-     * @param document {@link DocumentData}
-     * @param pane     {@link PaneData}
-     * @param index    {@link DocumentData} index within {@link PaneData}
+     * @param document document
+     * @param pane     pane data
+     * @param index    document index within pane
      */
     public void run ( T document, PaneData<T> pane, int index );
 }

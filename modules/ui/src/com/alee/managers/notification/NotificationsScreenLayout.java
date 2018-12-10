@@ -17,19 +17,20 @@
 
 package com.alee.managers.notification;
 
-import com.alee.extended.window.AbstractScreenLayout;
+import com.alee.utils.swing.AbstractScreenLayout;
 
 import javax.swing.*;
 import java.awt.*;
 
 /**
- * Custom screen layout for {@link NotificationManager}.
+ * Custom screen layout for NotificationManager.
  * It properly places notification windows on the screen.
  *
  * @author Mikle Garin
  * @see com.alee.managers.notification.NotificationManager
  * @see com.alee.managers.notification.NotificationsLayoutUtils
  */
+
 public class NotificationsScreenLayout extends AbstractScreenLayout<Window, Object> implements SwingConstants
 {
     /**

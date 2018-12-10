@@ -1,4 +1,4 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.extended.button.WebSwitch -->
 
@@ -7,17 +7,10 @@
         <painter>
             <decorations>
                 <decoration>
-                    <WebShape round="2" />
-                    <WebShadow type="outer" width="2" />
-                    <LineBorder color="170,170,170" />
-                    <ColorBackground color="237,237,237" />
+                    <ColorBackground color="250,250,250" />
                 </decoration>
                 <decoration states="focused">
                     <LineBorder color="85,130,190" />
-                </decoration>
-                <decoration states="disabled">
-                    <WebShadow type="outer" opacity="0" />
-                    <LineBorder color="lightGray" />
                 </decoration>
             </decorations>
         </painter>
@@ -39,7 +32,11 @@
         </style>
 
         <!-- Switch state label -->
-        <style type="label" id="option" extends="shadow" />
+        <style type="label" id="option" extends="shade">
+            <component>
+                <foreground>darkGray</foreground>
+            </component>
+        </style>
         <style type="label" id="selected" extends="option" padding="2,5,2,5" />
         <style type="label" id="deselected" extends="option" padding="2,5,2,5" />
         <style type="label" id="icon-selected" extends="option" padding="2,2,2,2" />

@@ -17,9 +17,7 @@
 
 package com.alee.extended.filechooser;
 
-import com.alee.laf.window.WebDialog;
-import com.alee.managers.icon.Icons;
-import com.alee.utils.ImageUtils;
+import com.alee.laf.rootpane.WebDialog;
 import com.alee.utils.filefilter.AbstractFileFilter;
 import com.alee.utils.swing.DialogOptions;
 
@@ -37,6 +35,11 @@ import java.io.File;
 
 public class WebDirectoryChooser extends WebDialog implements DialogOptions
 {
+    /**
+     * Icons.
+     */
+    protected static final ImageIcon ICON = new ImageIcon ( WebDirectoryChooser.class.getResource ( "icons/dir_icon.png" ) );
+
     /**
      * UI components.
      */
@@ -66,7 +69,7 @@ public class WebDirectoryChooser extends WebDialog implements DialogOptions
     public WebDirectoryChooser ( final Window parent, final String title )
     {
         super ( parent, title != null ? title : "weblaf.ex.dirchooser.title" );
-        setIconImage ( ImageUtils.getBufferedImage ( Icons.dir ) );
+        setIconImage ( ICON.getImage () );
 
         // Default container settings
         getContentPane ().setLayout ( new BorderLayout ( 0, 0 ) );

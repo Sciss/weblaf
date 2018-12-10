@@ -24,6 +24,7 @@ package com.alee.managers.style.data;
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
  * @see com.alee.managers.style.StyleManager
  */
+
 public final class IgnoredValue
 {
     /**

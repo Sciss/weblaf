@@ -5,16 +5,13 @@ import com.alee.painter.SpecificPainter;
 import javax.swing.*;
 
 /**
- * Base interface for {@link JInternalFrame} component painters.
+ * Base interface for JInternalFrame component painters.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public interface IInternalFramePainter<C extends JInternalFrame, U extends WebInternalFrameUI> extends SpecificPainter<C, U>
+public interface IInternalFramePainter<E extends JInternalFrame, U extends WebInternalFrameUI> extends SpecificPainter<E, U>
 {
-    /**
-     * This interface doesn't offer any additional methods to implement.
-     */
 }

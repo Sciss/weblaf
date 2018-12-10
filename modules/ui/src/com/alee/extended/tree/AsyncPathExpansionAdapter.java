@@ -20,32 +20,32 @@ package com.alee.extended.tree;
 /**
  * This custom adapter is used to track async tree path expansion action.
  *
- * @param <N> node type
+ * @param <E> node type
  * @author Mikle Garin
  */
 
-public abstract class AsyncPathExpansionAdapter<N extends AsyncUniqueNode> implements AsyncPathExpansionListener<N>
+public abstract class AsyncPathExpansionAdapter<E extends AsyncUniqueNode> implements AsyncPathExpansionListener<E>
 {
     @Override
-    public void pathNodeExpanded ( final N expandedNode )
-    {
-        // Do nothing by default
-    }
-
-    @Override
-    public void pathExpanded ( final N lastNode )
-    {
-        // Do nothing by default
-    }
-
-    @Override
-    public void pathPartiallyExpanded ( final N lastFoundNode )
-    {
-        // Do nothing by default
-    }
-
-    @Override
     public void pathFailedToExpand ()
+    {
+        // Do nothing by default
+    }
+
+    @Override
+    public void pathNodeExpanded ( final E expandedNode )
+    {
+        // Do nothing by default
+    }
+
+    @Override
+    public void pathPartiallyExpanded ( final E lastFoundNode )
+    {
+        // Do nothing by default
+    }
+
+    @Override
+    public void pathExpanded ( final E lastNode )
     {
         // Do nothing by default
     }

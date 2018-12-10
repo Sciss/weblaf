@@ -33,15 +33,11 @@ import java.awt.event.FocusListener;
 /**
  * This class provides a styled default cell editor for trees.
  *
- * @param <C> editor {@link JComponent} type
  * @author Mikle Garin
  */
+
 public class WebTreeCellEditor<C extends JComponent> extends WebDefaultCellEditor<C> implements FocusListener
 {
-    /**
-     * todo 1. Break this editor into proper separate implementations instead of Swing-way chaos
-     */
-
     /**
      * Whether should update editor's leading icon automatically when it is possible or not.
      */
@@ -143,21 +139,19 @@ public class WebTreeCellEditor<C extends JComponent> extends WebDefaultCellEdito
         cellEditor.setPreferredSize ( component.getPreferredSize () );
 
         // Updating editor styling
-        if ( cellEditor instanceof WebTextField )
+        if ( component instanceof JLabel && ( ( JLabel ) component ).getIcon () != null )
         {
-            // Field styling
-            final WebTextField editor = ( WebTextField ) cellEditor;
-            editor.setStyleId ( StyleId.treeCellEditor.at ( tree ) );
-
-            // Updating leading icon styling
-            if ( component instanceof JLabel && ( ( JLabel ) component ).getIcon () != null )
+            final JLabel label = ( JLabel ) component;
+            if ( cellEditor instanceof WebTextField )
             {
-                final JLabel label = ( JLabel ) component;
+                // Field styling
+                final WebTextField editor = ( WebTextField ) cellEditor;
+                editor.setStyleId ( StyleId.treeCellEditor.at ( tree ) );
+
+                // Leading icon
                 if ( autoUpdateLeadingIcon )
                 {
-                    // Leading icon styling
-                    final WebImage image = new WebImage ( StyleId.treeCellEditorIcon.at ( editor ), label.getIcon () );
-                    editor.setLeadingComponent ( image );
+                    editor.setLeadingComponent ( new WebImage ( label.getIcon () ) );
                 }
             }
         }

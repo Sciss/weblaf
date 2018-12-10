@@ -17,17 +17,14 @@
 
 package com.alee.extended.ninepatch;
 
-import com.alee.api.clone.Clone;
 import com.alee.extended.layout.TableLayout;
-import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.style.StyleId;
-import com.alee.painter.decoration.background.AlphaLayerBackground;
 import com.alee.utils.*;
 import com.alee.utils.ninepatch.NinePatchIcon;
 import com.alee.utils.ninepatch.NinePatchInterval;
 import com.alee.utils.swing.MouseEventType;
-import com.alee.utils.swing.extensions.SizeMethodsImpl;
+import com.alee.utils.swing.SizeMethods;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -43,16 +40,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * This editor is not based on the Android dev kit editor - {@link NinePatchEditor} is more advanced and user-friendly.
- * This editor allows quick visual nine-patch editing, nine-patch information copying and also creation of new nine-patch files based on
- * any image file that could be loaded by WebLookAndFeel library.
+ * This editor is not based on the Android dev kit editor - NinePatchEditor is much more advanced and user-friendly. It allows fully visual
+ * and quick nine-patch editing, nine-patch information copying and also creation of new nine-patch files based on any image file that
+ * could be loaded by WebLookAndFeel library.
+ * <p>
+ * Android dev kit editor: http://developer.android.com/guide/developing/tools/draw9patch.html
  *
  * @author Mikle Garin
- * @see <a href="http://developer.android.com/guide/developing/tools/draw9patch.html">Android dev kit editor</a>
- * @see NinePatchEditorPanel
- * @see NinePatchEditorFrame
+ * @see com.alee.extended.ninepatch.NinePatchEditorPanel
  */
-public class NinePatchEditor extends WebPanel
+
+public class NinePatchEditor extends JComponent implements SizeMethods<NinePatchEditor>
 {
     public static final Color STRETCH_GUIDELINES_COLOR = new Color ( 60, 150, 0 );
     public static final Color STRETCH_COLOR = new Color ( 80, 150, 0, 100 );
@@ -67,11 +65,6 @@ public class NinePatchEditor extends WebPanel
     public static final int MAX_ZOOM = 32;
     public static final Stroke GUIDELINE_STROKE =
             new BasicStroke ( 1, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1, new float[]{ 4, 4 }, 0 );
-
-    /**
-     * Alpha background.
-     */
-    private final AlphaLayerBackground ALPHA_LAYER_BACKGROUND = new AlphaLayerBackground ();
 
     private final List<ChangeListener> changeListeners = new ArrayList<ChangeListener> ( 1 );
     private final List<ZoomChangeListener> zoomChangeListeners = new ArrayList<ZoomChangeListener> ( 1 );
@@ -103,14 +96,13 @@ public class NinePatchEditor extends WebPanel
         ninePatchIcon = null;
 
         SwingUtils.setOrientation ( this );
-        setOpaque ( false );
         setFocusable ( true );
         setLayout ( new TableLayout ( new double[][]{ { RULER_LENGTH, TableLayout.PREFERRED, TableLayout.FILL },
                 { RULER_LENGTH, TableLayout.PREFERRED, TableLayout.FILL } } ) );
 
         setFont ( new JLabel ().getFont ().deriveFont ( 10f ) );
 
-        view = new WebScrollPane ( StyleId.scrollpaneTransparentHovering, this );
+        view = new WebScrollPane ( StyleId.scrollpaneUndecorated, this );
 
         final NinePatchEditorMouseAdapter mouseAdapter = new NinePatchEditorMouseAdapter ();
         addMouseListener ( mouseAdapter );
@@ -362,9 +354,9 @@ public class NinePatchEditor extends WebPanel
         }
 
         // Update NinePatchIcon data
-        ninePatchIcon.setMargin ( Clone.basic ().clone ( state.getMargin () ) );
-        ninePatchIcon.setHorizontalStretch ( Clone.deep ().clone ( state.getHorizontalStretch () ) );
-        ninePatchIcon.setVerticalStretch ( Clone.deep ().clone ( state.getVerticalStretch () ) );
+        ninePatchIcon.setMargin ( MergeUtils.clone ( state.getMargin () ) );
+        ninePatchIcon.setHorizontalStretch ( MergeUtils.clone ( state.getHorizontalStretch () ) );
+        ninePatchIcon.setVerticalStretch ( MergeUtils.clone ( state.getVerticalStretch () ) );
 
         // Updates shown image
         validateIcon ();
@@ -388,9 +380,9 @@ public class NinePatchEditor extends WebPanel
             // Adding new state
             final NinePatchInfo info = new NinePatchInfo ();
             info.setImageSize ( ninePatchIcon.getRealImageSize () );
-            info.setMargin ( Clone.basic ().clone ( ninePatchIcon.getMargin () ) );
-            info.setHorizontalStretch ( Clone.deep ().clone ( ninePatchIcon.getHorizontalStretch () ) );
-            info.setVerticalStretch ( Clone.deep ().clone ( ninePatchIcon.getVerticalStretch () ) );
+            info.setMargin ( MergeUtils.clone ( ninePatchIcon.getMargin () ) );
+            info.setHorizontalStretch ( MergeUtils.clone ( ninePatchIcon.getHorizontalStretch () ) );
+            info.setVerticalStretch ( MergeUtils.clone ( ninePatchIcon.getVerticalStretch () ) );
             history.add ( info );
             historyState = history.size () - 1;
 
@@ -828,7 +820,7 @@ public class NinePatchEditor extends WebPanel
                 if ( !npi.isPixel () )
                 {
                     // Stretch areas drag
-                    if ( hStretchAreaDragged && changedInterval.getId ().equals ( npi.getId () ) || !someDragged &&
+                    if ( hStretchAreaDragged && changedInterval.isSame ( npi ) || !someDragged &&
                             new Rectangle ( imageStartX + npi.getStart () * zoom, imageStartY - zoom,
                                     ( npi.getEnd () - npi.getStart () + 1 ) * zoom, zoom + ( fillStretchAreas ? ih : 0 ) )
                                     .contains ( x, y ) )
@@ -882,7 +874,7 @@ public class NinePatchEditor extends WebPanel
                     // Stretch areas resize cursor  
                     if ( y <= imageStartY + ih )
                     {
-                        if ( hStretchStartDragged && changedInterval.getId ().equals ( npi.getId () ) || !someDragged &&
+                        if ( hStretchStartDragged && changedInterval.isSame ( npi ) || !someDragged &&
                                 imageStartX + npi.getStart () * zoom - getSnap () <= x &&
                                 x <= imageStartX + npi.getStart () * zoom + getSnap () )
                         {
@@ -921,7 +913,7 @@ public class NinePatchEditor extends WebPanel
                             setCursor ( Cursor.getPredefinedCursor ( Cursor.E_RESIZE_CURSOR ) );
                             return repaintRequired;
                         }
-                        if ( hStretchEndDragged && changedInterval.getId ().equals ( npi.getId () ) || !someDragged &&
+                        if ( hStretchEndDragged && changedInterval.isSame ( npi ) || !someDragged &&
                                 imageStartX + ( npi.getEnd () + 1 ) * zoom - getSnap () <= x &&
                                 x <= imageStartX + ( npi.getEnd () + 1 ) * zoom + getSnap () )
                         {
@@ -968,7 +960,7 @@ public class NinePatchEditor extends WebPanel
                 if ( !npi.isPixel () )
                 {
                     // Stretch areas drag
-                    if ( vStretchAreaDragged && changedInterval.getId ().equals ( npi.getId () ) || !someDragged &&
+                    if ( vStretchAreaDragged && changedInterval.isSame ( npi ) || !someDragged &&
                             new Rectangle ( imageStartX - zoom, imageStartY + npi.getStart () * zoom, zoom + ( fillStretchAreas ? iw : 0 ),
                                     ( npi.getEnd () - npi.getStart () + 1 ) * zoom ).contains ( x, y ) )
                     {
@@ -1021,7 +1013,7 @@ public class NinePatchEditor extends WebPanel
                     // Stretch areas resize cursor  
                     if ( x <= imageStartX + iw )
                     {
-                        if ( vStretchStartDragged && changedInterval.getId ().equals ( npi.getId () ) || !someDragged &&
+                        if ( vStretchStartDragged && changedInterval.isSame ( npi ) || !someDragged &&
                                 imageStartY + npi.getStart () * zoom - getSnap () <= y &&
                                 y <= imageStartY + npi.getStart () * zoom + getSnap () )
                         {
@@ -1060,7 +1052,7 @@ public class NinePatchEditor extends WebPanel
                             setCursor ( Cursor.getPredefinedCursor ( Cursor.S_RESIZE_CURSOR ) );
                             return repaintRequired;
                         }
-                        if ( vStretchEndDragged && changedInterval.getId ().equals ( npi.getId () ) || !someDragged &&
+                        if ( vStretchEndDragged && changedInterval.isSame ( npi ) || !someDragged &&
                                 imageStartY + ( npi.getEnd () + 1 ) * zoom - getSnap () <= y &&
                                 y <= imageStartY + ( npi.getEnd () + 1 ) * zoom + getSnap () )
                         {
@@ -1526,8 +1518,7 @@ public class NinePatchEditor extends WebPanel
             final Map taa = SwingUtils.setupTextAntialias ( g2d );
 
             // Alpha-background
-            final Rectangle shape = new Rectangle ( imageStartX, imageStartY, iw, ih );
-            ALPHA_LAYER_BACKGROUND.paint ( g2d, shape, this, null, shape );
+            LafUtils.drawAlphaLayer ( g2d, imageStartX, imageStartY, iw, ih );
 
             // Border
             g2d.setPaint ( Color.DARK_GRAY );
@@ -1677,7 +1668,7 @@ public class NinePatchEditor extends WebPanel
         // Mouse coordinates
         if ( showRulerCursorPosition || showAreaCursorPosition )
         {
-            final Point mouse = CoreSwingUtils.getMouseLocation ( this );
+            final Point mouse = SwingUtils.getMousePoint ( this );
             if ( mouse.x > vr.x + RULER_LENGTH && mouse.x < vr.x + vr.width &&
                     mouse.y > vr.y + RULER_LENGTH && mouse.y < vr.y + vr.height )
             {
@@ -1940,21 +1931,97 @@ public class NinePatchEditor extends WebPanel
         }
     }
 
+    /**
+     * Size methods.
+     */
+
     @Override
-    public Dimension getPreferredSize ()
+    public int getPreferredWidth ()
     {
-        return SizeMethodsImpl.getPreferredSize ( this, getActualPreferredSize () );
+        return SizeUtils.getPreferredWidth ( this );
     }
 
     @Override
-    public Dimension getOriginalPreferredSize ()
+    public NinePatchEditor setPreferredWidth ( final int preferredWidth )
     {
-        return SizeMethodsImpl.getOriginalPreferredSize ( this, getActualPreferredSize () );
+        return SizeUtils.setPreferredWidth ( this, preferredWidth );
+    }
+
+    @Override
+    public int getPreferredHeight ()
+    {
+        return SizeUtils.getPreferredHeight ( this );
+    }
+
+    @Override
+    public NinePatchEditor setPreferredHeight ( final int preferredHeight )
+    {
+        return SizeUtils.setPreferredHeight ( this, preferredHeight );
+    }
+
+    @Override
+    public int getMinimumWidth ()
+    {
+        return SizeUtils.getMinimumWidth ( this );
+    }
+
+    @Override
+    public NinePatchEditor setMinimumWidth ( final int minimumWidth )
+    {
+        return SizeUtils.setMinimumWidth ( this, minimumWidth );
+    }
+
+    @Override
+    public int getMinimumHeight ()
+    {
+        return SizeUtils.getMinimumHeight ( this );
+    }
+
+    @Override
+    public NinePatchEditor setMinimumHeight ( final int minimumHeight )
+    {
+        return SizeUtils.setMinimumHeight ( this, minimumHeight );
+    }
+
+    @Override
+    public int getMaximumWidth ()
+    {
+        return SizeUtils.getMaximumWidth ( this );
+    }
+
+    @Override
+    public NinePatchEditor setMaximumWidth ( final int maximumWidth )
+    {
+        return SizeUtils.setMaximumWidth ( this, maximumWidth );
+    }
+
+    @Override
+    public int getMaximumHeight ()
+    {
+        return SizeUtils.getMaximumHeight ( this );
+    }
+
+    @Override
+    public NinePatchEditor setMaximumHeight ( final int maximumHeight )
+    {
+        return SizeUtils.setMaximumHeight ( this, maximumHeight );
+    }
+
+    @Override
+    public Dimension getPreferredSize ()
+    {
+        return SizeUtils.getPreferredSize ( this, getActualPreferredSize () );
+    }
+
+    @Override
+    public NinePatchEditor setPreferredSize ( final int width, final int height )
+    {
+        return SizeUtils.setPreferredSize ( this, width, height );
     }
 
     public Dimension getActualPreferredSize ()
     {
-        // todo Should be in LaF for NinePatchEditor
+        // todo Should be in L&F for NinePatchEditor
         final boolean imageExists = ninePatchImage != null;
         final int iw = imageExists ? ( ninePatchImage.getWidth () + 2 ) * zoom : 400;
         final int ih = imageExists ? ( ninePatchImage.getHeight () + 2 ) * zoom : 400;

@@ -1,13 +1,11 @@
 package com.alee.laf.tabbedpane;
 
-import com.alee.api.jdk.Objects;
-import com.alee.laf.WebLookAndFeel;
-import com.alee.managers.style.Bounds;
+import com.alee.global.StyleConstants;
 import com.alee.painter.AbstractPainter;
-import com.alee.painter.SectionPainter;
+import com.alee.painter.Painter;
 import com.alee.utils.GraphicsUtils;
+import com.alee.utils.LafUtils;
 import com.alee.utils.SwingUtils;
-import com.alee.utils.laf.FocusType;
 import com.alee.utils.laf.WebBorder;
 
 import javax.swing.*;
@@ -24,17 +22,16 @@ import java.util.Map;
 import java.util.Vector;
 
 /**
- * Basic painter for {@link JTabbedPane} component.
- * It is used as {@link WTabbedPaneUI} default painter.
+ * Basic painter for JTabbedPane component.
+ * It is used as WebTabbedPaneUI default painter.
  *
- * @param <C> component type
+ * @param <E> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
- * @author Mikle Garin
  */
 
-public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> extends AbstractPainter<C, U>
-        implements ITabbedPanePainter<C, U>
+public class TabbedPanePainter<E extends JTabbedPane, U extends WebTabbedPaneUI> extends AbstractPainter<E, U>
+        implements ITabbedPanePainter<E, U>
 {
     /**
      * Style settings.
@@ -47,6 +44,7 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
     protected Color bottomBg = WebTabbedPaneStyle.bottomBg;
     protected Color tabBorderColor = WebTabbedPaneStyle.tabBorderColor;
     protected Color contentBorderColor = WebTabbedPaneStyle.contentBorderColor;
+    protected Color backgroundColor = WebTabbedPaneStyle.backgroundColor;
     protected boolean paintBorderOnlyOnSelectedTab = WebTabbedPaneStyle.paintBorderOnlyOnSelectedTab;
     protected boolean forceUseSelectedTabBgColors = WebTabbedPaneStyle.forceUseSelectedTabBgColors;
     protected boolean paintOnlyTopBorder = WebTabbedPaneStyle.paintOnlyTopBorder;
@@ -54,77 +52,30 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
     /**
      * Listeners.
      */
-    protected transient FocusAdapter focusAdapter;
+    protected FocusAdapter focusAdapter;
 
     /**
      * Painting variables.
      */
-    protected transient boolean tabsOverlapBorder;
-    protected transient boolean tabsOpaque;
-    protected transient int textIconGap;
-    protected transient Vector htmlViews;
-    protected transient int tabRuns[];
-    protected transient Rectangle rects[];
-    protected transient int maxTabHeight;
-    protected transient int maxTabWidth;
-    protected transient int runCount;
-    protected transient boolean scrollableTabLayoutEnabled;
+    protected boolean tabsOverlapBorder = UIManager.getBoolean ( "TabbedPane.tabsOverlapBorder" );
+    protected boolean tabsOpaque = UIManager.getBoolean ( "TabbedPane.tabsOpaque" );
+    protected int textIconGap = UIManager.getInt ( "TabbedPane.textIconGap" );
+    protected Vector htmlViews;
+    protected int tabRuns[];
+    protected Rectangle rects[];
+    protected int maxTabHeight;
+    protected int maxTabWidth;
+    protected int runCount;
+    protected boolean scrollableTabLayoutEnabled;
 
     @Override
-    protected void installPropertiesAndListeners ()
+    public void install ( final E c, final U ui )
     {
-        super.installPropertiesAndListeners ();
-        installRuntimeVariables ();
-        installTabbedPaneFocusListeners ();
-    }
+        super.install ( c, ui );
 
-    @Override
-    protected void uninstallPropertiesAndListeners ()
-    {
-        uninstallTabbedPaneFocusListeners ();
-        uninstallRuntimeVariables ();
-        super.uninstallPropertiesAndListeners ();
-    }
+        component.setBackground ( backgroundColor );
 
-    @Override
-    protected void propertyChanged ( final String property, final Object oldValue, final Object newValue )
-    {
-        // Perform basic actions on property changes
-        super.propertyChanged ( property, oldValue, newValue );
-
-        // Updating border upon style change
-        if ( Objects.equals ( property, WebLookAndFeel.TABBED_PANE_STYLE_PROPERTY ) )
-        {
-            updateBorder ();
-        }
-    }
-
-    /**
-     * Installs runtime variables.
-     */
-    protected void installRuntimeVariables ()
-    {
-        tabsOverlapBorder = UIManager.getBoolean ( "TabbedPane.tabsOverlapBorder" );
-        tabsOpaque = UIManager.getBoolean ( "TabbedPane.tabsOpaque" );
-        textIconGap = UIManager.getInt ( "TabbedPane.textIconGap" );
-    }
-
-    /**
-     * Uninstalls runtime variables.
-     */
-    protected void uninstallRuntimeVariables ()
-    {
-        tabsOverlapBorder = false;
-        tabsOpaque = false;
-        textIconGap = 0;
-    }
-
-    /**
-     * Installs custom {@link JTabbedPane} focus listeners for appropriate updates on focus change.
-     * todo Remove upon switchin to appropriate styling
-     */
-    protected void installTabbedPaneFocusListeners ()
-    {
+        // Focus updater
         focusAdapter = new FocusAdapter ()
         {
             @Override
@@ -142,14 +93,17 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
         component.addFocusListener ( focusAdapter );
     }
 
-    /**
-     * Uninstalls custom {@link JTabbedPane} focus listeners.
-     * todo Remove upon switchin to appropriate styling
-     */
-    protected void uninstallTabbedPaneFocusListeners ()
+    @Override
+    public void uninstall ( final E c, final U ui )
     {
-        component.removeFocusListener ( focusAdapter );
-        focusAdapter = null;
+        // Removing listeners
+        if ( focusAdapter != null )
+        {
+            component.removeFocusListener ( focusAdapter );
+            focusAdapter = null;
+        }
+
+        super.uninstall ( c, ui );
     }
 
     /**
@@ -167,11 +121,11 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
                 return;
             }
 
-            final Insets bgInsets = new Insets ( 0, 0, 0, 0 );
+            final Insets bgInsets = i ( 0, 0, 0, 0 );
             if ( ui.getTabbedPaneStyle ().equals ( TabbedPaneStyle.standalone ) )
             {
                 // Standalone style border
-                final Insets sbi = new Insets ( shadeWidth, shadeWidth, shadeWidth, shadeWidth );
+                final Insets sbi = i ( shadeWidth, shadeWidth, shadeWidth, shadeWidth );
                 component.setBorder ( new WebBorder ( SwingUtils.max ( bgInsets, sbi ) ) );
             }
             else
@@ -283,6 +237,16 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
         this.forceUseSelectedTabBgColors = forceUseSelectedTabBgColors;
     }
 
+    public Color getBackgroundColor ()
+    {
+        return backgroundColor;
+    }
+
+    public void setBackgroundColor ( final Color backgroundColor )
+    {
+        this.backgroundColor = backgroundColor;
+    }
+
     public boolean isPaintOnlyTopBorder ()
     {
         return paintOnlyTopBorder;
@@ -294,7 +258,7 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final C c, final U ui, final Bounds bounds )
+    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
     {
         final Map hints = SwingUtils.setupTextAntialias ( g2d );
 
@@ -382,7 +346,7 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
         for ( int i = runCount - 1; i >= 0; i-- )
         {
             final int start = tabRuns[ i ];
-            final int next = tabRuns[ i == runCount - 1 ? 0 : i + 1 ];
+            final int next = tabRuns[ ( i == runCount - 1 ) ? 0 : i + 1 ];
             final int end = next != 0 ? next - 1 : tabCount - 1;
             for ( int j = start; j <= end; j++ )
             {
@@ -472,6 +436,7 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
         textRect.y += yNudge;
     }
 
+    @SuppressWarnings ("UnusedParameters")
     protected void paintIcon ( final Graphics g, final int tabPlacement, final int tabIndex, final Icon icon, final Rectangle iconRect,
                                final boolean isSelected )
     {
@@ -500,35 +465,6 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
         return null;
     }
 
-    private void paintCustomFocus ( final Graphics2D g2d, final JComponent component, final FocusType focusType, final Shape shape,
-                                    final Boolean mouseover, Boolean hasFocus )
-    {
-        hasFocus = hasFocus != null ? hasFocus : component.hasFocus () && component.isEnabled ();
-        if ( hasFocus && focusType.equals ( FocusType.componentFocus ) )
-        {
-            final Object aa = GraphicsUtils.setupAntialias ( g2d );
-            final Stroke os = GraphicsUtils.setupStroke ( g2d,
-                    new BasicStroke ( 1, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1, new float[]{ 1, 2 }, 0 ) );
-
-            g2d.setPaint ( new Color ( 160, 160, 160 ) );
-            g2d.draw ( shape );
-
-            GraphicsUtils.restoreStroke ( g2d, os );
-            GraphicsUtils.restoreAntialias ( g2d, aa );
-        }
-        else if ( focusType.equals ( FocusType.fieldFocus ) && ( hasFocus || mouseover != null && mouseover ) )
-        {
-            final Object aa = GraphicsUtils.setupAntialias ( g2d );
-            final Stroke os = GraphicsUtils.setupStroke ( g2d, new BasicStroke ( 1.5f ) );
-
-            g2d.setPaint ( hasFocus ? new Color ( 85, 142, 239 ) : new Color ( 85, 142, 239, 128 ) );
-            g2d.draw ( shape );
-
-            GraphicsUtils.restoreStroke ( g2d, os );
-            GraphicsUtils.restoreAntialias ( g2d, aa );
-        }
-    }
-
     protected void paintTabBackground ( final Graphics g, final int tabPlacement, final int tabIndex, final int x, final int y, final int w,
                                         final int h, final boolean isSelected )
     {
@@ -548,12 +484,11 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
 
         // Tab background
         final GeneralPath bgShape = createTabShape ( TabShapeType.background, tabPlacement, x, y, w, h, isSelected );
-        final SectionPainter backgroundPainterAt = ui.getBackgroundPainterAt ( tabIndex );
+        final Painter backgroundPainterAt = ui.getBackgroundPainterAt ( tabIndex );
         if ( backgroundPainterAt != null && isSelected )
         {
-            // todo This is a hack used to paint background as section
             final Shape old = GraphicsUtils.intersectClip ( g2d, bgShape );
-            paintSection ( backgroundPainterAt, g2d, new Rectangle ( x, y, w, h ) );
+            backgroundPainterAt.paint ( g2d, new Rectangle ( x, y, w, h ), component, ui );
             GraphicsUtils.restoreClip ( g2d, old );
         }
         else
@@ -589,7 +524,7 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
         final boolean drawFocus = isSelected && component.isFocusOwner ();
         if ( ui.getTabbedPaneStyle ().equals ( TabbedPaneStyle.standalone ) )
         {
-            paintCustomFocus ( g2d, null, FocusType.fieldFocus, borderShape, null, drawFocus );
+            LafUtils.drawCustomWebFocus ( g2d, null, StyleConstants.focusType, borderShape, null, drawFocus );
         }
         //        else if ( drawFocus )
         //        {
@@ -604,10 +539,11 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
 
     protected Icon getIconForTab ( final int tabIndex )
     {
-        return !component.isEnabled () || !component.isEnabledAt ( tabIndex ) ? component.getDisabledIconAt ( tabIndex ) :
+        return ( !component.isEnabled () || !component.isEnabledAt ( tabIndex ) ) ? component.getDisabledIconAt ( tabIndex ) :
                 component.getIconAt ( tabIndex );
     }
 
+    @SuppressWarnings ("UnusedParameters")
     protected void paintText ( final Graphics g, final int tabPlacement, final Font font, final FontMetrics metrics, final int tabIndex,
                                final String title, final Rectangle textRect, final boolean isSelected )
     {
@@ -626,12 +562,20 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
             if ( component.isEnabled () && component.isEnabledAt ( tabIndex ) )
             {
                 Color fg = component.getForegroundAt ( tabIndex );
-                if ( isSelected && fg instanceof UIResource )
+                if ( isSelected && ( fg instanceof UIResource ) )
                 {
-                    final Color selectedFG = UIManager.getColor ( "TabbedPane.selectedForeground" );
-                    if ( selectedFG != null )
+                    final Color selectedForegroundAt = ui.getSelectedForegroundAt ( tabIndex );
+                    if ( selectedForegroundAt != null )
                     {
-                        fg = selectedFG;
+                        fg = selectedForegroundAt;
+                    }
+                    else
+                    {
+                        final Color selectedFG = UIManager.getColor ( "TabbedPane.selectedForeground" );
+                        if ( selectedFG != null )
+                        {
+                            fg = selectedFG;
+                        }
                     }
                 }
                 g.setColor ( fg );
@@ -734,19 +678,19 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
     {
         if ( tabPlacement == JTabbedPane.TOP )
         {
-            return new Point ( x, y );
+            return p ( x, y );
         }
         else if ( tabPlacement == JTabbedPane.BOTTOM )
         {
-            return new Point ( x, y + h );
+            return p ( x, y + h );
         }
         else if ( tabPlacement == JTabbedPane.LEFT )
         {
-            return new Point ( x, y );
+            return p ( x, y );
         }
         else
         {
-            return new Point ( x + w, y );
+            return p ( x + w, y );
         }
     }
 
@@ -754,19 +698,19 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
     {
         if ( tabPlacement == JTabbedPane.TOP )
         {
-            return new Point ( x, y + h - 4 );
+            return p ( x, y + h - 4 );
         }
         else if ( tabPlacement == JTabbedPane.BOTTOM )
         {
-            return new Point ( x, y + 4 );
+            return p ( x, y + 4 );
         }
         else if ( tabPlacement == JTabbedPane.LEFT )
         {
-            return new Point ( x + w - 4, y );
+            return p ( x + w - 4, y );
         }
         else
         {
-            return new Point ( x + 4, y );
+            return p ( x + 4, y );
         }
     }
 
@@ -779,11 +723,11 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
         Insets bi = component.getInsets ();
         if ( tabPlacement == JTabbedPane.TOP || tabPlacement == JTabbedPane.BOTTOM )
         {
-            bi = new Insets ( bi.top, bi.left, bi.bottom, bi.right + 1 );
+            bi = i ( bi.top, bi.left, bi.bottom, bi.right + 1 );
         }
         else
         {
-            bi = new Insets ( bi.top, bi.left, bi.bottom + 1, bi.right );
+            bi = i ( bi.top, bi.left, bi.bottom + 1, bi.right );
         }
 
         // Selected tab bounds
@@ -828,12 +772,11 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
             //            }
 
             // Area background
-            final SectionPainter backgroundPainterAt = ui.getBackgroundPainterAt ( selectedIndex );
+            final Painter backgroundPainterAt = ui.getBackgroundPainterAt ( selectedIndex );
             if ( backgroundPainterAt != null )
             {
-                // todo This is a hack used to paint background as section
                 final Shape old = GraphicsUtils.intersectClip ( g2d, bs );
-                paintSection ( backgroundPainterAt, g2d, bs.getBounds () );
+                backgroundPainterAt.paint ( g2d, bs.getBounds (), component, ui );
                 GraphicsUtils.restoreClip ( g2d, old );
             }
             else
@@ -848,16 +791,15 @@ public class TabbedPanePainter<C extends JTabbedPane, U extends WTabbedPaneUI> e
             g2d.draw ( bs );
 
             // Area focus
-            paintCustomFocus ( g2d, null, FocusType.fieldFocus, bs, null, component.isFocusOwner () );
+            LafUtils.drawCustomWebFocus ( g2d, null, StyleConstants.focusType, bs, null, component.isFocusOwner () );
         }
         else
         {
             // Area background
-            final SectionPainter backgroundPainterAt = ui.getBackgroundPainterAt ( selectedIndex );
+            final Painter backgroundPainterAt = ui.getBackgroundPainterAt ( selectedIndex );
             if ( backgroundPainterAt != null )
             {
-                // todo This is a hack used to paint background as section
-                paintSection ( backgroundPainterAt, g2d, bs.getBounds () );
+                backgroundPainterAt.paint ( g2d, bs.getBounds (), component, ui );
             }
             else
             {

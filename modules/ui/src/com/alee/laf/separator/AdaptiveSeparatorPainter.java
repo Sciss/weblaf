@@ -6,19 +6,17 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link SeparatorPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WSeparatorUI}.
+ * Simple SeparatorPainter adapter class.
+ * It is used to install simple non-specific painters into WebSeparatorUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveSeparatorPainter<C extends JSeparator, U extends WSeparatorUI> extends AdaptivePainter<C, U>
-        implements ISeparatorPainter<C, U>
+public final class AdaptiveSeparatorPainter<E extends JSeparator, U extends WebSeparatorUI> extends AdaptivePainter<E, U>
+        implements ISeparatorPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveSeparatorPainter} for the specified painter.
+     * Constructs new AdaptiveSeparatorPainter for the specified painter.
      *
      * @param painter painter to adapt
      */

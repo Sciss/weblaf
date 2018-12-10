@@ -17,9 +17,9 @@
 
 package com.alee.extended.colorchooser;
 
-import com.alee.api.merge.Mergeable;
-import com.alee.utils.CollectionUtils;
+import com.alee.managers.settings.DefaultValue;
 import com.alee.utils.ColorUtils;
+import com.alee.utils.MergeUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamImplicit;
 
@@ -30,69 +30,39 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Gradient color information object.
+ * Data object for WebGradientColorChooser component.
  *
  * @author Mikle Garin
  */
-@XStreamAlias ( "GradientData" )
-public class GradientData implements Mergeable, Cloneable, Serializable
+
+@XStreamAlias ("GradientData")
+public class GradientData implements Serializable, Cloneable, DefaultValue
 {
     /**
      * Comparator to sort colors data on change.
      */
-    private static final GradientColorDataComparator locationsComparator = new GradientColorDataComparator ();
+    private static final transient GradientColorDataComparator locationsComparator = new GradientColorDataComparator ();
 
     /**
-     * {@link List} of {@link GradientColorData}.
+     * All available colors data.
      */
-    @XStreamImplicit ( itemFieldName = "Color" )
+    @XStreamImplicit (itemFieldName = "Color")
     private List<GradientColorData> gradientColorsData;
 
     /**
-     * Constructs {@link GradientData} object with empty colors list.
+     * Constructs GradientData object with empty data list.
      */
     public GradientData ()
     {
-        gradientColorsData = new ArrayList<GradientColorData> ( 2 );
+        super ();
+        gradientColorsData = new ArrayList<GradientColorData> ();
     }
 
     /**
-     * Constructs {@link GradientData} object with empty colors list.
+     * Returns whether there is a GradientColorData for specified location or not.
      *
-     * @param data {@link List} of {@link GradientColorData}
-     */
-    public GradientData ( final GradientData data )
-    {
-        gradientColorsData = new ArrayList<GradientColorData> ( data.getGradientColorsData () );
-    }
-
-    /**
-     * Constructs {@link GradientData} object with empty colors list.
-     *
-     * @param data array of {@link GradientColorData}
-     */
-    public GradientData ( final GradientColorData... data )
-    {
-        gradientColorsData = CollectionUtils.asList ( data );
-        sort ();
-    }
-
-    /**
-     * Constructs {@link GradientData} object with empty colors list.
-     *
-     * @param data {@link List} of {@link GradientColorData}
-     */
-    public GradientData ( final List<GradientColorData> data )
-    {
-        gradientColorsData = new ArrayList<GradientColorData> ( data );
-        sort ();
-    }
-
-    /**
-     * Returns whether there is a {@link GradientColorData} for specified location or not.
-     *
-     * @param location location to search for {@link GradientColorData}
-     * @return {@code true} if there is a {@link GradientColorData} for specified location, {@code false} otherwise
+     * @param location location to search for GradientColorData
+     * @return true if there is a GradientColorData for specified location, false otherwise
      */
     public boolean containtsLocation ( final float location )
     {
@@ -107,9 +77,9 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Adds {@link GradientColorData} into colors list and sorts the list.
+     * Adds GradientColorData into data list and sorts the list.
      *
-     * @param gradientColorData {@link GradientColorData} to add
+     * @param gradientColorData GradientColorData to add
      */
     public void addGradientColorData ( final GradientColorData gradientColorData )
     {
@@ -118,10 +88,10 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Adds {@link GradientColorData} with the specified location and color into colors list and sorts the list.
+     * Adds GradientColorData with the specified location and color into data list and sorts the list.
      *
-     * @param location color location
-     * @param color    color
+     * @param location GradientColorData location
+     * @param color    GradientColorData color
      */
     public void addGradientColorData ( final float location, final Color color )
     {
@@ -130,9 +100,9 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Removes {@link GradientColorData} from colors list and sorts the list.
+     * Removes GradientColorData from data list and sorts the list.
      *
-     * @param gradientColorData {@link GradientColorData} to remove
+     * @param gradientColorData GradientColorData to remove
      */
     public void removeGradientColorData ( final GradientColorData gradientColorData )
     {
@@ -141,9 +111,9 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Returns sorted colors list.
+     * Returns sorted data list.
      *
-     * @return sorted colors list
+     * @return sorted data list
      */
     public List<GradientColorData> getGradientColorsData ()
     {
@@ -152,9 +122,9 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Sets colors list and sorts it.
+     * Sets data list and sorts it.
      *
-     * @param gradientColorsData new colors list
+     * @param gradientColorsData new data list
      */
     public void setGradientColorsData ( final List<GradientColorData> gradientColorsData )
     {
@@ -163,9 +133,9 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Returns an array of fractions for {@link LinearGradientPaint}.
+     * Returns an array of fractions for LinearGradientPaint.
      *
-     * @return an array of fractions for {@link LinearGradientPaint}
+     * @return an array of fractions for LinearGradientPaint
      */
     public float[] getFractions ()
     {
@@ -179,9 +149,9 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Returns an array of colors for {@link LinearGradientPaint}.
+     * Returns an array of colors for LinearGradientPaint.
      *
-     * @return an array of colors for {@link LinearGradientPaint}
+     * @return an array of colors for LinearGradientPaint
      */
     public Color[] getColors ()
     {
@@ -195,9 +165,9 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Returns colors list size.
+     * Returns data list size.
      *
-     * @return colors list size
+     * @return data list size
      */
     public int size ()
     {
@@ -205,10 +175,10 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Returns {@link GradientColorData} at the specified index.
+     * Returns GradientColorData at the specified index.
      *
-     * @param index {@link GradientColorData} index
-     * @return {@link GradientColorData} at the specified index
+     * @param index GradientColorData index
+     * @return GradientColorData at the specified index
      */
     public GradientColorData get ( final int index )
     {
@@ -216,10 +186,10 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Returns location for {@link GradientColorData} at the specified index.
+     * Returns location for GradientColorData at the specified index.
      *
-     * @param index {@link GradientColorData} index
-     * @return location for {@link GradientColorData} at the specified index
+     * @param index GradientColorData index
+     * @return location for GradientColorData at the specified index
      */
     public float getLocation ( final int index )
     {
@@ -227,10 +197,10 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Returns color for {@link GradientColorData} at the specified index.
+     * Returns color for GradientColorData at the specified index.
      *
-     * @param index {@link GradientColorData} index
-     * @return color for {@link GradientColorData} at the specified index
+     * @param index GradientColorData index
+     * @return color for GradientColorData at the specified index
      */
     public Color getColor ( final int index )
     {
@@ -238,9 +208,9 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Returns first {@link GradientColorData}.
+     * Returns first GradientColorData.
      *
-     * @return first {@link GradientColorData}
+     * @return first GradientColorData
      */
     public GradientColorData getFirst ()
     {
@@ -248,9 +218,9 @@ public class GradientData implements Mergeable, Cloneable, Serializable
     }
 
     /**
-     * Returns last {@link GradientColorData}.
+     * Returns last GradientColorData.
      *
-     * @return last {@link GradientColorData}
+     * @return last GradientColorData
      */
     public GradientColorData getLast ()
     {
@@ -303,7 +273,7 @@ public class GradientData implements Mergeable, Cloneable, Serializable
         final Color c1 = getColor ( nextIndex - 1 );
         final Color c2 = getColor ( nextIndex );
 
-        return ColorUtils.intermediate ( c1, c2, progress );
+        return ColorUtils.getIntermediateColor ( c1, c2, progress );
     }
 
     /**
@@ -314,6 +284,12 @@ public class GradientData implements Mergeable, Cloneable, Serializable
         Collections.sort ( gradientColorsData, locationsComparator );
     }
 
+    /**
+     * Returns whether this GradientData is equal to the specified object or not.
+     *
+     * @param obj object to compare with
+     * @return true if this GradientData is equal to the specified object, false otherwise
+     */
     @Override
     public boolean equals ( final Object obj )
     {
@@ -336,5 +312,32 @@ public class GradientData implements Mergeable, Cloneable, Serializable
             }
         }
         return true;
+    }
+
+    /**
+     * Returns cloned GradientData.
+     *
+     * @return cloned GradientData
+     */
+    @Override
+    public GradientData clone ()
+    {
+        return MergeUtils.cloneByFieldsSafely ( this );
+    }
+
+    /**
+     * Returns default GradientData value.
+     *
+     * @return default GradientData value
+     */
+    public static GradientData getDefaultValue ()
+    {
+        final GradientData gradientData = new GradientData ();
+        gradientData.addGradientColorData ( 0f, Color.RED );
+        gradientData.addGradientColorData ( 0.25f, Color.YELLOW );
+        gradientData.addGradientColorData ( 0.5f, Color.GREEN );
+        gradientData.addGradientColorData ( 0.75f, Color.CYAN );
+        gradientData.addGradientColorData ( 1f, Color.BLUE );
+        return gradientData;
     }
 }

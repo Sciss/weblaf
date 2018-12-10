@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Custom layout for {@link WebAccordion} component.
+ * Custom layout for {@link com.alee.extended.panel.WebAccordion} component.
  *
  * @author Mikle Garin
  */
@@ -37,13 +37,72 @@ import java.util.List;
 public class AccordionLayout extends AbstractGroupingLayout
 {
     @Override
-    public void layoutContainer ( final Container container )
+    public Dimension preferredLayoutSize ( final Container parent )
     {
-        final WebAccordion accordion = ( WebAccordion ) container;
-        final List<WebCollapsiblePane> panes = accordion.getPanes ();
+        return getLayoutSize ( parent, true );
+    }
+
+    @Override
+    public Dimension minimumLayoutSize ( final Container parent )
+    {
+        return getLayoutSize ( parent, false );
+    }
+
+    /**
+     * Returns either minimum or preferred container size.
+     *
+     * @param parent    container
+     * @param preferred whether preferred size should be returned or not
+     * @return either minimum or preferred container size
+     */
+    private Dimension getLayoutSize ( final Container parent, final boolean preferred )
+    {
+        final WebAccordion accordion = ( WebAccordion ) parent;
+        final List<WebCollapsiblePane> panes = accordion.getActualPanesList ();
         final int gap = accordion.getGap ();
-        final Insets insets = container.getInsets ();
-        final Dimension size = container.getSize ();
+        final Dimension ps = new Dimension ();
+        final boolean hor = accordion.getOrientation () == SwingConstants.HORIZONTAL;
+
+        for ( final WebCollapsiblePane pane : panes )
+        {
+            final Dimension cps = preferred || !accordion.isFillSpace () ? pane.getPreferredSize () : pane.getBasePreferredSize ();
+            if ( hor )
+            {
+                ps.width += cps.width;
+                ps.height = Math.max ( ps.height, cps.height );
+            }
+            else
+            {
+                ps.width = Math.max ( ps.width, cps.width );
+                ps.height += cps.height;
+            }
+        }
+        if ( panes.size () > 0 )
+        {
+            if ( hor )
+            {
+                ps.width += gap * ( panes.size () - 1 );
+            }
+            else
+            {
+                ps.height += gap * ( panes.size () - 1 );
+            }
+        }
+
+        final Insets insets = parent.getInsets ();
+        ps.width += insets.left + insets.right;
+        ps.height += insets.top + insets.bottom;
+        return ps;
+    }
+
+    @Override
+    public void layoutContainer ( final Container parent )
+    {
+        final WebAccordion accordion = ( WebAccordion ) parent;
+        final List<WebCollapsiblePane> panes = accordion.getActualPanesList ();
+        final int gap = accordion.getGap ();
+        final Insets insets = parent.getInsets ();
+        final Dimension size = parent.getSize ();
         final int w = size.width - insets.left - insets.right;
         final int h = size.height - insets.top - insets.bottom;
         final boolean hor = accordion.getOrientation () == SwingConstants.HORIZONTAL;
@@ -85,7 +144,7 @@ public class AccordionLayout extends AbstractGroupingLayout
                 int length = base.get ( i );
                 if ( expandState > 0f )
                 {
-                    end += totalFillLength * expandState / totalStates % 1;
+                    end += ( totalFillLength * expandState / totalStates ) % 1;
                     length += Math.round ( ( float ) Math.floor ( totalFillLength * expandState / totalStates ) ) +
                             ( i == lastFillIndex ? Math.round ( end ) : 0 );
                 }
@@ -120,78 +179,19 @@ public class AccordionLayout extends AbstractGroupingLayout
     }
 
     @Override
-    public Dimension preferredLayoutSize ( final Container container )
-    {
-        return getLayoutSize ( container, true );
-    }
-
-    @Override
-    public Dimension minimumLayoutSize ( final Container container )
-    {
-        return getLayoutSize ( container, false );
-    }
-
-    /**
-     * Returns either minimum or preferred container size.
-     *
-     * @param container    container
-     * @param preferred whether preferred size should be returned or not
-     * @return either minimum or preferred container size
-     */
-    protected Dimension getLayoutSize ( final Container container, final boolean preferred )
-    {
-        final WebAccordion accordion = ( WebAccordion ) container;
-        final List<WebCollapsiblePane> panes = accordion.getPanes ();
-        final int gap = accordion.getGap ();
-        final Dimension ps = new Dimension ();
-        final boolean hor = accordion.getOrientation () == SwingConstants.HORIZONTAL;
-
-        for ( final WebCollapsiblePane pane : panes )
-        {
-            final Dimension cps = preferred || !accordion.isFillSpace () ? pane.getPreferredSize () : pane.getBasePreferredSize ();
-            if ( hor )
-            {
-                ps.width += cps.width;
-                ps.height = Math.max ( ps.height, cps.height );
-            }
-            else
-            {
-                ps.width = Math.max ( ps.width, cps.width );
-                ps.height += cps.height;
-            }
-        }
-        if ( panes.size () > 0 )
-        {
-            if ( hor )
-            {
-                ps.width += gap * ( panes.size () - 1 );
-            }
-            else
-            {
-                ps.height += gap * ( panes.size () - 1 );
-            }
-        }
-
-        final Insets insets = container.getInsets ();
-        ps.width += insets.left + insets.right;
-        ps.height += insets.top + insets.bottom;
-        return ps;
-    }
-
-    @Override
     protected String sides ()
     {
         return sides != null ? sides : ( sides = "0,0,0,0" );
     }
 
     @Override
-    public Pair<String, String> getDescriptors ( final Container container, final Component component, final int index )
+    protected Pair<String, String> getDescriptors ( final Container parent, final Component component, final int index )
     {
         final Pair<String, String> descriptors;
-        final WebAccordion accordion = ( WebAccordion ) container;
+        final WebAccordion accordion = ( WebAccordion ) parent;
         if ( accordion.getGap () == 0 )
         {
-            final int last = container.getComponentCount () - 1;
+            final int last = parent.getComponentCount () - 1;
             final boolean hor = accordion.getOrientation () == SwingConstants.HORIZONTAL;
             final boolean top = ( hor || !hor && index == 0 ) && isPaintTop ();
             final boolean left = ( index == 0 || !hor ) && isPaintLeft ();

@@ -21,15 +21,13 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Base interface for custom tooltip providers for complex components.
- * It only provides tooltips for component areas described by {@link ComponentArea} implementation.
+ * WebLaF tooltip provider interface.
+ * It defines methods used across all components.
  *
- * @param <V> value type
- * @param <C> component type
- * @param <A> component area type
  * @author Mikle Garin
  */
-public interface ToolTipProvider<V, C extends JComponent, A extends ComponentArea<V, C>>
+
+public interface ToolTipProvider<T extends JComponent>
 {
     /**
      * Returns tooltip display delay.
@@ -40,33 +38,38 @@ public interface ToolTipProvider<V, C extends JComponent, A extends ComponentAre
     public long getDelay ();
 
     /**
-     * Returns tooltip source bounds.
-     * Tooltip will be displayed relative to these bounds using provided {@link TooltipWay}.
+     * Returns custom WebLaF tooltip source bounds.
+     * Tooltip will be displayed relative to these bounds using provided TooltipWay.
      *
-     * @param component component to provide tooltip for
-     * @param value     value
-     * @param area      {@link ComponentArea}
-     * @return tooltip source bounds
+     * @param component  component to provide tooltip for
+     * @param value      cell value
+     * @param index      cell index
+     * @param column     cell column index
+     * @param isSelected whether the cell is selected or not
+     * @return custom WebLaF tooltip source bounds
      */
-    public Rectangle getSourceBounds ( C component, V value, A area );
+    public Rectangle getSourceBounds ( T component, Object value, int index, int column, boolean isSelected );
 
     /**
-     * Return {@link WebCustomTooltip} for the specified value and {@link ComponentArea}.
+     * Return custom WebLaF tooltip for the specified cell.
      *
-     * @param component component to provide tooltip for
-     * @param value     value
-     * @param area      {@link ComponentArea}
-     * @return {@link WebCustomTooltip} for the specified value and {@link ComponentArea}
+     * @param component  component to provide tooltip for
+     * @param value      cell value
+     * @param index      cell index
+     * @param column     cell column index
+     * @param isSelected whether the cell is selected or not
+     * @return cell tooltip
      */
-    public WebCustomTooltip getToolTip ( C component, V value, A area );
+    public WebCustomTooltip getToolTip ( T component, Object value, int index, int column, boolean isSelected );
 
     /**
-     * Informs about hover area changes.
-     * This method implementations should display tooltips
+     * Forces tooltip to update when hover cell changes.
      *
      * @param component component to provide tooltip for
-     * @param oldArea   {@link ComponentArea}
-     * @param newArea   {@link ComponentArea}
+     * @param oldIndex  old hover cell index
+     * @param oldColumn old hover cell column
+     * @param newIndex  new hover cell index
+     * @param newColumn new hover cell column
      */
-    public void hoverAreaChanged ( C component, A oldArea, A newArea );
+    public void hoverCellChanged ( final T component, final int oldIndex, final int oldColumn, final int newIndex, final int newColumn );
 }

@@ -17,13 +17,14 @@
 
 package com.alee.extended.filechooser;
 
+import com.alee.extended.drag.FileDragAndDropHandler;
 import com.alee.extended.layout.WrapFlowLayout;
-import com.alee.laf.panel.WebPanel;
-import com.alee.managers.drag.transfer.FilesTransferHandler;
-import com.alee.managers.language.LanguageMethods;
-import com.alee.managers.language.UILanguageManager;
-import com.alee.managers.language.updaters.LanguageUpdater;
+import com.alee.global.StyleConstants;
 import com.alee.managers.style.StyleId;
+import com.alee.laf.panel.WebPanel;
+import com.alee.managers.language.LanguageManager;
+import com.alee.managers.language.LanguageMethods;
+import com.alee.managers.language.updaters.LanguageUpdater;
 import com.alee.utils.*;
 import com.alee.utils.filefilter.AbstractFileFilter;
 import com.alee.utils.swing.WebTimer;
@@ -48,6 +49,11 @@ import java.util.Map;
 
 public class WebFileDrop extends WebPanel implements LanguageMethods
 {
+    /**
+     * Remove file icon.
+     */
+    public static final ImageIcon CROSS_ICON = new ImageIcon ( WebFileDrop.class.getResource ( "icons/cross.png" ) );
+
     protected static final BasicStroke dashStroke =
             new BasicStroke ( 3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1f, new float[]{ 8f, 8f }, 0f );
 
@@ -92,7 +98,7 @@ public class WebFileDrop extends WebPanel implements LanguageMethods
         setShowDefaultDropText ( true );
 
         // Files TransferHandler
-        setTransferHandler ( new FilesTransferHandler ( false, true )
+        setTransferHandler ( new FileDragAndDropHandler ()
         {
             @Override
             public boolean isDropEnabled ()
@@ -132,7 +138,7 @@ public class WebFileDrop extends WebPanel implements LanguageMethods
                 {
                     stopAnimator ();
                     filesCount = selectedFiles.size ();
-                    animator = new WebTimer ( "WebFileDrop.textFadeOutTimer", SwingUtils.frameRateDelay ( 24 ), new ActionListener ()
+                    animator = new WebTimer ( "WebFileDrop.textFadeOutTimer", StyleConstants.fps24, new ActionListener ()
                     {
                         @Override
                         public void actionPerformed ( final ActionEvent e )
@@ -155,7 +161,7 @@ public class WebFileDrop extends WebPanel implements LanguageMethods
                 {
                     stopAnimator ();
                     filesCount = selectedFiles.size ();
-                    animator = new WebTimer ( "WebFileDrop.textFadeInTimer", SwingUtils.frameRateDelay ( 24 ), new ActionListener ()
+                    animator = new WebTimer ( "WebFileDrop.textFadeInTimer", StyleConstants.fps24, new ActionListener ()
                     {
                         @Override
                         public void actionPerformed ( final ActionEvent e )
@@ -601,50 +607,44 @@ public class WebFileDrop extends WebPanel implements LanguageMethods
      */
 
     @Override
-    public String getLanguage ()
-    {
-        return UILanguageManager.getComponentKey ( this );
-    }
-
-    @Override
     public void setLanguage ( final String key, final Object... data )
     {
-        UILanguageManager.registerComponent ( this, key, data );
+        LanguageManager.registerComponent ( this, key, data );
     }
 
     @Override
     public void updateLanguage ( final Object... data )
     {
-        UILanguageManager.updateComponent ( this, data );
+        LanguageManager.updateComponent ( this, data );
     }
 
     @Override
     public void updateLanguage ( final String key, final Object... data )
     {
-        UILanguageManager.updateComponent ( this, key, data );
+        LanguageManager.updateComponent ( this, key, data );
     }
 
     @Override
     public void removeLanguage ()
     {
-        UILanguageManager.unregisterComponent ( this );
+        LanguageManager.unregisterComponent ( this );
     }
 
     @Override
     public boolean isLanguageSet ()
     {
-        return UILanguageManager.isRegisteredComponent ( this );
+        return LanguageManager.isRegisteredComponent ( this );
     }
 
     @Override
     public void setLanguageUpdater ( final LanguageUpdater updater )
     {
-        UILanguageManager.registerLanguageUpdater ( this, updater );
+        LanguageManager.registerLanguageUpdater ( this, updater );
     }
 
     @Override
     public void removeLanguageUpdater ()
     {
-        UILanguageManager.unregisterLanguageUpdater ( this );
+        LanguageManager.unregisterLanguageUpdater ( this );
     }
 }

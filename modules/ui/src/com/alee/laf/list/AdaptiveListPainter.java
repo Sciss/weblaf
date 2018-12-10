@@ -6,18 +6,16 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple {@link ListPainter} adapter class.
- * It is used to install simple non-specific painters into {@link WListUI}.
+ * Simple ListPainter adapter class.
+ * It is used to install simple non-specific painters into WebListUI.
  *
- * @param <C> component type
- * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public final class AdaptiveListPainter<C extends JList, U extends WListUI> extends AdaptivePainter<C, U> implements IListPainter<C, U>
+public final class AdaptiveListPainter<E extends JList, U extends WebListUI> extends AdaptivePainter<E, U> implements IListPainter<E, U>
 {
     /**
-     * Constructs new {@link AdaptiveListPainter} for the specified painter.
+     * Constructs new AdaptiveListPainter for the specified painter.
      *
      * @param painter painter to adapt
      */
@@ -27,7 +25,7 @@ public final class AdaptiveListPainter<C extends JList, U extends WListUI> exten
     }
 
     @Override
-    public boolean isItemHoverDecorationSupported ()
+    public boolean isHoverDecorationSupported ()
     {
         return false;
     }

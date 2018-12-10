@@ -1,4 +1,4 @@
-<skin xmlns="http://weblookandfeel.com/XmlSkin">
+<skin>
 
     <!-- com.alee.laf.text.WebTextField -->
 
@@ -6,15 +6,15 @@
     <style type="textfield" padding="2">
         <component>
             <opaque>false</opaque>
-            <foreground>245,245,245</foreground>
-            <selectedTextColor>245,245,245</selectedTextColor>
+            <foreground>255,255,255,240</foreground>
+            <selectedTextColor>255,255,255,240</selectedTextColor>
             <selectionColor>black</selectionColor>
             <caretColor>white</caretColor>
         </component>
         <painter>
             <inputPromptHorizontalPosition>10</inputPromptHorizontalPosition>
             <inputPromptVerticalPosition>1</inputPromptVerticalPosition>
-            <inputPromptForeground>200,200,200</inputPromptForeground>
+            <inputPromptForeground>160,160,160</inputPromptForeground>
             <inputPromptOnlyWhenEditable>true</inputPromptOnlyWhenEditable>
             <hideInputPromptOnFocus>false</hideInputPromptOnFocus>
             <decorations>
@@ -22,7 +22,7 @@
                     <WebShape round="2" />
                     <WebShadow type="outer" width="2" />
                     <LineBorder color="20,20,20" />
-                    <ColorBackground color="106,110,112" />
+                    <ColorBackground color="77,81,83" />
                 </decoration>
                 <decoration states="focused">
                     <LineBorder color="black" />
@@ -35,25 +35,12 @@
         </painter>
     </style>
 
-    <!-- Non-opaque text field -->
-    <style type="textfield" id="non-opaque">
-        <component>
-            <opaque>false</opaque>
-        </component>
+    <!-- Text field undecorated -->
+    <style type="textfield" id="undecorated">
         <painter>
-            <decorations overwrite="true">
-                <decoration>
-                    <BoundsShape />
-                    <ColorBackground color="106,110,112" />
-                </decoration>
+            <decorations>
+                <decoration visible="false" />
             </decorations>
-        </painter>
-    </style>
-
-    <!-- Transparent text field -->
-    <style type="textfield" id="transparent" extends="non-opaque">
-        <painter>
-            <decorations overwrite="true" />
         </painter>
     </style>
 

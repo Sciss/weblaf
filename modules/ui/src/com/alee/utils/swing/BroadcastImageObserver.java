@@ -17,54 +17,41 @@
 
 package com.alee.utils.swing;
 
-import com.alee.api.jdk.BiConsumer;
-
-import javax.swing.*;
 import java.awt.*;
 import java.awt.image.ImageObserver;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Special {@link ImageObserver} implementaion that can broadcast update events to other {@link ImageObserver}s.
+ * Custom image observer for image updates broadcasting.
  *
  * @author Mikle Garin
  */
+
 public class BroadcastImageObserver implements ImageObserver
 {
     /**
-     * {@link ImageObserver}s to broadcast update events to.
-     * These {@link ImageObserver}s are kept in memory as long as this {@link BroadcastImageObserver} is in memory.
+     * Observers to broadcast update events to.
      */
-    protected final List<ImageObserver> observers = new ArrayList<ImageObserver> ( 2 );
+    protected final List<ImageObserver> observers = new ArrayList<ImageObserver> ( 10 );
 
     /**
-     * {@link ImageObserver}s to broadcast update events to.
-     * These {@link ImageObserver}s are tied to specific component and will be disposed whenever component is destroyed.
-     */
-    protected final WeakComponentDataList<JComponent, ImageObserver> componentObservers =
-            new WeakComponentDataList<JComponent, ImageObserver> ( "BroadcastImageObserver.ImageObserver", 50 );
-
-    /**
-     * Adds {@link ImageObserver} to broadcast update events to.
+     * Adds new observer to broadcast update events to.
      *
-     * @param observer {@link ImageObserver} to add
+     * @param observer image observer
      */
     public void addObserver ( final ImageObserver observer )
     {
         synchronized ( observers )
         {
-            if ( !observers.contains ( observer ) )
-            {
-                observers.add ( observer );
-            }
+            observers.add ( observer );
         }
     }
 
     /**
-     * Removes {@link ImageObserver} from broadcast list.
+     * Removes observer from broadcast list.
      *
-     * @param observer {@link ImageObserver} to remove
+     * @param observer image observer
      */
     public void removeObserver ( final ImageObserver observer )
     {
@@ -72,31 +59,6 @@ public class BroadcastImageObserver implements ImageObserver
         {
             observers.remove ( observer );
         }
-    }
-
-    /**
-     * Adds {@link ImageObserver} to broadcast update events to.
-     *
-     * @param component {@link JComponent} to tie {@link ImageObserver} to
-     * @param observer  {@link ImageObserver} to add
-     */
-    public void addObserver ( final JComponent component, final ImageObserver observer )
-    {
-        if ( !componentObservers.containsData ( component, observer ) )
-        {
-            componentObservers.add ( component, observer );
-        }
-    }
-
-    /**
-     * Removes {@link ImageObserver} from broadcast list.
-     *
-     * @param component {@link JComponent} to untie {@link ImageObserver} from
-     * @param observer  {@link ImageObserver} to remove
-     */
-    public void removeObserver ( final JComponent component, final ImageObserver observer )
-    {
-        componentObservers.remove ( component, observer );
     }
 
     @Override
@@ -111,14 +73,6 @@ public class BroadcastImageObserver implements ImageObserver
                     observer.imageUpdate ( img, flags, x, y, width, height );
                 }
             }
-            componentObservers.forEachData ( new BiConsumer<JComponent, ImageObserver> ()
-            {
-                @Override
-                public void accept ( final JComponent component, final ImageObserver observer )
-                {
-                    observer.imageUpdate ( img, flags, x, y, width, height );
-                }
-            } );
         }
         return ( flags & ( ALLBITS | ABORT ) ) == 0;
     }
