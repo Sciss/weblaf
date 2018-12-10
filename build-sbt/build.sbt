@@ -3,7 +3,7 @@ lazy val baseNameL          = baseName.toLowerCase
 lazy val fullDescr          = "WebLaf is a Java Swing Look and Feel and extended components library for cross-platform applications"
 
 lazy val useOurOwnVersion   = true      // detaches artifact from original WebLaF numbering
-lazy val ownVersion         = "2.1.3"   // we deliberately make a jump here to avoid confusion with original version
+lazy val ownVersion         = "2.1.4"   // we deliberately make a jump here to avoid confusion with original version
 lazy val upstreamIsSnapshot = true      // only used when `useOurOwnVersion` is `false`!
 
 // - generate debugging symbols
@@ -13,9 +13,9 @@ lazy val commonJavaOptions  = Seq("-source", "1.6")
 
 // ---- core dependencies ----
 lazy val imageScalingVersion= "0.8.6"
-lazy val xstreamVersion     = "1.4.9"
+lazy val xstreamVersion     = "1.4.11.1"
 lazy val jerichoVersion     = "3.3" // note: "3.4" is not Java 6 compatible
-lazy val slfVersion         = "1.7.24"
+lazy val slfVersion         = "1.7.25"
 
 // ---- ui dependencies ----
 lazy val rSyntaxVersion     = "2.6.1"
@@ -41,7 +41,7 @@ lazy val commonSettings = Seq(
   // organization  := "com.alee"
   // we use this organization in order to publish to Sonatype Nexus (Maven Central)
   organization      := "de.sciss",
-  scalaVersion      := "2.11.8",  // not used
+  scalaVersion      := "2.12.8",  // not used
   homepage          := Some(url("http://weblookandfeel.com")),
   licenses          := Seq("GPL v3+" -> url("http://www.gnu.org/licenses/gpl-3.0.txt")),
   crossPaths        := false,   // this is just a Java project
@@ -84,12 +84,11 @@ lazy val commonSettings = Seq(
 
 // ---- projects ----
 
-lazy val full = Project(
-  id            = baseNameL,
-  base          = file("."),
-  aggregate     = Seq(core, ui),  // exclude `demo` here
-  dependencies  = Seq(core, ui),  // exclude `demo` here
-  settings      = commonSettings ++ Seq(
+lazy val full = project.withId(baseNameL).in(file("."))
+  .aggregate(core, ui)  // exclude `demo` here
+  .dependsOn(core, ui)  // exclude `demo` here
+  .settings(commonSettings)
+  .settings(
     name := baseName,
     description := fullDescr,
     // version is determined from version.properties
@@ -98,9 +97,8 @@ lazy val full = Project(
     publishArtifact in (Compile, packageDoc) := false, // there are no java-docs
     publishArtifact in (Compile, packageSrc) := false  // there are no sources
   )
-)
 
-lazy val core = Project(id = s"$baseNameL-core", base = file("core"))
+lazy val core = project.withId(s"$baseNameL-core").in(file("core"))
   .settings(commonSettings)
   .settings(
     name        := s"$baseName-core",
@@ -119,7 +117,7 @@ lazy val core = Project(id = s"$baseNameL-core", base = file("core"))
     excludeFilter in (Compile, unmanagedResources) := "*.java"
   )
 
-lazy val ui = Project(id = s"$baseNameL-ui", base = file("ui"))
+lazy val ui = project.withId(s"$baseNameL-ui").in(file("ui"))
   .dependsOn(core)
   .settings(commonSettings)
   .settings(
@@ -136,7 +134,7 @@ lazy val ui = Project(id = s"$baseNameL-ui", base = file("ui"))
     excludeFilter in (Compile, unmanagedResources) := "*.java"
   )
 
-lazy val demo = Project(id = s"$baseNameL-demo", base = file("demo"))
+lazy val demo = project.withId(s"$baseNameL-demo").in(file("demo"))
   .dependsOn(core, ui)
   .settings(commonSettings)
   .settings(
@@ -148,7 +146,7 @@ lazy val demo = Project(id = s"$baseNameL-demo", base = file("demo"))
       "com.kitfox.svg" % "svg-salamander"  % salamanderVersion
     ),
     fork in run := true,
-    mainClass in (Compile,run) := Some("com.alee.examples.WebLookAndFeelDemo"),
+    mainClass in (Compile,run) := Some("com.alee.demo.DemoApplication"),
     // javaSource        in Compile := baseDirectory.value / ".." / ".." / "modules" / "demo" / "src",
     // resourceDirectory in Compile := baseDirectory.value / ".." / ".." / "modules" / "demo" / "src",
     // excludeFilter in (Compile, unmanagedSources)   := new SimpleFileFilter(_.getPath.contains("/examples/")),

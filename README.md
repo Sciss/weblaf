@@ -7,7 +7,7 @@ This is a fork of the [Web Look-and-Feel project](https://github.com/mgarin/webl
 for JVM desktop applications using the Swing toolkit. Please also see the [original README](README-ORIG.md).
 
 This fork is mostly identical with upstream, but includes a few fixes required for interop with 
-the [Submin](https://github.com/Sciss/Submin) derivate that has a light and dark skin.
+the [Submin](https://git.iem.at/sciss/Submin) derivate that has a light and dark skin.
 
 This fork is published under the GNU General Public License v3+.
 
@@ -37,7 +37,7 @@ Or in an sbt based project:
 
     "de.sciss" % "weblaf" % v
 
-The current version `v` is `"2.1.3"` (no relation to original WebLaF project version).
+The current version `v` is `"2.1.4"` (no relation to original WebLaF project version).
 
 Note that the dependency on RSyntaxTextArea is not declared, so if you want to use `StyleEditor`,
 you have to add the additional dependency on this library.
