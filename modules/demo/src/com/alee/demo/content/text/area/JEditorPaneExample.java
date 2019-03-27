@@ -17,7 +17,9 @@
 
 package com.alee.demo.content.text.area;
 
-import com.alee.demo.api.*;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
@@ -28,8 +30,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JEditorPaneExample extends AbstractExample
+public class JEditorPaneExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -50,12 +51,19 @@ public class JEditorPaneExample extends AbstractExample
     }
 
     @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Use Editor Panes", "editorpane" );
+    }
+
+    @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicPane e1 = new BasicPane ( "basic", StyleId.editorpane );
-        final ScrollablePane e2 = new ScrollablePane ( "scrollable", StyleId.editorpane );
-        final ReadOnlyPane e3 = new ReadOnlyPane ( "readonly", StyleId.editorpane );
-        return CollectionUtils.<Preview>asList ( e1, e2, e3 );
+        return CollectionUtils.<Preview>asList (
+                new BasicPane ( "basic", StyleId.editorpane ),
+                new ScrollablePane ( "scrollable", StyleId.editorpane ),
+                new ReadOnlyPane ( "readonly", StyleId.editorpane )
+        );
     }
 
     /**
@@ -75,7 +83,7 @@ public class JEditorPaneExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JEditorPane editorPane = new JEditorPane ( "text/html", createHtmlText () );
             editorPane.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
@@ -100,7 +108,7 @@ public class JEditorPaneExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JEditorPane editorPane = new JEditorPane ( "text/html", createHtmlText () );
             editorPane.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
@@ -125,7 +133,7 @@ public class JEditorPaneExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JEditorPane editorPane = new JEditorPane ( "text/html", createHtmlText () );
             editorPane.setEditable ( false );

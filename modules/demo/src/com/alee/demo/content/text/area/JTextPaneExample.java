@@ -17,7 +17,9 @@
 
 package com.alee.demo.content.text.area;
 
-import com.alee.demo.api.*;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
@@ -28,8 +30,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JTextPaneExample extends AbstractExample
+public class JTextPaneExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -50,12 +51,19 @@ public class JTextPaneExample extends AbstractExample
     }
 
     @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Use Text Panes", "editorpane" );
+    }
+
+    @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicPane e1 = new BasicPane ( "basic", StyleId.textpane );
-        final ScrollablePane e2 = new ScrollablePane ( "scrollable", StyleId.textpane );
-        final ReadOnlyPane e3 = new ReadOnlyPane ( "readonly", StyleId.textpane );
-        return CollectionUtils.<Preview>asList ( e1, e2, e3 );
+        return CollectionUtils.<Preview>asList (
+                new BasicPane ( "basic", StyleId.textpane ),
+                new ScrollablePane ( "scrollable", StyleId.textpane ),
+                new ReadOnlyPane ( "readonly", StyleId.textpane )
+        );
     }
 
     /**
@@ -75,7 +83,7 @@ public class JTextPaneExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JTextPane textPane = new JTextPane ();
             textPane.setText ( "Sample text" );
@@ -101,7 +109,7 @@ public class JTextPaneExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JTextPane textPane = new JTextPane ();
             textPane.setText ( "Sample\nmultiline\ntext" );
@@ -127,7 +135,7 @@ public class JTextPaneExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JTextPane textPane = new JTextPane ();
             textPane.setText ( "Read/copy only" );

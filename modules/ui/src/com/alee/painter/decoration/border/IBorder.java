@@ -18,24 +18,23 @@
 package com.alee.painter.decoration.border;
 
 import com.alee.api.Identifiable;
-import com.alee.api.Mergeable;
+import com.alee.api.merge.Overwriting;
 import com.alee.painter.decoration.IDecoration;
+import com.alee.painter.decoration.IShapedElement;
 
 import javax.swing.*;
-import java.awt.*;
 import java.io.Serializable;
 
 /**
- * Customizable component border interface.
+ * Interface for any custom borders.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <D> decoration type
  * @param <I> border type
  * @author Mikle Garin
  */
-
-public interface IBorder<E extends JComponent, D extends IDecoration<E, D>, I extends IBorder<E, D, I>>
-        extends Serializable, Cloneable, Mergeable<I>, Identifiable
+public interface IBorder<C extends JComponent, D extends IDecoration<C, D>, I extends IBorder<C, D, I>>
+        extends IShapedElement<C, D, I>, Identifiable, Overwriting, Cloneable, Serializable
 {
     /**
      * Returns border opacity.
@@ -45,34 +44,9 @@ public interface IBorder<E extends JComponent, D extends IDecoration<E, D>, I ex
     public float getOpacity ();
 
     /**
-     * Returns border stroke.
-     *
-     * @return border stroke
-     */
-    public Stroke getStroke ();
-
-    /**
      * Returns border width.
      *
      * @return border width
      */
-    public float getWidth ();
-
-    /**
-     * Returns border color.
-     *
-     * @return border color
-     */
-    public Color getColor ();
-
-    /**
-     * Paints border using the specified shape.
-     *
-     * @param g2d    graphics context
-     * @param bounds painting bounds
-     * @param c      painted component
-     * @param d      painted decoration state
-     * @param shape  background shape
-     */
-    public void paint ( Graphics2D g2d, Rectangle bounds, E c, D d, Shape shape );
+    public BorderWidth getWidth ();
 }

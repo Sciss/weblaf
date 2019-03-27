@@ -17,38 +17,44 @@
 
 package com.alee.extended.tab;
 
-import com.alee.managers.drag.SimpleDragViewHandler;
-import com.alee.managers.language.LM;
+import com.alee.managers.drag.view.SimpleDragViewHandler;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
+import java.awt.dnd.DragSourceDragEvent;
 
 /**
- * Custom DragViewHandler for WebDocumentPane document.
+ * {@link SimpleDragViewHandler} implementation for {@link WebDocumentPane} document.
  *
+ * @param <T> {@link DocumentData} type
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
- * @see com.alee.extended.tab.WebDocumentPane
+ * @see WebDocumentPane
  * @see com.alee.managers.drag.DragManager
  */
-
 public class DocumentDragViewHandler<T extends DocumentData> extends SimpleDragViewHandler<T>
 {
     /**
-     * Document pane which provides this DragViewHandler.
+     * {@link WebDocumentPane} using this drag view handler.
      */
     protected final WebDocumentPane documentPane;
 
     /**
-     * Constructs custom DragViewHandler for DocumentData object.
+     * Constructs new {@link DocumentDragViewHandler}.
      *
-     * @param documentPane document pane which provides this DragViewHandler
+     * @param documentPane {@link WebDocumentPane} using this drag view handler
      */
     public DocumentDragViewHandler ( final WebDocumentPane documentPane )
     {
         super ();
         this.documentPane = documentPane;
+    }
+
+    @Override
+    public boolean supports ( final T object, final DragSourceDragEvent event )
+    {
+        return true;
     }
 
     @Override
@@ -78,6 +84,6 @@ public class DocumentDragViewHandler<T extends DocumentData> extends SimpleDragV
     @Override
     protected String getText ( final T document )
     {
-        return LM.get ( document.getTitle () );
+        return document.getTitle ();
     }
 }

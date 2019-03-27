@@ -20,14 +20,13 @@ package com.alee.managers.style;
 import javax.swing.*;
 
 /**
- * Custom listener that can be installed into {@link Skinnable} components to listen to style changes.
+ * Custom listener that can be installed into {@link Styleable} components to listen to style changes.
  *
  * @author Mikle Garin
- * @see Skinnable
- * @see com.alee.managers.style.Styleable
- * @see com.alee.managers.style.StyleManager
+ * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
+ * @see Styleable
+ * @see StyleManager
  */
-
 public interface StyleListener
 {
     /**

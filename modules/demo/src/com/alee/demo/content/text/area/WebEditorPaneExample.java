@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.text.area;
 
-import com.alee.demo.api.*;
+import com.alee.demo.api.example.*;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.text.WebEditorPane;
 import com.alee.managers.style.StyleId;
@@ -29,8 +29,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebEditorPaneExample extends AbstractExample
+public class WebEditorPaneExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -53,9 +52,10 @@ public class WebEditorPaneExample extends AbstractExample
     @Override
     protected List<Preview> createPreviews ()
     {
-        final PromptPane e1 = new PromptPane ( "prompt", StyleId.editorpane );
-        final DecoratedPane e2 = new DecoratedPane ( "decorated", StyleId.editorpaneDecorated );
-        return CollectionUtils.<Preview>asList ( e1, e2 );
+        return CollectionUtils.<Preview>asList (
+                new PromptPane ( "prompt", StyleId.editorpane ),
+                new DecoratedPane ( "decorated", StyleId.editorpaneDecorated )
+        );
     }
 
     /**
@@ -75,7 +75,7 @@ public class WebEditorPaneExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebEditorPane textPane = new WebEditorPane ( getStyleId () );
             textPane.setInputPrompt ( getPreviewLanguagePrefix () + "prompt" );
@@ -100,7 +100,7 @@ public class WebEditorPaneExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebEditorPane textPane = new WebEditorPane ( getStyleId (), "text/html", createHtmlText () );
             return CollectionUtils.asList ( textPane );

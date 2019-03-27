@@ -27,11 +27,16 @@ import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 /**
+ * Abstract {@link com.alee.laf.grouping.GroupingLayout} that contains most basic features for any final implementation.
+ *
  * @author Mikle Garin
+ * @see com.alee.laf.grouping.GroupPaneLayout
+ * @see com.alee.extended.layout.AccordionLayout
+ * @see com.alee.extended.dock.WebDockablePaneModel
  */
 
 public abstract class AbstractGroupingLayout extends AbstractLayoutManager implements GroupingLayout
@@ -50,6 +55,12 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
      */
     @XStreamAsAttribute
     protected Boolean groupButtons;
+
+    /**
+     * Whether or not this button group should allow empty selection state.
+     */
+    @XStreamAsAttribute
+    protected Boolean unselectableGrouping;
 
     /**
      * Displayed children decoration sides.
@@ -114,13 +125,37 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
     }
 
     /**
+     * Returns whether or not this button group should allow empty selection state.
+     *
+     * @return true if this button group should allow empty selection state, false otherwise
+     */
+    public boolean isUnselectableGrouping ()
+    {
+        return unselectableGrouping != null && unselectableGrouping;
+    }
+
+    /**
+     * Sets whether or not this button group should allow empty selection state.
+     *
+     * @param unselectable whether or not this button group should allow empty selection state
+     */
+    public void setUnselectableGrouping ( final boolean unselectable )
+    {
+        if ( isUnselectableGrouping () != unselectableGrouping )
+        {
+            this.unselectableGrouping = unselectable;
+            updateButtonGrouping ();
+        }
+    }
+
+    /**
      * Returns newly created button group.
      *
      * @return newly created button group
      */
     protected UnselectableButtonGroup createButtonGroup ()
     {
-        return new UnselectableButtonGroup ( false );
+        return new UnselectableButtonGroup ( isUnselectableGrouping () );
     }
 
     /**
@@ -300,7 +335,7 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
         // Saving child reference
         if ( children == null )
         {
-            children = new WeakHashMap<Component, Pair<String, String>> ( 3 );
+            children = new HashMap<Component, Pair<String, String>> ( 3 );
         }
         children.put ( component, new Pair<String, String> () );
 
@@ -351,7 +386,7 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
      * @param component painted component
      * @return descriptors for painted component sides and lines
      */
-    private Pair<String, String> getDescriptors ( final Component component )
+    protected Pair<String, String> getDescriptors ( final Component component )
     {
         Pair<String, String> pair = children.get ( component );
         if ( pair == null || pair.getKey () == null )
@@ -374,12 +409,12 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
      * Returns descriptors for painted component sides and lines.
      * It is requested only if grouping is actually enabled.
      *
-     * @param parent    component container
+     * @param container    component container
      * @param component painted component
      * @param index     component z-index in container
      * @return descriptors for painted component sides and lines
      */
-    protected abstract Pair<String, String> getDescriptors ( Container parent, Component component, int index );
+    public abstract Pair<String, String> getDescriptors ( Container container, Component component, int index );
 
     /**
      * Resets cached sides and lines descriptors.

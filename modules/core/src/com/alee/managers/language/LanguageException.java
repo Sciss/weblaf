@@ -19,17 +19,15 @@ package com.alee.managers.language;
 
 /**
  * Special exception class used to display various language problems.
- * It extends RuntimeException to allow throwing this exception while normal runtime.
  *
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-LanguageManager">How to use LanguageManager</a>
- * @see com.alee.managers.language.LanguageManager
+ * @see LanguageManager
  */
-
 public final class LanguageException extends RuntimeException
 {
     /**
-     * Constructs a new LanguageException with {@code null} as its detail message.
+     * Constructs a new {@link LanguageException} with {@code null} as its detail message.
      */
     public LanguageException ()
     {
@@ -37,7 +35,7 @@ public final class LanguageException extends RuntimeException
     }
 
     /**
-     * Constructs a new LanguageException with the specified detail message.
+     * Constructs a new {@link LanguageException} with the specified detail message.
      *
      * @param message exception message
      */
@@ -47,7 +45,7 @@ public final class LanguageException extends RuntimeException
     }
 
     /**
-     * Constructs a new LanguageException with the specified detail message and cause.
+     * Constructs a new {@link LanguageException} with the specified detail message and cause.
      *
      * @param message exception message
      * @param cause   exception cause
@@ -58,7 +56,7 @@ public final class LanguageException extends RuntimeException
     }
 
     /**
-     * Constructs a new LanguageException with the specified cause.
+     * Constructs a new {@link LanguageException} with the specified cause.
      *
      * @param cause exception cause
      */

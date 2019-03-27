@@ -17,15 +17,18 @@
 
 package com.alee.extended.window;
 
+import com.alee.api.jdk.Supplier;
+import com.alee.extended.behavior.ComponentMoveBehavior;
+import com.alee.extended.behavior.VisibilityBehavior;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.menu.AbstractPopupPainter;
 import com.alee.laf.menu.PopupStyle;
-import com.alee.laf.rootpane.WebRootPaneUI;
+import com.alee.laf.rootpane.WRootPaneUI;
+import com.alee.utils.CoreSwingUtils;
 import com.alee.utils.ProprietaryUtils;
-import com.alee.utils.SwingUtils;
+import com.alee.utils.SystemUtils;
 import com.alee.utils.swing.AncestorAdapter;
-import com.alee.utils.swing.DataProvider;
-import com.alee.utils.swing.WindowFollowBehavior;
+import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 import javax.swing.*;
 import javax.swing.event.AncestorEvent;
@@ -35,22 +38,28 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 
 /**
- * Basic painter for WebPopOver component.
- * It is used as default WebPopOver painter.
+ * Basic painter for {@link WebPopOver} component.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @author Mikle Garin
  */
-
-public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extends AbstractPopupPainter<E, U> implements IPopOverPainter<E, U>
+@XStreamAlias ( "PopOverPainter" )
+public class PopOverPainter<C extends JRootPane, U extends WRootPaneUI> extends AbstractPopupPainter<C, U>
+        implements IPopOverPainter<C, U>
 {
+    /**
+     * todo 1. This painter must extend {@link com.alee.laf.rootpane.RootPanePainter}
+     * todo 2. All {@link AbstractPopupPainter} stuff should be done by proper decoration elements instead
+     */
+
     /**
      * Listeners.
      */
-    protected ComponentMoveBehavior moveAdapter;
-    protected WindowFocusListener focusListener;
-    protected ComponentAdapter resizeAdapter;
+    protected transient ComponentMoveBehavior moveAdapter;
+    protected transient WindowFocusListener focusListener;
+    protected transient ComponentAdapter resizeAdapter;
+    protected transient VisibilityBehavior windowVisibilityBehavior;
 
     /**
      * Whether or not popover is focused.
@@ -83,13 +92,12 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
     protected PopOverAlignment preferredAlignment = null;
 
     @Override
-    public void install ( final E c, final U ui )
+    protected void installPropertiesAndListeners ()
     {
-        // Must call super to install default settings
-        super.install ( c, ui );
+        super.installPropertiesAndListeners ();
 
         // Retrieving popover instance
-        final WebPopOver popOver = getPopOver ( c );
+        final WebPopOver popOver = getPopOver ( component );
 
         // Window focus listener
         focusListener = new WindowFocusListener ()
@@ -109,7 +117,7 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
         popOver.addWindowFocusListener ( focusListener );
 
         // Popover drag listener
-        moveAdapter = new ComponentMoveBehavior ()
+        moveAdapter = new ComponentMoveBehavior ( component )
         {
             @Override
             protected Rectangle getDragStartBounds ( final MouseEvent e )
@@ -117,7 +125,7 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
                 if ( popOver.isMovable () )
                 {
                     final int sw = getShadeWidth ();
-                    return new Rectangle ( sw, sw, c.getWidth () - sw * 2, c.getHeight () - sw * 2 );
+                    return new Rectangle ( sw, sw, component.getWidth () - sw * 2, component.getHeight () - sw * 2 );
                 }
                 else
                 {
@@ -134,14 +142,14 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
                     attached = false;
                     preferredDirection = null;
                     setPopupStyle ( PopupStyle.simple );
+                    repaint ();
                     popOver.fireDetached ();
                 }
 
                 super.mouseDragged ( e );
             }
         };
-        c.addMouseListener ( moveAdapter );
-        c.addMouseMotionListener ( moveAdapter );
+        moveAdapter.install ();
 
         // Custom window shaping
         if ( !ProprietaryUtils.isWindowTransparencyAllowed () && ProprietaryUtils.isWindowShapeAllowed () )
@@ -154,18 +162,65 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
                     final Rectangle bounds = popOver.getBounds ();
                     bounds.width++;
                     bounds.height++;
-                    ProprietaryUtils.setWindowShape ( popOver, provideShape ( c, bounds ) );
+                    ProprietaryUtils.setWindowShape ( popOver, provideShape ( component, bounds ) );
                 }
             };
             popOver.addComponentListener ( resizeAdapter );
         }
+
+        // Installs behavior that informs L&F about window visibility changes
+        // todo Remove this behavior as soon as this painter extends RootPanePainter
+        windowVisibilityBehavior = new VisibilityBehavior ( component )
+        {
+            @Override
+            public void displayed ()
+            {
+                if ( popOver != null )
+                {
+                    /**
+                     * Notifying popover listeners.
+                     * Note that if this pop-over is modal this event will be fired only after it is closed.
+                     * Unfortunately there is no good way to provide this event after dialog is opened but before it is closed in that case.
+                     */
+                    popOver.fireOpened ();
+
+                    /**
+                     * Notifying L&F about opened window.
+                     */
+                    WebLookAndFeel.fireWindowDisplayed ( popOver );
+                }
+            }
+
+            @Override
+            public void hidden ()
+            {
+                if ( popOver != null )
+                {
+                    /**
+                     * Notifying popover listeners.
+                     */
+                    popOver.fireClosed ();
+
+                    /**
+                     * Notifying L&F about closed window.
+                     */
+                    WebLookAndFeel.fireWindowHidden ( popOver );
+                }
+            }
+        };
+        windowVisibilityBehavior.install ();
     }
 
     @Override
-    public void uninstall ( final E c, final U ui )
+    protected void uninstallPropertiesAndListeners ()
     {
+        // Uninstalls behavior that informs L&F about window visibility changes
+        // todo Remove this behavior as soon as this painter extends RootPanePainter
+        windowVisibilityBehavior.uninstall ();
+        windowVisibilityBehavior = null;
+
         // Retrieving popover instance
-        final WebPopOver popOver = getPopOver ( c );
+        final WebPopOver popOver = getPopOver ( component );
 
         // Custom window shaping
         if ( resizeAdapter != null )
@@ -175,16 +230,14 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
         }
 
         // Popover drag listener
-        c.removeMouseMotionListener ( moveAdapter );
-        c.removeMouseListener ( moveAdapter );
+        moveAdapter.uninstall ();
         moveAdapter = null;
 
         // Window focus listener
         popOver.removeWindowFocusListener ( focusListener );
         focusListener = null;
 
-        // Must call super to uninstall default settings
-        super.uninstall ( c, ui );
+        super.uninstallPropertiesAndListeners ();
     }
 
     @Override
@@ -284,12 +337,6 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
         this.currentDirection = direction;
     }
 
-    /**
-     * Displays unattached WebPopOver at the specified screen location.
-     *
-     * @param popOver  WebPopOver to configure
-     * @param location WebPopOver location on screen
-     */
     @Override
     public void configure ( final WebPopOver popOver, final PopOverLocation location )
     {
@@ -351,13 +398,6 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
         }
     }
 
-    /**
-     * Displays unattached WebPopOver at the specified location.
-     *
-     * @param popOver WebPopOver to configure
-     * @param x       WebPopOver X location
-     * @param y       WebPopOver Y location
-     */
     @Override
     public void configure ( final WebPopOver popOver, final int x, final int y )
     {
@@ -371,36 +411,25 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
         popOver.setLocation ( x - getShadeWidth (), y - getShadeWidth () );
     }
 
-    /**
-     * Displays WebPopOver attached to the invoker component area and faced to specified direction.
-     * It will also be aligned using the specified alignment type when possible.
-     * WebPopOver opened in this way will always auto-follow invoker's ancestor window.
-     *
-     * @param popOver        WebPopOver to configure
-     * @param invoker        invoker component
-     * @param boundsProvider source area bounds provider
-     * @param direction      preferred display direction
-     * @param alignment      preferred display alignment
-     */
     @Override
-    public void configure ( final WebPopOver popOver, final Component invoker, final DataProvider<Rectangle> boundsProvider,
+    public void configure ( final WebPopOver popOver, final Component invoker, final Supplier<Rectangle> boundsSupplier,
                             final PopOverDirection direction, final PopOverAlignment alignment )
     {
         // Translating coordinates into screen coordinates system
-        final DataProvider<Rectangle> actualBoundsProvider = boundsProvider == null ? null : new DataProvider<Rectangle> ()
+        final Supplier<Rectangle> actualBoundsProvider = boundsSupplier == null ? null : new Supplier<Rectangle> ()
         {
             private Rectangle lastBounds = new Rectangle ();
 
             @Override
-            public Rectangle provide ()
+            public Rectangle get ()
             {
                 // Invoker might be hidden while WebPopOver is still visible
                 // This is why we should simply stop updating its position when that happens
                 // It is not the best workaround but at least it will keep us safe from exceptions
                 if ( invoker.isShowing () )
                 {
-                    final Rectangle bounds = boundsProvider.provide ();
-                    final Point los = invoker.getLocationOnScreen ();
+                    final Rectangle bounds = boundsSupplier.get ();
+                    final Point los = CoreSwingUtils.locationOnScreen ( invoker );
                     lastBounds = new Rectangle ( los.x + bounds.x, los.y + bounds.y, bounds.width, bounds.height );
                 }
                 return lastBounds;
@@ -425,11 +454,11 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
      * @param invoker        invoker component
      * @param boundsProvider source area bounds provider
      */
-    protected void updatePopOverLocation ( final WebPopOver popOver, final Component invoker, final DataProvider<Rectangle> boundsProvider )
+    protected void updatePopOverLocation ( final WebPopOver popOver, final Component invoker, final Supplier<Rectangle> boundsProvider )
     {
         if ( boundsProvider != null )
         {
-            updatePopOverLocation ( popOver, invoker, boundsProvider.provide () );
+            updatePopOverLocation ( popOver, invoker, boundsProvider.get () );
         }
         else
         {
@@ -445,25 +474,9 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
      */
     protected void updatePopOverLocation ( final WebPopOver popOver, final Component invoker )
     {
-        if ( invoker instanceof Window )
+        if ( invoker.isShowing () )
         {
-            // Applying proper painter style
-            setPopupStyle ( PopupStyle.simple );
-
-            // Determining final WebPopOver position
-            final Rectangle ib = invoker.getBounds ();
-            final Dimension size = popOver.getSize ();
-
-            // Updating current direction
-            currentDirection = null;
-
-            // Updating WebPopOver location
-            popOver.setLocation ( ib.x + ib.width / 2 - size.width / 2, ib.y + ib.height / 2 - size.height / 2 );
-        }
-        else if ( invoker.isShowing () )
-        {
-            // Updating WebPopOver location in a smarter way
-            updatePopOverLocation ( popOver, invoker, SwingUtils.getBoundsOnScreen ( invoker ) );
+            updatePopOverLocation ( popOver, invoker, CoreSwingUtils.getBoundsOnScreen ( invoker ) );
         }
     }
 
@@ -479,14 +492,13 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
         // Applying proper painter style
         setPopupStyle ( PopupStyle.dropdown );
 
-        // WebPopOver preferred size without shade
+        // WebPopOver preferred size without shadow
         final Dimension size = popOver.getSize ();
         final int sw = getShadeWidth ();
         final int round = getRound ();
         final int cw = getCornerWidth ();
         final Dimension ps = new Dimension ( size.width - sw * 2, size.height - sw * 2 );
-        final Rectangle sb = SwingUtils.getScreenBounds ( invoker );
-        final Rectangle screenBounds = sb != null ? sb : SwingUtils.getWindowAncestor ( invoker ).getGraphicsConfiguration ().getBounds ();
+        final Rectangle screenBounds = SystemUtils.getDeviceBounds ( invoker, false );
 
         // Determining actual direction
         final PopOverDirection actualDirection = getActualDirection ( invokerBounds, ltr, cw, ps, screenBounds );
@@ -514,10 +526,10 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
      * @param boundsProvider source area bounds provider
      */
     protected void installPopOverLocationUpdater ( final WebPopOver popOver, final Component invoker,
-                                                   final DataProvider<Rectangle> boundsProvider )
+                                                   final Supplier<Rectangle> boundsProvider )
     {
         // Invoker component window
-        final Window invokerWindow = SwingUtils.getWindowAncestor ( invoker );
+        final Window invokerWindow = CoreSwingUtils.getWindowAncestor ( invoker );
 
         // Invoker window follow adapter
         final WindowFollowBehavior windowFollowBehavior = new WindowFollowBehavior ( popOver, invokerWindow )
@@ -525,10 +537,10 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
             @Override
             public boolean isEnabled ()
             {
-                return !attached;
+                return !PopOverPainter.this.attached;
             }
         };
-        invokerWindow.addComponentListener ( windowFollowBehavior );
+        windowFollowBehavior.install ();
 
         // Invoker window state listener
         final WindowStateListener windowStateListener = new WindowStateListener ()
@@ -654,7 +666,7 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
             {
                 popOver.removePopOverListener ( this );
                 invokerWindow.removeComponentListener ( invokerWindowAdapter );
-                invokerWindow.removeComponentListener ( windowFollowBehavior );
+                windowFollowBehavior.uninstall ();
                 invoker.removeComponentListener ( invokerAdapter );
                 if ( invoker instanceof JComponent )
                 {
@@ -695,7 +707,7 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
      * @param ltr             whether LTR orientation is active or not
      * @param round           corners round
      * @param cw              corner width
-     * @param ps              WebPopOver size without shade widths
+     * @param ps              WebPopOver size without shadow widths
      * @param screenBounds    screen bounds
      * @param actualDirection actual WebPopOver direction
      * @return actual WebPopOver location
@@ -708,64 +720,64 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
         {
             if ( preferredAlignment == PopOverAlignment.centered )
             {
-                final Point location = p ( sp.x - ps.width / 2, sp.y - cw - ps.height );
+                final Point location = new Point ( sp.x - ps.width / 2, sp.y - cw - ps.height );
                 return checkRightCollision ( checkLeftCollision ( location, screenBounds ), ps, screenBounds );
             }
             else if ( preferredAlignment == ( ltr ? PopOverAlignment.leading : PopOverAlignment.trailing ) )
             {
-                return checkLeftCollision ( p ( sp.x + cw * 2 + round - ps.width, sp.y - cw - ps.height ), screenBounds );
+                return checkLeftCollision ( new Point ( sp.x + cw * 2 + round - ps.width, sp.y - cw - ps.height ), screenBounds );
             }
             else if ( preferredAlignment == ( ltr ? PopOverAlignment.trailing : PopOverAlignment.leading ) )
             {
-                return checkRightCollision ( p ( sp.x - cw * 2 - round, sp.y - cw - ps.height ), ps, screenBounds );
+                return checkRightCollision ( new Point ( sp.x - cw * 2 - round, sp.y - cw - ps.height ), ps, screenBounds );
             }
         }
         else if ( actualDirection == PopOverDirection.down )
         {
             if ( preferredAlignment == PopOverAlignment.centered )
             {
-                final Point location = p ( sp.x - ps.width / 2, sp.y + cw );
+                final Point location = new Point ( sp.x - ps.width / 2, sp.y + cw );
                 return checkRightCollision ( checkLeftCollision ( location, screenBounds ), ps, screenBounds );
             }
             else if ( preferredAlignment == ( ltr ? PopOverAlignment.leading : PopOverAlignment.trailing ) )
             {
-                return checkLeftCollision ( p ( sp.x + cw * 2 + round - ps.width, sp.y + cw ), screenBounds );
+                return checkLeftCollision ( new Point ( sp.x + cw * 2 + round - ps.width, sp.y + cw ), screenBounds );
             }
             else if ( preferredAlignment == ( ltr ? PopOverAlignment.trailing : PopOverAlignment.leading ) )
             {
-                return checkRightCollision ( p ( sp.x - cw * 2 - round, sp.y + cw ), ps, screenBounds );
+                return checkRightCollision ( new Point ( sp.x - cw * 2 - round, sp.y + cw ), ps, screenBounds );
             }
         }
         else if ( actualDirection == ( ltr ? PopOverDirection.left : PopOverDirection.right ) )
         {
             if ( preferredAlignment == PopOverAlignment.centered )
             {
-                final Point location = p ( sp.x - cw - ps.width, sp.y - ps.height / 2 );
+                final Point location = new Point ( sp.x - cw - ps.width, sp.y - ps.height / 2 );
                 return checkBottomCollision ( checkTopCollision ( location, screenBounds ), ps, screenBounds );
             }
             else if ( preferredAlignment == PopOverAlignment.leading )
             {
-                return checkTopCollision ( p ( sp.x - cw - ps.width, sp.y + cw * 2 + round - ps.height ), screenBounds );
+                return checkTopCollision ( new Point ( sp.x - cw - ps.width, sp.y + cw * 2 + round - ps.height ), screenBounds );
             }
             else if ( preferredAlignment == PopOverAlignment.trailing )
             {
-                return checkBottomCollision ( p ( sp.x - cw - ps.width, sp.y - cw * 2 - round ), ps, screenBounds );
+                return checkBottomCollision ( new Point ( sp.x - cw - ps.width, sp.y - cw * 2 - round ), ps, screenBounds );
             }
         }
         else if ( actualDirection == ( ltr ? PopOverDirection.right : PopOverDirection.left ) )
         {
             if ( preferredAlignment == PopOverAlignment.centered )
             {
-                final Point location = p ( sp.x + cw, sp.y - ps.height / 2 );
+                final Point location = new Point ( sp.x + cw, sp.y - ps.height / 2 );
                 return checkBottomCollision ( checkTopCollision ( location, screenBounds ), ps, screenBounds );
             }
             else if ( preferredAlignment == PopOverAlignment.leading )
             {
-                return checkTopCollision ( p ( sp.x + cw, sp.y + cw * 2 + round - ps.height ), screenBounds );
+                return checkTopCollision ( new Point ( sp.x + cw, sp.y + cw * 2 + round - ps.height ), screenBounds );
             }
             else if ( preferredAlignment == PopOverAlignment.trailing )
             {
-                return checkBottomCollision ( p ( sp.x + cw, sp.y - cw * 2 - round ), ps, screenBounds );
+                return checkBottomCollision ( new Point ( sp.x + cw, sp.y - cw * 2 - round ), ps, screenBounds );
             }
         }
         return null;
@@ -791,7 +803,7 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
      * Checks whether WebPopOver will collide with bottom screen border and modifies location accordingly.
      *
      * @param location     approximate WebPopOver location
-     * @param ps           WebPopOver size without shade widths
+     * @param ps           WebPopOver size without shadow widths
      * @param screenBounds screen bounds
      * @return either modified or unmodified WebPopOver location
      */
@@ -824,7 +836,7 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
      * Checks whether WebPopOver will collide with right screen border and modifies location accordingly.
      *
      * @param location     approximate WebPopOver location
-     * @param ps           WebPopOver size without shade widths
+     * @param ps           WebPopOver size without shadow widths
      * @param screenBounds screen bounds
      * @return either modified or unmodified WebPopOver location
      */
@@ -843,7 +855,7 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
      * @param ib           invoker component bounds on screen
      * @param ltr          whether LTR orientation is active or not
      * @param cw           corner with
-     * @param ps           WebPopOver size without shade widths
+     * @param ps           WebPopOver size without shadow widths
      * @param screenBounds screen bounds
      * @return actual WebPopOver direction
      */
@@ -897,25 +909,25 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
     {
         if ( popOverSourcePoint == PopOverSourcePoint.componentCenter )
         {
-            return p ( ib.x + ib.width / 2, ib.y + ib.height / 2 );
+            return new Point ( ib.x + ib.width / 2, ib.y + ib.height / 2 );
         }
         else
         {
             if ( direction == PopOverDirection.up )
             {
-                return p ( ib.x + ib.width / 2, ib.y );
+                return new Point ( ib.x + ib.width / 2, ib.y );
             }
             else if ( direction == PopOverDirection.down )
             {
-                return p ( ib.x + ib.width / 2, ib.y + ib.height );
+                return new Point ( ib.x + ib.width / 2, ib.y + ib.height );
             }
             else if ( direction == ( ltr ? PopOverDirection.left : PopOverDirection.right ) )
             {
-                return p ( ib.x, ib.y + ib.height / 2 );
+                return new Point ( ib.x, ib.y + ib.height / 2 );
             }
             else if ( direction == ( ltr ? PopOverDirection.right : PopOverDirection.left ) )
             {
-                return p ( ib.x + ib.width, ib.y + ib.height / 2 );
+                return new Point ( ib.x + ib.width, ib.y + ib.height / 2 );
             }
         }
         return null;
@@ -927,7 +939,7 @@ public class PopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extend
      * @param c root pane
      * @return popover instance for the specified root pane
      */
-    protected final WebPopOver getPopOver ( final E c )
+    protected final WebPopOver getPopOver ( final C c )
     {
         return ( WebPopOver ) c.getClientProperty ( WebPopOver.POPOVER_INSTANCE );
     }

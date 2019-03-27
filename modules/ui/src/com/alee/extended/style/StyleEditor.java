@@ -17,10 +17,10 @@
 
 package com.alee.extended.style;
 
+import com.alee.api.jdk.Objects;
 import com.alee.extended.button.SplitButtonAdapter;
 import com.alee.extended.button.WebSplitButton;
 import com.alee.extended.checkbox.WebTristateCheckBox;
-import com.alee.extended.label.StyleRange;
 import com.alee.extended.label.WebStyledLabel;
 import com.alee.extended.layout.VerticalFlowLayout;
 import com.alee.extended.magnifier.MagnifierGlass;
@@ -34,7 +34,6 @@ import com.alee.extended.syntax.WebSyntaxScrollPane;
 import com.alee.extended.tree.WebFileTree;
 import com.alee.extended.window.PopOverLocation;
 import com.alee.extended.window.WebPopOver;
-import com.alee.global.StyleConstants;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
@@ -52,7 +51,6 @@ import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.progressbar.WebProgressBar;
 import com.alee.laf.radiobutton.WebRadioButton;
-import com.alee.laf.rootpane.WebFrame;
 import com.alee.laf.scroll.WebScrollBar;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.slider.WebSlider;
@@ -66,28 +64,35 @@ import com.alee.laf.text.WebTextField;
 import com.alee.laf.text.WebTextPane;
 import com.alee.laf.toolbar.WebToolBar;
 import com.alee.laf.tree.TreeSelectionStyle;
+import com.alee.laf.window.WebFrame;
+import com.alee.managers.animation.AnimationManager;
+import com.alee.managers.animation.easing.Exponential;
+import com.alee.managers.animation.easing.Quadratic;
+import com.alee.managers.animation.transition.*;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.managers.hotkey.HotkeyManager;
 import com.alee.managers.hotkey.HotkeyRunnable;
-import com.alee.managers.language.data.TooltipWay;
-import com.alee.managers.log.Log;
 import com.alee.managers.style.*;
 import com.alee.managers.style.data.ComponentStyleConverter;
 import com.alee.managers.style.data.SkinInfo;
 import com.alee.managers.style.data.SkinInfoConverter;
-import com.alee.managers.style.CustomSkin;
-import com.alee.managers.style.Skin;
-import com.alee.skin.web.WebSkin;
 import com.alee.managers.tooltip.TooltipManager;
+import com.alee.managers.tooltip.TooltipWay;
+import com.alee.skin.web.WebSkin;
 import com.alee.utils.*;
-import com.alee.utils.swing.*;
+import com.alee.utils.swing.IntTextDocument;
+import com.alee.utils.swing.MouseButton;
+import com.alee.utils.swing.WebTimer;
+import com.alee.utils.swing.extensions.DocumentEventRunnable;
+import com.alee.utils.swing.extensions.KeyEventRunnable;
+import com.alee.utils.swing.extensions.MouseEventRunnable;
 import com.alee.utils.text.LoremIpsum;
-import com.alee.utils.xml.ResourceFile;
-import com.alee.utils.xml.ResourceLocation;
+import com.alee.utils.xml.Resource;
 import com.thoughtworks.xstream.converters.ConversionException;
 import net.htmlparser.jericho.Element;
 import net.htmlparser.jericho.Source;
 import net.htmlparser.jericho.StartTag;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import javax.swing.event.CaretEvent;
@@ -112,8 +117,10 @@ import java.util.Locale;
 public class StyleEditor extends WebFrame
 {
     /**
-     * todo 1. Translate editor
-     * todo 2. Add JavaDoc
+     * todo 1. Fix multiple major style and functional issues
+     * todo 2. Move into separate module?
+     * todo 3. Translate editor?
+     * todo 4. Add appropriate JavaDoc
      */
 
     protected static final ImageIcon magnifierIcon = new ImageIcon ( StyleEditor.class.getResource ( "icons/editor/magnifier.png" ) );
@@ -135,7 +142,7 @@ public class StyleEditor extends WebFrame
     protected static final ImageIcon completeStackTraceIcon =
             new ImageIcon ( StyleEditor.class.getResource ( "icons/status/completeStackTrace.png" ) );
 
-    protected static final String COMPONENT_TYPE_KEY = "component.type.key";
+    protected static final String COMPONENT_DESCRIPTOR_KEY = "component.descriptor.key";
     protected static final String SINGLE_PREVIEW_KEY = "single.preview.key";
     protected static final String STYLE_ID_KEY = "style.id.key";
 
@@ -176,7 +183,7 @@ public class StyleEditor extends WebFrame
     protected boolean brush = false;
     protected boolean completeStackTrace = false;
 
-    protected final ResourceFile baseSkinFile;
+    protected final Resource baseSkinFile;
     protected List<WebSyntaxArea> editors;
 
     protected Throwable lastException = null;
@@ -186,7 +193,7 @@ public class StyleEditor extends WebFrame
      *
      * @param skin skin resource file
      */
-    public StyleEditor ( final ResourceFile skin )
+    public StyleEditor ( final Resource skin )
     {
         super ( StyleId.styleeditor, "Style editor" );
         setIconImages ( WebLookAndFeel.getImages () );
@@ -198,7 +205,6 @@ public class StyleEditor extends WebFrame
         split = new WebSplitPane ( StyleId.styleeditorSplit.at ( StyleEditor.this ), WebSplitPane.HORIZONTAL_SPLIT, true );
         split.setDividerLocation ( 350 );
         split.setDividerSize ( 8 );
-        split.setDrawDividerBorder ( true );
         split.setOneTouchExpandable ( true );
         container.add ( split, BorderLayout.CENTER );
 
@@ -331,11 +337,11 @@ public class StyleEditor extends WebFrame
 
                             final Component c = e.getComponent ();
                             final Point click = e.getLocationOnScreen ();
-                            final Point cloc = c.getLocationOnScreen ();
+                            final Point cloc = CoreSwingUtils.locationOnScreen ( c );
                             final Component actual = SwingUtils.getTopComponentAt ( c, click.x - cloc.x, click.y - cloc.y );
 
                             // todo GLASSPANE USAGE
-                            System.out.println ( actual );
+                            actual.repaint ();
                         }
                     }
                 }, AWTEvent.MOUSE_EVENT_MASK );
@@ -362,6 +368,8 @@ public class StyleEditor extends WebFrame
      */
     protected void createPreviewPanel ()
     {
+        final LoremIpsum loremIpsum = new LoremIpsum ();
+
         previewScroll = new WebScrollPane ( StyleId.styleeditorPreviewScroll.at ( previewContainer ) );
         previewScroll.getVerticalScrollBar ().setUnitIncrement ( 15 );
         previewContainer.add ( previewScroll, BorderLayout.CENTER );
@@ -379,7 +387,6 @@ public class StyleEditor extends WebFrame
 
         final String styledText = "{Simple styled label:b;c(128,128,0);u}\n" + "with {hard:b} line breaks\n" + "across the text";
         final WebStyledLabel styledLabel = new WebStyledLabel ( styledText );
-        styledLabel.addStyleRange ( new StyleRange ( 1, 3, Font.ITALIC ) );
         addViewComponent ( "Styled label", styledLabel, styledLabel, true );
 
         //
@@ -435,13 +442,21 @@ public class StyleEditor extends WebFrame
 
         final WebTextArea textArea = new WebTextArea ();
         textArea.setRows ( 5 );
-
-        final LoremIpsum loremIpsum = new LoremIpsum ();
         textArea.setText ( loremIpsum.getParagraphs ( 5 ) );
 
         final WebScrollPane sp = new WebScrollPane ( textArea );
         sp.setPreferredWidth ( 0 );
         addViewComponent ( "Scroll pane", sp, sp, false );
+
+        //
+
+        final WebTextArea textArea2 = new WebTextArea ( StyleId.textareaNonOpaque );
+        textArea2.setRows ( 5 );
+        textArea2.setText ( loremIpsum.getParagraphs ( 5 ) );
+
+        final WebScrollPane hsp = new WebScrollPane ( StyleId.scrollpaneHovering, textArea2 );
+        hsp.setPreferredWidth ( 0 );
+        addViewComponent ( "Hovering scroll pane", hsp, hsp, false );
 
         //
 
@@ -469,22 +484,51 @@ public class StyleEditor extends WebFrame
         //
 
         final WebProgressBar progress = new WebProgressBar ();
-        progress.setValue ( 33 );
         addViewComponent ( "Progress bar", progress, progress, true );
+
+        final int min = progress.getMinimum ();
+        final int max = progress.getMaximum ();
+        final QueueTransition<Integer> progressAnimator = new QueueTransition<Integer> ( true );
+        progressAnimator.add ( new TimedTransition<Integer> ( min, max, new Quadratic.Out (), 2000L ) );
+        progressAnimator.add ( new IdleTransition<Integer> ( max, 1000L ) );
+        progressAnimator.add ( new TimedTransition<Integer> ( max, min, new Exponential.Out (), 2000L ) );
+        progressAnimator.add ( new IdleTransition<Integer> ( min, 1000L ) );
+        progressAnimator.addListener ( new TransitionAdapter<Integer> ()
+        {
+            @Override
+            public void started ( final Transition transition, final Integer value )
+            {
+                progress.setValue ( value );
+            }
+
+            @Override
+            public void adjusted ( final Transition transition, final Integer value )
+            {
+                progress.setValue ( value );
+            }
+        } );
+        AnimationManager.play ( progressAnimator );
 
         //
 
         final WebList wl = new WebList ( d );
+        wl.setVisibleRowCount ( 6 );
         final WebScrollPane wlScroll = new WebScrollPane ( wl );
-        wlScroll.setPreferredSize ( new Dimension ( 200, 150 ) );
         addViewComponent ( "List", wlScroll, wl, false );
 
         //
 
         final WebFileTree homeFileTree = new WebFileTree ( FileUtils.getUserHomePath () );
-        homeFileTree.setAutoExpandSelectedNode ( false );
-        homeFileTree.setShowsRootHandles ( true );
+        homeFileTree.setExpandSelected ( false );
         homeFileTree.setSelectionStyle ( TreeSelectionStyle.group );
+        homeFileTree.onKeyRelease ( Hotkey.SPACE, new KeyEventRunnable ()
+        {
+            @Override
+            public void run ( final KeyEvent e )
+            {
+                homeFileTree.updateVisibleNodes ();
+            }
+        } );
         final WebScrollPane homeFileTreeScroll = new WebScrollPane ( homeFileTree );
         homeFileTreeScroll.setPreferredSize ( new Dimension ( 200, 150 ) );
         addViewComponent ( "Tree", homeFileTreeScroll, homeFileTree, false );
@@ -627,13 +671,13 @@ public class StyleEditor extends WebFrame
     protected void addViewComponent ( final String title, final StyleId styleId, final JComponent displayedView, final JComponent view,
                                       final boolean center )
     {
-        final StyleableComponent type = StyleableComponent.get ( view );
+        final ComponentDescriptor descriptor = StyleManager.getDescriptor ( view );
 
         final StyleId singleId = StyleId.styleeditorPreviewSingle.at ( previewPanel );
         final WebPanel singlePreview = new WebPanel ( singleId, new BorderLayout ( 0, 0 ) );
 
         final ChildStyleId titleId = StyleId.styleeditorPreviewSingleTitle;
-        final WebLabel titleLabel = new WebLabel ( titleId.at ( singlePreview ), title, type.getIcon (), WebLabel.LEADING );
+        final WebLabel titleLabel = new WebLabel ( titleId.at ( singlePreview ), title, descriptor.getIcon (), WebLabel.LEADING );
         singlePreview.add ( titleLabel, BorderLayout.NORTH );
 
         final StyleId emptyId = StyleId.styleeditorPreviewSingleEmpty.at ( singlePreview );
@@ -641,19 +685,12 @@ public class StyleEditor extends WebFrame
         boundsPanel.putClientProperty ( SINGLE_PREVIEW_KEY, singlePreview );
         boundsPanels.add ( boundsPanel );
 
-        final StyleId viewId = StyleId.styleeditorPreviewSingleShade.at ( singlePreview );
+        final StyleId viewId = StyleId.styleeditorPreviewSingleShadow.at ( singlePreview );
         final WebPanel viewPanel = new WebPanel ( viewId, center ? new CenterPanel ( boundsPanel ) : boundsPanel );
         singlePreview.add ( viewPanel, BorderLayout.CENTER );
 
-        singlePreview.putClientProperty ( COMPONENT_TYPE_KEY, type );
-        if ( styleId != null )
-        {
-            singlePreview.putClientProperty ( STYLE_ID_KEY, styleId );
-        }
-        else if ( view instanceof Styleable )
-        {
-            singlePreview.putClientProperty ( STYLE_ID_KEY, ( ( Styleable ) view ).getStyleId () );
-        }
+        singlePreview.putClientProperty ( COMPONENT_DESCRIPTOR_KEY, descriptor );
+        singlePreview.putClientProperty ( STYLE_ID_KEY, styleId != null ? styleId : StyleManager.getStyleId ( view ) );
 
         titleLabel.addMouseListener ( new MouseAdapter ()
         {
@@ -685,16 +722,19 @@ public class StyleEditor extends WebFrame
 
         final StyleId delayId = StyleId.styleeditorStatusDelay.at ( statusBar );
         final WebTextField delayField = new WebTextField ( delayId, new IntTextDocument (), "" + updateDelay, 3 );
-        delayField.setHorizontalAlignment ( WebTextField.CENTER );
-        delayField.getDocument ().addDocumentListener ( new IntDocumentChangeListener ()
+        delayField.onChange ( new DocumentEventRunnable<WebTextField> ()
         {
             @Override
-            public void documentChanged ( final Integer newValue, final DocumentEvent e )
+            public void run ( final WebTextField component, final DocumentEvent event )
             {
-                updateDelay = newValue != null ? newValue : updateDelay;
-                if ( updateDelay < 0 )
+                try
                 {
-                    updateDelay = 0;
+                    final int value = Integer.parseInt ( component.getText () );
+                    updateDelay = value >= 0 ? value : 0;
+                }
+                catch ( final Exception e )
+                {
+                    // Leave delay unchanged
                 }
             }
         } );
@@ -750,7 +790,7 @@ public class StyleEditor extends WebFrame
         // Parsing all related files
         final List<String> xmlContent = new ArrayList<String> ();
         final List<String> xmlNames = new ArrayList<String> ();
-        final List<ResourceFile> xmlFiles = new ArrayList<ResourceFile> ();
+        final List<Resource> xmlFiles = new ArrayList<Resource> ();
         loadSkinSources ( xmlContent, xmlNames, xmlFiles );
 
         // Creating editor tabs
@@ -792,12 +832,12 @@ public class StyleEditor extends WebFrame
                 popOver.add ( searchField );
 
                 // Jump to tabs while typing
-                searchField.getDocument ().addDocumentListener ( new DocumentChangeListener ()
+                searchField.onChange ( new DocumentEventRunnable<WebTextField> ()
                 {
                     @Override
-                    public void documentChanged ( final DocumentEvent e )
+                    public void run ( final WebTextField component, final DocumentEvent event )
                     {
-                        final String text = searchField.getText ().toLowerCase ( Locale.ROOT );
+                        final String text = component.getText ().toLowerCase ( Locale.ROOT );
                         if ( !TextUtils.isEmpty ( text ) )
                         {
                             for ( final String name : xmlNames )
@@ -837,7 +877,7 @@ public class StyleEditor extends WebFrame
      * @param xmlFile XML file
      * @return XML editor created for the specified XML file
      */
-    protected Component createSingleXmlEditor ( final String xml, final ResourceFile xmlFile )
+    protected Component createSingleXmlEditor ( final String xml, final Resource xmlFile )
     {
         final WebSyntaxArea xmlEditor = new WebSyntaxArea ( xml, SyntaxPreset.xml );
         xmlEditor.applyPresets ( SyntaxPreset.base );
@@ -861,20 +901,20 @@ public class StyleEditor extends WebFrame
         final WebSyntaxScrollPane xmlEditorScroll = new WebSyntaxScrollPane ( StyleId.syntaxareaScrollUndecorated, xmlEditor );
 
         // Start listening edits
-        xmlEditor.onChange ( new DocumentEventRunnable ()
+        xmlEditor.onChange ( new DocumentEventRunnable<WebSyntaxArea> ()
         {
             private final WebTimer updateTimer = new WebTimer ( updateDelay, new ActionListener ()
             {
                 @Override
                 public void actionPerformed ( final ActionEvent e )
                 {
-                    SkinInfoConverter.addCustomResource ( xmlFile.getClassName (), xmlFile.getSource (), xmlEditor.getText () );
+                    SkinInfoConverter.addCustomResource ( xmlFile.getClassName (), xmlFile.getPath (), xmlEditor.getText () );
                     applySkin ();
                 }
             } ).setRepeats ( false );
 
             @Override
-            public void run ( final DocumentEvent e )
+            public void run ( final WebSyntaxArea component, final DocumentEvent event )
             {
                 updateTimer.restart ( updateDelay );
             }
@@ -894,10 +934,10 @@ public class StyleEditor extends WebFrame
         return xmlEditorScroll;
     }
 
-    protected void loadSkinSources ( final List<String> xmlContent, final List<String> xmlNames, final List<ResourceFile> xmlFiles )
+    protected void loadSkinSources ( final List<String> xmlContent, final List<String> xmlNames, final List<Resource> xmlFiles )
     {
         // Adding base skin file
-        final List<ResourceFile> resources = new ArrayList<ResourceFile> ();
+        final List<Resource> resources = new ArrayList<Resource> ();
         resources.add ( baseSkinFile );
 
         // Parsing all related skin files
@@ -909,7 +949,7 @@ public class StyleEditor extends WebFrame
             }
             catch ( final IOException e )
             {
-                Log.error ( this, e );
+                LoggerFactory.getLogger ( StyleEditor.class ).error ( e.toString (), e );
             }
         }
     }
@@ -919,7 +959,9 @@ public class StyleEditor extends WebFrame
         try
         {
             long time = System.currentTimeMillis ();
-            StyleManager.setSkin ( new CustomSkin ( ( SkinInfo ) XmlUtils.fromXML ( editors.get ( 0 ).getText () ) ) );
+            final String text = editors.get ( 0 ).getText ();
+            final SkinInfo skinInfo = XmlUtils.fromXML ( text );
+            StyleManager.setSkin ( new XmlSkin ( skinInfo ) );
 
             // Updating orientation
             applyViewOrientation ();
@@ -941,11 +983,11 @@ public class StyleEditor extends WebFrame
             // Stack trace for parse exceptions
             if ( completeStackTrace )
             {
-                Log.error ( this, ex );
+                LoggerFactory.getLogger ( StyleEditor.class ).error ( ex.toString (), ex );
             }
             else
             {
-                Log.error ( this, "Fix syntax problems within the XML to update styling" );
+                LoggerFactory.getLogger ( StyleEditor.class ).error ( "Fix syntax problems within the XML to update styling" );
             }
 
             // Information in status bar
@@ -956,16 +998,16 @@ public class StyleEditor extends WebFrame
             // Adding tooltip with detailed message
             lastException = ex;
         }
-        catch ( final Throwable ex )
+        catch ( final Exception ex )
         {
             // Full stack trace for unknown exceptions
             if ( completeStackTrace )
             {
-                Log.error ( this, ex );
+                LoggerFactory.getLogger ( StyleEditor.class ).error ( ex.toString (), ex );
             }
             else
             {
-                Log.error ( this, "Unable to update skin due to internal issues" );
+                LoggerFactory.getLogger ( StyleEditor.class ).error ( "Unable to update skin due to internal issues" );
             }
 
             // Information in status bar
@@ -1031,15 +1073,15 @@ public class StyleEditor extends WebFrame
             if ( component instanceof JComponent )
             {
                 final JComponent jc = ( JComponent ) component;
-                final StyleableComponent sc = ( StyleableComponent ) jc.getClientProperty ( COMPONENT_TYPE_KEY );
-                if ( sc != null && sc == StyleableComponent.valueOf ( type ) )
+                final ComponentDescriptor descriptor = ( ComponentDescriptor ) jc.getClientProperty ( COMPONENT_DESCRIPTOR_KEY );
+                if ( descriptor != null && descriptor.getId ().equals ( type ) )
                 {
                     final StyleId styleId = ( StyleId ) jc.getClientProperty ( STYLE_ID_KEY );
-                    final StyleId sid = styleId == null ? sc.getDefaultStyleId () : styleId;
-                    if ( CompareUtils.equals ( sid.getCompleteId (), id ) )
+                    final StyleId sid = styleId != null ? styleId : StyleId.getDefault ( jc );
+                    if ( Objects.equals ( sid.getCompleteId (), id ) )
                     {
                         final Dimension visible = previewPanel.getVisibleRect ().getSize ();
-                        final Rectangle bounds = SwingUtils.getRelativeBounds ( component, previewPanel );
+                        final Rectangle bounds = CoreSwingUtils.getRelativeBounds ( component, previewPanel );
                         if ( visible.height > bounds.height )
                         {
                             final int y = bounds.y + bounds.height / 2 - visible.height / 2;
@@ -1064,11 +1106,11 @@ public class StyleEditor extends WebFrame
         return false;
     }
 
-    protected void loadFirstResource ( final List<ResourceFile> resources, final List<String> xmlContent, final List<String> xmlNames,
-                                       final List<ResourceFile> xmlFiles ) throws IOException
+    protected void loadFirstResource ( final List<Resource> resources, final List<String> xmlContent, final List<String> xmlNames,
+                                       final List<Resource> xmlFiles ) throws IOException
     {
-        final ResourceFile rf = resources.get ( 0 );
-        final Source xmlSource = new Source ( ReflectUtils.getClassSafely ( rf.getClassName () ).getResource ( rf.getSource () ) );
+        final Resource rf = resources.get ( 0 );
+        final Source xmlSource = new Source ( ReflectUtils.getClassSafely ( rf.getClassName () ).getResource ( rf.getPath () ) );
         xmlSource.setLogger ( null );
         xmlSource.fullSequentialParse ();
 
@@ -1080,11 +1122,11 @@ public class StyleEditor extends WebFrame
             final String includeClass = includeTag.getAttributeValue ( SkinInfoConverter.NEAR_CLASS_ATTRIBUTE );
             final String finalClass = includeClass != null ? includeClass : baseClass;
             final String src = includeTag.getContent ().toString ();
-            resources.add ( new ResourceFile ( ResourceLocation.nearClass, src, finalClass ) );
+            resources.add ( new Resource ( finalClass, src ) );
         }
 
         xmlContent.add ( xmlSource.toString () );
-        xmlNames.add ( new File ( rf.getSource () ).getName () );
+        xmlNames.add ( new File ( rf.getPath () ).getName () );
         xmlFiles.add ( rf );
 
         resources.remove ( 0 );
@@ -1092,6 +1134,7 @@ public class StyleEditor extends WebFrame
 
     /**
      * Custom tab content separator.
+     * todo This is a temporary thing, it should be replaced with an appropriate styling
      */
     protected class TabContentSeparator extends JComponent
     {
@@ -1100,7 +1143,7 @@ public class StyleEditor extends WebFrame
         {
             g.setColor ( new Color ( 237, 237, 237 ) );
             g.fillRect ( 0, 0, getWidth (), getHeight () - 1 );
-            g.setColor ( StyleConstants.darkBorderColor );
+            g.setColor ( Color.GRAY );
             g.drawLine ( 0, getHeight () - 1, getWidth () - 1, getHeight () - 1 );
         }
 
@@ -1112,9 +1155,9 @@ public class StyleEditor extends WebFrame
     }
 
     /**
-     * StyleEditor main method used to launch editor.
+     * {@link StyleEditor} main launch method.
      *
-     * @param args arguments
+     * @param args editor arguments
      */
     public static void main ( final String[] args )
     {
@@ -1124,7 +1167,7 @@ public class StyleEditor extends WebFrame
         WebLookAndFeel.install ( skinClass );
 
         // Edited skin file
-        final ResourceFile skin = new ResourceFile ( ResourceLocation.nearClass, "resources/skin.xml", skinClass );
+        final Resource skin = new Resource ( skinClass, "resources/skin.xml" );
 
         // Displaying StyleEditor
         final StyleEditor styleEditor = new StyleEditor ( skin );

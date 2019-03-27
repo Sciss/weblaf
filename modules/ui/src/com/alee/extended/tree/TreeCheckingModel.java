@@ -18,41 +18,28 @@
 package com.alee.extended.tree;
 
 import com.alee.laf.checkbox.CheckState;
+import com.alee.laf.tree.NodesAcceptPolicy;
 
-import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.MutableTreeNode;
 import java.util.Collection;
 import java.util.List;
 
 /**
- * Special checking model for WebCheckBoxTree.
+ * Special checking model for {@link WebCheckBoxTree}.
  *
+ * @param <N> node type
  * @author Mikle Garin
  */
-
-public interface TreeCheckingModel<E extends DefaultMutableTreeNode>
+public interface TreeCheckingModel<N extends MutableTreeNode>
 {
     /**
-     * Returns list of checked nodes.
+     * Returns list of nodes for the specified state.
      *
-     * @param optimize whether should optimize the resulting list by removing checked node children or not
-     * @return list of checked nodes
+     * @param state  {@link CheckState} to return nodes for
+     * @param policy {@link NodesAcceptPolicy} that defines a way to filter nodes
+     * @return list of nodes for the specified state
      */
-    public List<E> getCheckedNodes ( boolean optimize );
-
-    /**
-     * Returns list of nodes in mixed state.
-     *
-     * @return list of nodes in mixed state
-     */
-    public List<E> getMixedNodes ();
-
-    /**
-     * Sets specified nodes state to checked.
-     *
-     * @param nodes   nodes to check
-     * @param checked whether the specified tree nodes should be checked or not
-     */
-    public void setChecked ( Collection<E> nodes, boolean checked );
+    public List<N> getNodes ( CheckState state, NodesAcceptPolicy policy );
 
     /**
      * Returns specified tree node check state.
@@ -60,7 +47,7 @@ public interface TreeCheckingModel<E extends DefaultMutableTreeNode>
      * @param node tree node to process
      * @return specified tree node check state
      */
-    public CheckState getCheckState ( E node );
+    public CheckState getCheckState ( N node );
 
     /**
      * Sets whether the specified tree node is checked or not.
@@ -68,31 +55,39 @@ public interface TreeCheckingModel<E extends DefaultMutableTreeNode>
      * @param node    tree node to process
      * @param checked whether the specified tree node should be checked or not
      */
-    public void setChecked ( E node, boolean checked );
+    public void setChecked ( N node, boolean checked );
+
+    /**
+     * Sets specified nodes state to checked.
+     *
+     * @param nodes   nodes to check
+     * @param checked whether the specified tree nodes should be checked or not
+     */
+    public void setChecked ( Collection<N> nodes, boolean checked );
 
     /**
      * Inverts tree node check.
      *
      * @param node tree node to process
      */
-    public void invertCheck ( E node );
+    public void invertCheck ( N node );
 
     /**
      * Inverts tree nodes check.
      *
      * @param nodes list of tree nodes to process
      */
-    public void invertCheck ( Collection<E> nodes );
-
-    /**
-     * Unchecks all tree nodes.
-     */
-    public void uncheckAll ();
+    public void invertCheck ( Collection<N> nodes );
 
     /**
      * Checks all tree nodes.
      */
     public void checkAll ();
+
+    /**
+     * Unchecks all tree nodes.
+     */
+    public void uncheckAll ();
 
     /**
      * Notifies model about checking mode change.

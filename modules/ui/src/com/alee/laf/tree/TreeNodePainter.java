@@ -18,34 +18,119 @@
 package com.alee.laf.tree;
 
 import com.alee.painter.decoration.AbstractSectionDecorationPainter;
+import com.alee.painter.decoration.DecorationState;
+import com.alee.painter.decoration.DecorationUtils;
 import com.alee.painter.decoration.IDecoration;
 
 import javax.swing.*;
+import javax.swing.tree.TreePath;
+import java.util.List;
 
 /**
- * Simple tree selection painter based on {@link com.alee.painter.decoration.AbstractDecorationPainter}.
- * It is used within {@link TreePainter} to paint cells selection.
+ * Simple tree node painter based on {@link AbstractSectionDecorationPainter}.
+ * It is used within {@link TreePainter} to paint nodes background.
  *
+ * @param <C> component type
+ * @param <U> component UI type
+ * @param <D> decoration type
  * @author Mikle Garin
  */
 
-public class TreeNodePainter<E extends JTree, U extends WebTreeUI, D extends IDecoration<E, D>>
-        extends AbstractSectionDecorationPainter<E, U, D> implements ITreeNodePainter<E, U>
+public class TreeNodePainter<C extends JTree, U extends WTreeUI, D extends IDecoration<C, D>>
+        extends AbstractSectionDecorationPainter<C, U, D> implements ITreeNodePainter<C, U>
 {
     /**
-     * Painted row index.
+     * Painted node row index.
      */
-    protected int row;
+    protected transient Integer row;
 
     @Override
-    public void prepareToPaint ( final int row )
+    public String getSectionId ()
     {
-        this.row = row;
+        return "node";
     }
 
     @Override
     protected boolean isFocused ()
     {
         return false;
+    }
+
+    @Override
+    public List<String> getDecorationStates ()
+    {
+        final List<String> states = super.getDecorationStates ();
+        addRowStates ( states );
+        return states;
+    }
+
+    /**
+     * Adds states provided by this painter.
+     *
+     * @param states list to add states to
+     */
+    protected void addRowStates ( final List<String> states )
+    {
+        // Ensure row is specified
+        if ( row != null )
+        {
+            // Ensure path exists
+            final TreePath path = component.getPathForRow ( row );
+            if ( path != null )
+            {
+                addPathStates ( states, path );
+            }
+        }
+    }
+
+    /**
+     * Adds states provided by specified {@link TreePath}.
+     *
+     * @param states list to add states to
+     * @param path   {@link TreePath} to provide states for
+     */
+    protected void addPathStates ( final List<String> states, final TreePath path )
+    {
+        // Adding row type
+        addNumerationStates ( states, path );
+
+        // Selection state
+        states.add ( component.isRowSelected ( row ) ? DecorationState.selected : DecorationState.unselected );
+
+        // Expansion state
+        states.add ( component.isExpanded ( row ) ? DecorationState.expanded : DecorationState.collapsed );
+
+        // Hover state
+        if ( row == ui.getHoverRow () )
+        {
+            states.add ( DecorationState.hover );
+        }
+        else
+        {
+            // We have to remove it as the origin might have hover state
+            states.remove ( DecorationState.hover );
+        }
+
+        // Adding possible extra node states
+        final Object value = path.getLastPathComponent ();
+        states.addAll ( DecorationUtils.getExtraStates ( value ) );
+    }
+
+    /**
+     * Adds numeration states for the specified {@link TreePath}.
+     *
+     * @param states list to add states to
+     * @param path   {@link TreePath} to provide numeration states for
+     */
+    protected void addNumerationStates ( final List<String> states, final TreePath path )
+    {
+        states.add ( row % 2 == 0 ? DecorationState.odd : DecorationState.even );
+    }
+
+    @Override
+    public void prepareToPaint ( final int row )
+    {
+        this.row = row;
+        updateDecorationState ();
     }
 }

@@ -18,23 +18,28 @@
 package com.alee.extended.syntax;
 
 import com.alee.laf.panel.IPanelPainter;
-import com.alee.laf.panel.WebPanelUI;
+import com.alee.laf.panel.WPanelUI;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.AbstractPainter;
 import com.alee.utils.GraphicsUtils;
+import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 import javax.swing.*;
 import java.awt.*;
 
 /**
- * Custom painter for WebSyntaxPanel component.
+ * Custom painter for {@link com.alee.extended.syntax.WebSyntaxPanel} component.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Mikle Garin
  * @see com.alee.laf.panel.PanelPainter
  * @see com.alee.painter.AbstractPainter
  * @see com.alee.painter.Painter
  */
-
-public class SyntaxPanelPainter<E extends JPanel, U extends WebPanelUI> extends AbstractPainter<E, U> implements IPanelPainter<E, U>
+@XStreamAlias ( "SyntaxPanelPainter" )
+public class SyntaxPanelPainter<C extends JPanel, U extends WPanelUI<C>>
+        extends AbstractPainter<C, U> implements IPanelPainter<C, U>
 {
     /**
      * Used colors.
@@ -70,10 +75,11 @@ public class SyntaxPanelPainter<E extends JPanel, U extends WebPanelUI> extends 
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E panel, final U ui )
+    public void paint ( final Graphics2D g2d, final C panel, final U ui, final Bounds b )
     {
         // Paint syntax panel styling
         final Object aa = GraphicsUtils.setupAntialias ( g2d );
+        final Rectangle bounds = b.get ();
         if ( style == SyntaxPanelStyle.bold )
         {
             // White spacer

@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.data.grid;
 
-import com.alee.demo.api.*;
+import com.alee.demo.api.example.*;
 import com.alee.extended.filechooser.WebFileTable;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.style.StyleId;
@@ -32,8 +32,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebFileTableExample extends AbstractExample
+public class WebFileTableExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -56,10 +55,11 @@ public class WebFileTableExample extends AbstractExample
     @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicTable basic = new BasicTable ( StyleId.filetable );
-        final ScrollableTable scrollable = new ScrollableTable ( StyleId.filetable );
-        final EditableTable editable = new EditableTable ( StyleId.filetable );
-        return CollectionUtils.<Preview>asList ( basic, scrollable, editable );
+        return CollectionUtils.<Preview>asList (
+                new BasicTable ( StyleId.filetable ),
+                new ScrollableTable ( StyleId.filetable ),
+                new EditableTable ( StyleId.filetable )
+        );
     }
 
     /**
@@ -78,7 +78,7 @@ public class WebFileTableExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final File[] home = FileUtils.getUserHome ().listFiles ();
             final List<File> files = CollectionUtils.asList ( home.length > 4 ? Arrays.copyOfRange ( home, 0, 4 ) : home );
@@ -103,7 +103,7 @@ public class WebFileTableExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebFileTable table = new WebFileTable ( getStyleId () );
             table.setDisplayedDirectory ( FileUtils.getUserHome () );
@@ -128,7 +128,7 @@ public class WebFileTableExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebFileTable table = new WebFileTable ( getStyleId () );
             table.setDisplayedDirectory ( FileUtils.getUserHome () );

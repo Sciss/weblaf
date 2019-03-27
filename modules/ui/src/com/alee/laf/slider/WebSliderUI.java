@@ -21,7 +21,7 @@ import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
+import com.alee.api.jdk.Consumer;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -29,12 +29,13 @@ import javax.swing.plaf.basic.BasicSliderUI;
 import java.awt.*;
 
 /**
+ * Custom UI for {@link JSlider} component.
+ *
  * @author Mikle Garin
  * @author Michka Popoff
  * @author Alexandr Zernov
  */
-
-public class WebSliderUI extends BasicSliderUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebSliderUI extends BasicSliderUI implements ShapeSupport, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -43,17 +44,11 @@ public class WebSliderUI extends BasicSliderUI implements Styleable, ShapeProvid
     protected ISliderPainter painter;
 
     /**
-     * Runtime variables.
-     */
-    protected Insets margin = null;
-    protected Insets padding = null;
-
-    /**
-     * Returns an instance of the WebSliderUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebSliderUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebSliderUI
+     * @return instance of the {@link WebSliderUI}
      */
     public static ComponentUI createUI ( final JComponent c )
     {
@@ -70,11 +65,6 @@ public class WebSliderUI extends BasicSliderUI implements Styleable, ShapeProvid
         super ( b );
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
@@ -85,11 +75,6 @@ public class WebSliderUI extends BasicSliderUI implements Styleable, ShapeProvid
         StyleManager.installSkin ( slider );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -101,47 +86,45 @@ public class WebSliderUI extends BasicSliderUI implements Styleable, ShapeProvid
     }
 
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( slider );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( slider, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( slider, painter );
     }
 
     @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( slider, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( slider, painter, enabled );
+    }
+
+    @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( slider );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( slider, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( slider );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( slider, padding );
     }
 
     /**
@@ -151,7 +134,7 @@ public class WebSliderUI extends BasicSliderUI implements Styleable, ShapeProvid
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -162,14 +145,20 @@ public class WebSliderUI extends BasicSliderUI implements Styleable, ShapeProvid
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( slider, new DataRunnable<ISliderPainter> ()
+        PainterSupport.setPainter ( slider, new Consumer<ISliderPainter> ()
         {
             @Override
-            public void run ( final ISliderPainter newPainter )
+            public void accept ( final ISliderPainter newPainter )
             {
                 WebSliderUI.this.painter = newPainter;
             }
         }, this.painter, painter, ISliderPainter.class, AdaptiveSliderPainter.class );
+    }
+
+    @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
     }
 
     @Override
@@ -178,7 +167,7 @@ public class WebSliderUI extends BasicSliderUI implements Styleable, ShapeProvid
         if ( painter != null )
         {
             painter.setDragging ( isDragging () );
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 

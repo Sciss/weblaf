@@ -1,4 +1,4 @@
-<skin>
+<skin xmlns="http://weblookandfeel.com/XmlSkin">
 
     <!-- com.alee.laf.scroll.WebScrollBar -->
 
@@ -9,15 +9,15 @@
             <background>237,237,237</background>
         </component>
         <ui>
-            <paintButtons>true</paintButtons>
-            <paintTrack>false</paintTrack>
+            <displayButtons>true</displayButtons>
+            <displayTrack>false</displayTrack>
             <minimumThumbSize>25,25</minimumThumbSize>
         </ui>
         <painter>
             <thumbRound>8</thumbRound>
             <thumbMargin>1,2,1,2</thumbMargin>
             <scrollBarWidth>13</scrollBarWidth>
-            <trackBorderColor>230,230,230</trackBorderColor>
+            <trackBorderColor>170,170,170</trackBorderColor>
             <trackBackgroundColor>245,245,245</trackBackgroundColor>
             <thumbBorderColor>189,189,189</thumbBorderColor>
             <thumbBackgroundColor>217,217,217</thumbBackgroundColor>
@@ -78,16 +78,16 @@
             <opaque>true</opaque>
         </component>
         <ui>
-            <paintButtons>true</paintButtons>
-            <paintTrack>true</paintTrack>
+            <displayButtons>true</displayButtons>
+            <displayTrack>true</displayTrack>
         </ui>
     </style>
 
     <!-- Undecorated scrollbar -->
     <style type="scrollbar" id="undecorated">
         <ui>
-            <paintButtons>true</paintButtons>
-            <paintTrack>false</paintTrack>
+            <displayButtons>true</displayButtons>
+            <displayTrack>false</displayTrack>
         </ui>
     </style>
 
@@ -97,17 +97,25 @@
             <opaque>true</opaque>
         </component>
         <ui>
-            <paintButtons>false</paintButtons>
-            <paintTrack>true</paintTrack>
+            <displayButtons>false</displayButtons>
+            <displayTrack>true</displayTrack>
         </ui>
+        <painter>
+            <thumbRound>0</thumbRound>
+            <thumbMargin>1,1,1,1</thumbMargin>
+            <scrollBarWidth>11</scrollBarWidth>
+        </painter>
     </style>
 
     <!-- Undecorated button-less scrollbar -->
     <style type="scrollbar" id="undecorated-buttonless">
         <ui>
-            <paintButtons>false</paintButtons>
-            <paintTrack>false</paintTrack>
+            <displayButtons>false</displayButtons>
+            <displayTrack>false</displayTrack>
         </ui>
+        <painter>
+            <thumbRound>0</thumbRound>
+        </painter>
     </style>
 
 </skin>

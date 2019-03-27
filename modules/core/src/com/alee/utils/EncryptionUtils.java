@@ -27,7 +27,6 @@ import java.io.UnsupportedEncodingException;
  *
  * @author Mikle Garin
  */
-
 public final class EncryptionUtils
 {
     /**
@@ -38,8 +37,15 @@ public final class EncryptionUtils
     /**
      * Encode and decode key.
      */
-    @SuppressWarnings ( "SpellCheckingInspection" )
     private static final String key = "aZCVKk3mospdfm12pk4fcFD43d435ccCDgHKPQMQ23x7zkq03";
+
+    /**
+     * Private constructor to avoid instantiation.
+     */
+    private EncryptionUtils ()
+    {
+        throw new UtilityException ( "Utility classes are not meant to be instantiated" );
+    }
 
     /**
      * Returns text encrypted through xor and encoded using base64.

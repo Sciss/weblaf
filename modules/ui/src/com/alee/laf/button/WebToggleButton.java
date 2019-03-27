@@ -17,34 +17,24 @@
 
 package com.alee.laf.button;
 
-import com.alee.painter.Paintable;
-import com.alee.painter.Painter;
-import com.alee.laf.WebLookAndFeel;
 import com.alee.managers.hotkey.HotkeyData;
 import com.alee.managers.hotkey.HotkeyInfo;
 import com.alee.managers.hotkey.HotkeyManager;
-import com.alee.managers.language.LanguageManager;
-import com.alee.managers.language.LanguageMethods;
-import com.alee.managers.language.LanguageUtils;
-import com.alee.managers.language.data.TooltipWay;
+import com.alee.managers.language.*;
 import com.alee.managers.language.updaters.LanguageUpdater;
-import com.alee.managers.log.Log;
-import com.alee.managers.settings.DefaultValue;
-import com.alee.managers.settings.SettingsManager;
+import com.alee.managers.settings.Configuration;
 import com.alee.managers.settings.SettingsMethods;
 import com.alee.managers.settings.SettingsProcessor;
+import com.alee.managers.settings.UISettingsManager;
 import com.alee.managers.style.*;
-import com.alee.managers.style.Skin;
-import com.alee.managers.style.StyleListener;
-import com.alee.managers.style.Skinnable;
 import com.alee.managers.tooltip.ToolTipMethods;
 import com.alee.managers.tooltip.TooltipManager;
+import com.alee.managers.tooltip.TooltipWay;
 import com.alee.managers.tooltip.WebCustomTooltip;
-import com.alee.utils.EventUtils;
-import com.alee.utils.ReflectUtils;
-import com.alee.utils.SizeUtils;
-import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.*;
+import com.alee.painter.Paintable;
+import com.alee.painter.Painter;
+import com.alee.utils.swing.MouseButton;
+import com.alee.utils.swing.extensions.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -53,398 +43,381 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.KeyAdapter;
 import java.awt.event.MouseAdapter;
 import java.util.List;
-import java.util.Map;
 
 /**
+ * {@link JToggleButton} extension class.
+ * It contains various useful methods to simplify core component usage.
+ *
+ * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
+ * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
+ *
  * @author Mikle Garin
+ * @see ToggleButtonDescriptor
+ * @see WToggleButtonUI
+ * @see WebToggleButtonUI
+ * @see IToggleButtonPainter
+ * @see ToggleButtonPainter
+ * @see JToggleButton
  */
-
-public class WebToggleButton extends JToggleButton
-        implements Styleable, Skinnable, Paintable, ShapeProvider, MarginSupport, PaddingSupport, EventMethods, ToolTipMethods,
-        LanguageMethods, SettingsMethods, FontMethods<WebToggleButton>, SizeMethods<WebToggleButton>
+public class WebToggleButton extends JToggleButton implements Styleable, Paintable, ShapeMethods, MarginMethods, PaddingMethods,
+        EventMethods, ToolTipMethods, LanguageMethods, LanguageEventMethods, SettingsMethods, FontMethods<WebToggleButton>,
+        SizeMethods<WebToggleButton>
 {
+    /**
+     * Constructs new {@link JToggleButton}.
+     */
     public WebToggleButton ()
     {
-        super ();
+        this ( StyleId.auto );
     }
 
-    public WebToggleButton ( final Icon icon )
-    {
-        super ( icon );
-        setStyleId ( StyleId.togglebuttonIcon );
-    }
-
-    public WebToggleButton ( final Icon icon, final boolean selected )
-    {
-        super ( icon, selected );
-        setStyleId ( StyleId.togglebuttonIcon );
-    }
-
-    public WebToggleButton ( final String text )
-    {
-        super ( text );
-    }
-
-    public WebToggleButton ( final String text, final boolean selected )
-    {
-        super ( text, selected );
-    }
-
-    public WebToggleButton ( final String text, final Icon icon )
-    {
-        super ( text, icon );
-    }
-
-    public WebToggleButton ( final String text, final Icon icon, final boolean selected )
-    {
-        super ( text, icon, selected );
-    }
-
-    public WebToggleButton ( final ActionListener listener )
-    {
-        super ();
-        addActionListener ( listener );
-    }
-
-    public WebToggleButton ( final Icon icon, final ActionListener listener )
-    {
-        super ( icon );
-        setStyleId ( StyleId.togglebuttonIcon );
-        addActionListener ( listener );
-    }
-
-    public WebToggleButton ( final Icon icon, final boolean selected, final ActionListener listener )
-    {
-        super ( icon, selected );
-        setStyleId ( StyleId.togglebuttonIcon );
-        addActionListener ( listener );
-    }
-
-    public WebToggleButton ( final String text, final ActionListener listener )
-    {
-        super ( text );
-        addActionListener ( listener );
-    }
-
-    public WebToggleButton ( final String text, final boolean selected, final ActionListener listener )
-    {
-        super ( text, selected );
-        addActionListener ( listener );
-    }
-
-    public WebToggleButton ( final String text, final Icon icon, final ActionListener listener )
-    {
-        super ( text, icon );
-        addActionListener ( listener );
-    }
-
-    public WebToggleButton ( final String text, final Icon icon, final boolean selected, final ActionListener listener )
-    {
-        super ( text, icon, selected );
-        addActionListener ( listener );
-    }
-
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param action button {@link Action}
+     */
     public WebToggleButton ( final Action action )
     {
-        super ( action );
+        this ( StyleId.auto, action );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param icon button {@link Icon}
+     */
+    public WebToggleButton ( final Icon icon )
+    {
+        this ( StyleId.auto, icon );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param icon     button {@link Icon}
+     * @param selected whether or not button is selected
+     */
+    public WebToggleButton ( final Icon icon, final boolean selected )
+    {
+        this ( StyleId.auto, icon, selected );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param text button text
+     */
+    public WebToggleButton ( final String text )
+    {
+        this ( StyleId.auto, text );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param text     button text
+     * @param selected whether or not button is selected
+     */
+    public WebToggleButton ( final String text, final boolean selected )
+    {
+        this ( StyleId.auto, text, selected );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param text button text
+     * @param icon button {@link Icon}
+     */
+    public WebToggleButton ( final String text, final Icon icon )
+    {
+        this ( StyleId.auto, text, icon );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param text     button text
+     * @param icon     button {@link Icon}
+     * @param selected whether or not button is selected
+     */
+    public WebToggleButton ( final String text, final Icon icon, final boolean selected )
+    {
+        this ( StyleId.auto, text, icon, selected );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param listener button {@link ActionListener}
+     */
+    public WebToggleButton ( final ActionListener listener )
+    {
+        this ( StyleId.auto, listener );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param icon     button {@link Icon}
+     * @param listener button {@link ActionListener}
+     */
+    public WebToggleButton ( final Icon icon, final ActionListener listener )
+    {
+        this ( StyleId.auto, icon, listener );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param icon     button {@link Icon}
+     * @param selected whether or not button is selected
+     * @param listener button {@link ActionListener}
+     */
+    public WebToggleButton ( final Icon icon, final boolean selected, final ActionListener listener )
+    {
+        this ( StyleId.auto, icon, selected, listener );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param text     button text
+     * @param listener button {@link ActionListener}
+     */
+    public WebToggleButton ( final String text, final ActionListener listener )
+    {
+        this ( StyleId.auto, text, listener );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param text     button text
+     * @param selected whether or not button is selected
+     * @param listener button {@link ActionListener}
+     */
+    public WebToggleButton ( final String text, final boolean selected, final ActionListener listener )
+    {
+        this ( StyleId.auto, text, selected, listener );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param text     button text
+     * @param icon     button {@link Icon}
+     * @param listener button {@link ActionListener}
+     */
+    public WebToggleButton ( final String text, final Icon icon, final ActionListener listener )
+    {
+        this ( StyleId.auto, text, icon, listener );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param text     button text
+     * @param icon     button {@link Icon}
+     * @param selected whether or not button is selected
+     * @param listener button {@link ActionListener}
+     */
+    public WebToggleButton ( final String text, final Icon icon, final boolean selected, final ActionListener listener )
+    {
+        this ( StyleId.auto, text, icon, selected, listener );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id {@link StyleId}
+     */
     public WebToggleButton ( final StyleId id )
     {
-        super ();
-        setStyleId ( id );
+        this ( id, null, null, false, null );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id     {@link StyleId}
+     * @param action button {@link Action}
+     */
+    public WebToggleButton ( final StyleId id, final Action action )
+    {
+        this ( id, null, null, false, null );
+        setAction ( action );
+    }
+
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id   {@link StyleId}
+     * @param icon button {@link Icon}
+     */
     public WebToggleButton ( final StyleId id, final Icon icon )
     {
-        super ( icon );
-        setStyleId ( id );
+        this ( id, null, icon, false, null );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param icon     button {@link Icon}
+     * @param selected whether or not button is selected
+     */
     public WebToggleButton ( final StyleId id, final Icon icon, final boolean selected )
     {
-        super ( icon, selected );
-        setStyleId ( id );
+        this ( id, null, icon, selected, null );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id   {@link StyleId}
+     * @param text button text
+     */
     public WebToggleButton ( final StyleId id, final String text )
     {
-        super ( text );
-        setStyleId ( id );
+        this ( id, text, null, false, null );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param text     button text
+     * @param selected whether or not button is selected
+     */
     public WebToggleButton ( final StyleId id, final String text, final boolean selected )
     {
-        super ( text, selected );
-        setStyleId ( id );
+        this ( id, text, null, selected, null );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id   {@link StyleId}
+     * @param text button text
+     * @param icon button {@link Icon}
+     */
     public WebToggleButton ( final StyleId id, final String text, final Icon icon )
     {
-        super ( text, icon );
-        setStyleId ( id );
+        this ( id, text, icon, false, null );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param text     button text
+     * @param icon     button {@link Icon}
+     * @param selected whether or not button is selected
+     */
     public WebToggleButton ( final StyleId id, final String text, final Icon icon, final boolean selected )
     {
-        super ( text, icon, selected );
-        setStyleId ( id );
+        this ( id, text, icon, selected, null );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param listener button {@link ActionListener}
+     */
     public WebToggleButton ( final StyleId id, final ActionListener listener )
     {
-        super ();
-        setStyleId ( id );
-        addActionListener ( listener );
+        this ( id, null, null, false, listener );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param icon     button {@link Icon}
+     * @param listener button {@link ActionListener}
+     */
     public WebToggleButton ( final StyleId id, final Icon icon, final ActionListener listener )
     {
-        super ( icon );
-        setStyleId ( id );
-        addActionListener ( listener );
+        this ( id, null, icon, false, listener );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param icon     button {@link Icon}
+     * @param selected whether or not button is selected
+     * @param listener button {@link ActionListener}
+     */
     public WebToggleButton ( final StyleId id, final Icon icon, final boolean selected, final ActionListener listener )
     {
-        super ( icon, selected );
-        setStyleId ( id );
-        addActionListener ( listener );
+        this ( id, null, icon, selected, listener );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param text     button text
+     * @param listener button {@link ActionListener}
+     */
     public WebToggleButton ( final StyleId id, final String text, final ActionListener listener )
     {
-        super ( text );
-        setStyleId ( id );
-        addActionListener ( listener );
+        this ( id, text, null, false, listener );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param text     button text
+     * @param selected whether or not button is selected
+     * @param listener button {@link ActionListener}
+     */
     public WebToggleButton ( final StyleId id, final String text, final boolean selected, final ActionListener listener )
     {
-        super ( text, selected );
-        setStyleId ( id );
-        addActionListener ( listener );
+        this ( id, text, null, selected, listener );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param text     button text
+     * @param icon     button {@link Icon}
+     * @param listener button {@link ActionListener}
+     */
     public WebToggleButton ( final StyleId id, final String text, final Icon icon, final ActionListener listener )
     {
-        super ( text, icon );
-        setStyleId ( id );
-        addActionListener ( listener );
+        this ( id, text, icon, false, listener );
     }
 
+    /**
+     * Constructs new {@link JToggleButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param text     button text
+     * @param icon     button {@link Icon}
+     * @param selected whether or not button is selected
+     * @param listener button {@link ActionListener}
+     */
     public WebToggleButton ( final StyleId id, final String text, final Icon icon, final boolean selected, final ActionListener listener )
     {
         super ( text, icon, selected );
         setStyleId ( id );
-        addActionListener ( listener );
-    }
-
-    public WebToggleButton ( final StyleId id, final Action action )
-    {
-        super ( action );
-        setStyleId ( id );
+        if ( listener != null )
+        {
+            addActionListener ( listener );
+        }
     }
 
     @Override
     protected void init ( final String text, final Icon icon )
     {
-        super.init ( LanguageUtils.getInitialText ( text ), icon );
-        LanguageUtils.registerInitialLanguage ( this, text );
-    }
-
-    @Override
-    public StyleId getStyleId ()
-    {
-        return getWebUI ().getStyleId ();
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return getWebUI ().setStyleId ( id );
-    }
-
-    @Override
-    public Skin getSkin ()
-    {
-        return StyleManager.getSkin ( this );
-    }
-
-    @Override
-    public Skin setSkin ( final Skin skin )
-    {
-        return StyleManager.setSkin ( this, skin );
-    }
-
-    @Override
-    public Skin setSkin ( final Skin skin, final boolean recursively )
-    {
-        return StyleManager.setSkin ( this, skin, recursively );
-    }
-
-    @Override
-    public Skin restoreSkin ()
-    {
-        return StyleManager.restoreSkin ( this );
-    }
-
-    @Override
-    public void addStyleListener ( final StyleListener listener )
-    {
-        StyleManager.addStyleListener ( this, listener );
-    }
-
-    @Override
-    public void removeStyleListener ( final StyleListener listener )
-    {
-        StyleManager.removeStyleListener ( this, listener );
-    }
-
-    @Override
-    public Map<String, Painter> getCustomPainters ()
-    {
-        return StyleManager.getCustomPainters ( this );
-    }
-
-    @Override
-    public Painter getCustomPainter ()
-    {
-        return StyleManager.getCustomPainter ( this );
-    }
-
-    @Override
-    public Painter getCustomPainter ( final String id )
-    {
-        return StyleManager.getCustomPainter ( this, id );
-    }
-
-    @Override
-    public Painter setCustomPainter ( final Painter painter )
-    {
-        return StyleManager.setCustomPainter ( this, painter );
-    }
-
-    @Override
-    public Painter setCustomPainter ( final String id, final Painter painter )
-    {
-        return StyleManager.setCustomPainter ( this, id, painter );
-    }
-
-    @Override
-    public boolean restoreDefaultPainters ()
-    {
-        return StyleManager.restoreDefaultPainters ( this );
-    }
-
-    @Override
-    public Shape provideShape ()
-    {
-        return getWebUI ().provideShape ();
-    }
-
-    @Override
-    public Insets getMargin ()
-    {
-        return getWebUI ().getMargin ();
-    }
-
-    /**
-     * Sets new margin.
-     *
-     * @param margin new margin
-     */
-    public void setMargin ( final int margin )
-    {
-        setMargin ( margin, margin, margin, margin );
-    }
-
-    /**
-     * Sets new margin.
-     *
-     * @param top    new top margin
-     * @param left   new left margin
-     * @param bottom new bottom margin
-     * @param right  new right margin
-     */
-    public void setMargin ( final int top, final int left, final int bottom, final int right )
-    {
-        setMargin ( new Insets ( top, left, bottom, right ) );
-    }
-
-    @Override
-    public void setMargin ( final Insets margin )
-    {
-        getWebUI ().setMargin ( margin );
-    }
-
-    @Override
-    public Insets getPadding ()
-    {
-        return getWebUI ().getPadding ();
-    }
-
-    /**
-     * Sets new padding.
-     *
-     * @param padding new padding
-     */
-    public void setPadding ( final int padding )
-    {
-        setPadding ( padding, padding, padding, padding );
-    }
-
-    /**
-     * Sets new padding.
-     *
-     * @param top    new top padding
-     * @param left   new left padding
-     * @param bottom new bottom padding
-     * @param right  new right padding
-     */
-    public void setPadding ( final int top, final int left, final int bottom, final int right )
-    {
-        setPadding ( new Insets ( top, left, bottom, right ) );
-    }
-
-    @Override
-    public void setPadding ( final Insets padding )
-    {
-        getWebUI ().setPadding ( padding );
-    }
-
-    /**
-     * Returns Web-UI applied to this class.
-     *
-     * @return Web-UI applied to this class
-     */
-    public WebToggleButtonUI getWebUI ()
-    {
-        return ( WebToggleButtonUI ) getUI ();
-    }
-
-    /**
-     * Installs a Web-UI into this component.
-     */
-    @Override
-    public void updateUI ()
-    {
-        if ( getUI () == null || !( getUI () instanceof WebToggleButtonUI ) )
-        {
-            try
-            {
-                setUI ( ( WebToggleButtonUI ) ReflectUtils.createInstance ( WebLookAndFeel.toggleButtonUI ) );
-            }
-            catch ( final Throwable e )
-            {
-                Log.error ( this, e );
-                setUI ( new WebToggleButtonUI () );
-            }
-        }
-        else
-        {
-            setUI ( getUI () );
-        }
+        super.init ( UILanguageManager.getInitialText ( text ), icon );
+        UILanguageManager.registerInitialLanguage ( this, text );
     }
 
     /**
@@ -507,111 +480,267 @@ public class WebToggleButton extends JToggleButton
     }
 
     @Override
+    public StyleId getDefaultStyleId ()
+    {
+        return getIcon () != null && getText () == null ? StyleId.togglebuttonIcon : StyleId.togglebutton;
+    }
+
+    @Override
+    public StyleId getStyleId ()
+    {
+        return StyleManager.getStyleId ( this );
+    }
+
+    @Override
+    public StyleId setStyleId ( final StyleId id )
+    {
+        return StyleManager.setStyleId ( this, id );
+    }
+
+    @Override
+    public StyleId resetStyleId ()
+    {
+        return StyleManager.resetStyleId ( this );
+    }
+
+    @Override
+    public Skin getSkin ()
+    {
+        return StyleManager.getSkin ( this );
+    }
+
+    @Override
+    public Skin setSkin ( final Skin skin )
+    {
+        return StyleManager.setSkin ( this, skin );
+    }
+
+    @Override
+    public Skin setSkin ( final Skin skin, final boolean recursively )
+    {
+        return StyleManager.setSkin ( this, skin, recursively );
+    }
+
+    @Override
+    public Skin resetSkin ()
+    {
+        return StyleManager.resetSkin ( this );
+    }
+
+    @Override
+    public void addStyleListener ( final StyleListener listener )
+    {
+        StyleManager.addStyleListener ( this, listener );
+    }
+
+    @Override
+    public void removeStyleListener ( final StyleListener listener )
+    {
+        StyleManager.removeStyleListener ( this, listener );
+    }
+
+    @Override
+    public Painter getCustomPainter ()
+    {
+        return StyleManager.getCustomPainter ( this );
+    }
+
+    @Override
+    public Painter setCustomPainter ( final Painter painter )
+    {
+        return StyleManager.setCustomPainter ( this, painter );
+    }
+
+    @Override
+    public boolean resetCustomPainter ()
+    {
+        return StyleManager.resetCustomPainter ( this );
+    }
+
+    @Override
+    public Shape getShape ()
+    {
+        return ShapeMethodsImpl.getShape ( this );
+    }
+
+    @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return ShapeMethodsImpl.isShapeDetectionEnabled ( this );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        ShapeMethodsImpl.setShapeDetectionEnabled ( this, enabled );
+    }
+
+    @Override
+    public Insets getMargin ()
+    {
+        return MarginMethodsImpl.getMargin ( this );
+    }
+
+    @Override
+    public void setMargin ( final int margin )
+    {
+        MarginMethodsImpl.setMargin ( this, margin );
+    }
+
+    @Override
+    public void setMargin ( final int top, final int left, final int bottom, final int right )
+    {
+        MarginMethodsImpl.setMargin ( this, top, left, bottom, right );
+    }
+
+    @Override
+    public void setMargin ( final Insets margin )
+    {
+        MarginMethodsImpl.setMargin ( this, margin );
+    }
+
+    @Override
+    public Insets getPadding ()
+    {
+        return PaddingMethodsImpl.getPadding ( this );
+    }
+
+    @Override
+    public void setPadding ( final int padding )
+    {
+        PaddingMethodsImpl.setPadding ( this, padding );
+    }
+
+    @Override
+    public void setPadding ( final int top, final int left, final int bottom, final int right )
+    {
+        PaddingMethodsImpl.setPadding ( this, top, left, bottom, right );
+    }
+
+    @Override
+    public void setPadding ( final Insets padding )
+    {
+        PaddingMethodsImpl.setPadding ( this, padding );
+    }
+
+    @Override
     public MouseAdapter onMousePress ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMousePress ( this, runnable );
+        return EventMethodsImpl.onMousePress ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMousePress ( final MouseButton mouseButton, final MouseEventRunnable runnable )
     {
-        return EventUtils.onMousePress ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMousePress ( this, mouseButton, runnable );
     }
 
     @Override
     public MouseAdapter onMouseEnter ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseEnter ( this, runnable );
+        return EventMethodsImpl.onMouseEnter ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseExit ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseExit ( this, runnable );
+        return EventMethodsImpl.onMouseExit ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseDrag ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseDrag ( this, runnable );
+        return EventMethodsImpl.onMouseDrag ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseDrag ( final MouseButton mouseButton, final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseDrag ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMouseDrag ( this, mouseButton, runnable );
     }
 
     @Override
     public MouseAdapter onMouseClick ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseClick ( this, runnable );
+        return EventMethodsImpl.onMouseClick ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseClick ( final MouseButton mouseButton, final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseClick ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMouseClick ( this, mouseButton, runnable );
     }
 
     @Override
     public MouseAdapter onDoubleClick ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onDoubleClick ( this, runnable );
+        return EventMethodsImpl.onDoubleClick ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMenuTrigger ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMenuTrigger ( this, runnable );
+        return EventMethodsImpl.onMenuTrigger ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyType ( final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyType ( this, runnable );
+        return EventMethodsImpl.onKeyType ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyType ( final HotkeyData hotkey, final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyType ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyType ( this, hotkey, runnable );
     }
 
     @Override
     public KeyAdapter onKeyPress ( final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyPress ( this, runnable );
+        return EventMethodsImpl.onKeyPress ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyPress ( final HotkeyData hotkey, final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyPress ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyPress ( this, hotkey, runnable );
     }
 
     @Override
     public KeyAdapter onKeyRelease ( final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyRelease ( this, runnable );
+        return EventMethodsImpl.onKeyRelease ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyRelease ( final HotkeyData hotkey, final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyRelease ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyRelease ( this, hotkey, runnable );
     }
 
     @Override
     public FocusAdapter onFocusGain ( final FocusEventRunnable runnable )
     {
-        return EventUtils.onFocusGain ( this, runnable );
+        return EventMethodsImpl.onFocusGain ( this, runnable );
     }
 
     @Override
     public FocusAdapter onFocusLoss ( final FocusEventRunnable runnable )
     {
-        return EventUtils.onFocusLoss ( this, runnable );
+        return EventMethodsImpl.onFocusLoss ( this, runnable );
+    }
+
+    @Override
+    public MouseAdapter onDragStart ( final int shift, final MouseEventRunnable runnable )
+    {
+        return EventMethodsImpl.onDragStart ( this, shift, runnable );
+    }
+
+    @Override
+    public MouseAdapter onDragStart ( final int shift, final MouseButton mouseButton, final MouseEventRunnable runnable )
+    {
+        return EventMethodsImpl.onDragStart ( this, shift, mouseButton, runnable );
     }
 
     @Override
@@ -759,330 +888,347 @@ public class WebToggleButton extends JToggleButton
     }
 
     @Override
+    public String getLanguage ()
+    {
+        return UILanguageManager.getComponentKey ( this );
+    }
+
+    @Override
     public void setLanguage ( final String key, final Object... data )
     {
-        LanguageManager.registerComponent ( this, key, data );
+        UILanguageManager.registerComponent ( this, key, data );
     }
 
     @Override
     public void updateLanguage ( final Object... data )
     {
-        LanguageManager.updateComponent ( this, data );
+        UILanguageManager.updateComponent ( this, data );
     }
 
     @Override
     public void updateLanguage ( final String key, final Object... data )
     {
-        LanguageManager.updateComponent ( this, key, data );
+        UILanguageManager.updateComponent ( this, key, data );
     }
 
     @Override
     public void removeLanguage ()
     {
-        LanguageManager.unregisterComponent ( this );
+        UILanguageManager.unregisterComponent ( this );
     }
 
     @Override
     public boolean isLanguageSet ()
     {
-        return LanguageManager.isRegisteredComponent ( this );
+        return UILanguageManager.isRegisteredComponent ( this );
     }
 
     @Override
     public void setLanguageUpdater ( final LanguageUpdater updater )
     {
-        LanguageManager.registerLanguageUpdater ( this, updater );
+        UILanguageManager.registerLanguageUpdater ( this, updater );
     }
 
     @Override
     public void removeLanguageUpdater ()
     {
-        LanguageManager.unregisterLanguageUpdater ( this );
+        UILanguageManager.unregisterLanguageUpdater ( this );
     }
 
     @Override
-    public void registerSettings ( final String key )
+    public void addLanguageListener ( final LanguageListener listener )
     {
-        SettingsManager.registerComponent ( this, key );
+        UILanguageManager.addLanguageListener ( this, listener );
     }
 
     @Override
-    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass )
+    public void removeLanguageListener ( final LanguageListener listener )
     {
-        SettingsManager.registerComponent ( this, key, defaultValueClass );
+        UILanguageManager.removeLanguageListener ( this, listener );
     }
 
     @Override
-    public void registerSettings ( final String key, final Object defaultValue )
+    public void removeLanguageListeners ()
     {
-        SettingsManager.registerComponent ( this, key, defaultValue );
+        UILanguageManager.removeLanguageListeners ( this );
     }
 
     @Override
-    public void registerSettings ( final String group, final String key )
+    public void addDictionaryListener ( final DictionaryListener listener )
     {
-        SettingsManager.registerComponent ( this, group, key );
+        UILanguageManager.addDictionaryListener ( this, listener );
     }
 
     @Override
-    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass )
+    public void removeDictionaryListener ( final DictionaryListener listener )
     {
-        SettingsManager.registerComponent ( this, group, key, defaultValueClass );
+        UILanguageManager.removeDictionaryListener ( this, listener );
     }
 
     @Override
-    public void registerSettings ( final String group, final String key, final Object defaultValue )
+    public void removeDictionaryListeners ()
     {
-        SettingsManager.registerComponent ( this, group, key, defaultValue );
+        UILanguageManager.removeDictionaryListeners ( this );
     }
 
     @Override
-    public void registerSettings ( final String key, final boolean loadInitialSettings, final boolean applySettingsChanges )
+    public void registerSettings ( final Configuration configuration )
     {
-        SettingsManager.registerComponent ( this, key, loadInitialSettings, applySettingsChanges );
+        UISettingsManager.registerComponent ( this, configuration );
     }
 
     @Override
-    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass,
-                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
+    public void registerSettings ( final SettingsProcessor processor )
     {
-        SettingsManager.registerComponent ( this, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public void registerSettings ( final String key, final Object defaultValue, final boolean loadInitialSettings,
-                                   final boolean applySettingsChanges )
-    {
-        SettingsManager.registerComponent ( this, key, defaultValue, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass,
-                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
-    {
-        SettingsManager.registerComponent ( this, group, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public void registerSettings ( final String group, final String key, final Object defaultValue, final boolean loadInitialSettings,
-                                   final boolean applySettingsChanges )
-    {
-        SettingsManager.registerComponent ( this, group, key, defaultValue, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public void registerSettings ( final SettingsProcessor settingsProcessor )
-    {
-        SettingsManager.registerComponent ( this, settingsProcessor );
+        UISettingsManager.registerComponent ( this, processor );
     }
 
     @Override
     public void unregisterSettings ()
     {
-        SettingsManager.unregisterComponent ( this );
+        UISettingsManager.unregisterComponent ( this );
     }
 
     @Override
     public void loadSettings ()
     {
-        SettingsManager.loadComponentSettings ( this );
+        UISettingsManager.loadSettings ( this );
     }
 
     @Override
     public void saveSettings ()
     {
-        SettingsManager.saveComponentSettings ( this );
+        UISettingsManager.saveSettings ( this );
     }
 
     @Override
     public WebToggleButton setPlainFont ()
     {
-        return SwingUtils.setPlainFont ( this );
+        return FontMethodsImpl.setPlainFont ( this );
     }
 
     @Override
     public WebToggleButton setPlainFont ( final boolean apply )
     {
-        return SwingUtils.setPlainFont ( this, apply );
+        return FontMethodsImpl.setPlainFont ( this, apply );
     }
 
     @Override
     public boolean isPlainFont ()
     {
-        return SwingUtils.isPlainFont ( this );
+        return FontMethodsImpl.isPlainFont ( this );
     }
 
     @Override
     public WebToggleButton setBoldFont ()
     {
-        return SwingUtils.setBoldFont ( this );
+        return FontMethodsImpl.setBoldFont ( this );
     }
 
     @Override
     public WebToggleButton setBoldFont ( final boolean apply )
     {
-        return SwingUtils.setBoldFont ( this, apply );
+        return FontMethodsImpl.setBoldFont ( this, apply );
     }
 
     @Override
     public boolean isBoldFont ()
     {
-        return SwingUtils.isBoldFont ( this );
+        return FontMethodsImpl.isBoldFont ( this );
     }
 
     @Override
     public WebToggleButton setItalicFont ()
     {
-        return SwingUtils.setItalicFont ( this );
+        return FontMethodsImpl.setItalicFont ( this );
     }
 
     @Override
     public WebToggleButton setItalicFont ( final boolean apply )
     {
-        return SwingUtils.setItalicFont ( this, apply );
+        return FontMethodsImpl.setItalicFont ( this, apply );
     }
 
     @Override
     public boolean isItalicFont ()
     {
-        return SwingUtils.isItalicFont ( this );
+        return FontMethodsImpl.isItalicFont ( this );
     }
 
     @Override
     public WebToggleButton setFontStyle ( final boolean bold, final boolean italic )
     {
-        return SwingUtils.setFontStyle ( this, bold, italic );
+        return FontMethodsImpl.setFontStyle ( this, bold, italic );
     }
 
     @Override
     public WebToggleButton setFontStyle ( final int style )
     {
-        return SwingUtils.setFontStyle ( this, style );
+        return FontMethodsImpl.setFontStyle ( this, style );
     }
 
     @Override
     public WebToggleButton setFontSize ( final int fontSize )
     {
-        return SwingUtils.setFontSize ( this, fontSize );
+        return FontMethodsImpl.setFontSize ( this, fontSize );
     }
 
     @Override
     public WebToggleButton changeFontSize ( final int change )
     {
-        return SwingUtils.changeFontSize ( this, change );
+        return FontMethodsImpl.changeFontSize ( this, change );
     }
 
     @Override
     public int getFontSize ()
     {
-        return SwingUtils.getFontSize ( this );
+        return FontMethodsImpl.getFontSize ( this );
     }
 
     @Override
     public WebToggleButton setFontSizeAndStyle ( final int fontSize, final boolean bold, final boolean italic )
     {
-        return SwingUtils.setFontSizeAndStyle ( this, fontSize, bold, italic );
+        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, bold, italic );
     }
 
     @Override
     public WebToggleButton setFontSizeAndStyle ( final int fontSize, final int style )
     {
-        return SwingUtils.setFontSizeAndStyle ( this, fontSize, style );
+        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, style );
     }
 
     @Override
     public WebToggleButton setFontName ( final String fontName )
     {
-        return SwingUtils.setFontName ( this, fontName );
+        return FontMethodsImpl.setFontName ( this, fontName );
     }
 
     @Override
     public String getFontName ()
     {
-        return SwingUtils.getFontName ( this );
+        return FontMethodsImpl.getFontName ( this );
     }
 
     @Override
     public int getPreferredWidth ()
     {
-        return SizeUtils.getPreferredWidth ( this );
+        return SizeMethodsImpl.getPreferredWidth ( this );
     }
 
     @Override
     public WebToggleButton setPreferredWidth ( final int preferredWidth )
     {
-        return SizeUtils.setPreferredWidth ( this, preferredWidth );
+        return SizeMethodsImpl.setPreferredWidth ( this, preferredWidth );
     }
 
     @Override
     public int getPreferredHeight ()
     {
-        return SizeUtils.getPreferredHeight ( this );
+        return SizeMethodsImpl.getPreferredHeight ( this );
     }
 
     @Override
     public WebToggleButton setPreferredHeight ( final int preferredHeight )
     {
-        return SizeUtils.setPreferredHeight ( this, preferredHeight );
+        return SizeMethodsImpl.setPreferredHeight ( this, preferredHeight );
     }
 
     @Override
     public int getMinimumWidth ()
     {
-        return SizeUtils.getMinimumWidth ( this );
+        return SizeMethodsImpl.getMinimumWidth ( this );
     }
 
     @Override
     public WebToggleButton setMinimumWidth ( final int minimumWidth )
     {
-        return SizeUtils.setMinimumWidth ( this, minimumWidth );
+        return SizeMethodsImpl.setMinimumWidth ( this, minimumWidth );
     }
 
     @Override
     public int getMinimumHeight ()
     {
-        return SizeUtils.getMinimumHeight ( this );
+        return SizeMethodsImpl.getMinimumHeight ( this );
     }
 
     @Override
     public WebToggleButton setMinimumHeight ( final int minimumHeight )
     {
-        return SizeUtils.setMinimumHeight ( this, minimumHeight );
+        return SizeMethodsImpl.setMinimumHeight ( this, minimumHeight );
     }
 
     @Override
     public int getMaximumWidth ()
     {
-        return SizeUtils.getMaximumWidth ( this );
+        return SizeMethodsImpl.getMaximumWidth ( this );
     }
 
     @Override
     public WebToggleButton setMaximumWidth ( final int maximumWidth )
     {
-        return SizeUtils.setMaximumWidth ( this, maximumWidth );
+        return SizeMethodsImpl.setMaximumWidth ( this, maximumWidth );
     }
 
     @Override
     public int getMaximumHeight ()
     {
-        return SizeUtils.getMaximumHeight ( this );
+        return SizeMethodsImpl.getMaximumHeight ( this );
     }
 
     @Override
     public WebToggleButton setMaximumHeight ( final int maximumHeight )
     {
-        return SizeUtils.setMaximumHeight ( this, maximumHeight );
+        return SizeMethodsImpl.setMaximumHeight ( this, maximumHeight );
     }
 
     @Override
     public Dimension getPreferredSize ()
     {
-        return SizeUtils.getPreferredSize ( this, super.getPreferredSize () );
+        return SizeMethodsImpl.getPreferredSize ( this, super.getPreferredSize () );
+    }
+
+    @Override
+    public Dimension getOriginalPreferredSize ()
+    {
+        return SizeMethodsImpl.getOriginalPreferredSize ( this, super.getPreferredSize () );
     }
 
     @Override
     public WebToggleButton setPreferredSize ( final int width, final int height )
     {
-        return SizeUtils.setPreferredSize ( this, width, height );
+        return SizeMethodsImpl.setPreferredSize ( this, width, height );
+    }
+
+    /**
+     * Returns the look and feel (LaF) object that renders this component.
+     *
+     * @return the {@link WToggleButtonUI} object that renders this component
+     */
+    @Override
+    public WToggleButtonUI getUI ()
+    {
+        return ( WToggleButtonUI ) ui;
+    }
+
+    /**
+     * Sets the LaF object that renders this component.
+     *
+     * @param ui {@link WToggleButtonUI}
+     */
+    public void setUI ( final WToggleButtonUI ui )
+    {
+        super.setUI ( ui );
+    }
+
+    @Override
+    public void updateUI ()
+    {
+        StyleManager.getDescriptor ( this ).updateUI ( this );
+    }
+
+    @Override
+    public String getUIClassID ()
+    {
+        return StyleManager.getDescriptor ( this ).getUIClassId ();
     }
 }

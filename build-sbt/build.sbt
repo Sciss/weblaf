@@ -3,7 +3,7 @@ lazy val baseNameL          = baseName.toLowerCase
 lazy val fullDescr          = "WebLaf is a Java Swing Look and Feel and extended components library for cross-platform applications"
 
 lazy val useOurOwnVersion   = true      // detaches artifact from original WebLaF numbering
-lazy val ownVersion         = "2.1.4"   // we deliberately make a jump here to avoid confusion with original version
+lazy val ownVersion         = "2.2.0-SNAPSHOT"   // we deliberately make a jump here to avoid confusion with original version
 lazy val upstreamIsSnapshot = true      // only used when `useOurOwnVersion` is `false`!
 
 // - generate debugging symbols
@@ -11,17 +11,18 @@ lazy val upstreamIsSnapshot = true      // only used when `useOurOwnVersion` is 
 // - source adheres to Java 1.6 API
 lazy val commonJavaOptions  = Seq("-source", "1.6")
 
-// ---- core dependencies ----
-lazy val imageScalingVersion= "0.8.6"
-lazy val xstreamVersion     = "1.4.11.1"
-lazy val jerichoVersion     = "3.3" // note: "3.4" is not Java 6 compatible
-lazy val slfVersion         = "1.7.25"
-
-// ---- ui dependencies ----
-lazy val rSyntaxVersion     = "2.6.1"
-
-// ---- demo dependencies ----
-lazy val salamanderVersion  = "1.0"
+lazy val deps = new {
+  val core = new {
+    val imageScaling  = "0.8.6"
+    val xstream       = "1.4.11.1"
+    val jericho       = "3.3" // note: "3.4" is not Java 6 compatible
+    val slf           = "1.7.26"
+  }
+  val ui = new {
+    val salamander    = "1.1.2"
+    val rSyntax       = "3.0.2" // "2.6.1"
+  }
+}
 
 def mkVersion(base: File): String =
   if (useOurOwnVersion)
@@ -105,11 +106,11 @@ lazy val core = project.withId(s"$baseNameL-core").in(file("core"))
     description := "Core components for WebLaf",
     version     := mkVersion(baseDirectory.value / ".."),
     libraryDependencies ++= Seq(
-      "com.thoughtworks.xstream" % "xstream"            % xstreamVersion exclude("xpp3", "xpp3_min") exclude("xmlpull", "xmlpull"),
-      "net.htmlparser.jericho"   % "jericho-html"       % jerichoVersion,
-      "com.mortennobel"          % "java-image-scaling" % imageScalingVersion,
-      "org.slf4j"                % "slf4j-api"          % slfVersion,
-      "org.slf4j"                % "slf4j-simple"       % slfVersion
+      "com.thoughtworks.xstream" % "xstream"            % deps.core.xstream exclude("xpp3", "xpp3_min") exclude("xmlpull", "xmlpull"),
+      "net.htmlparser.jericho"   % "jericho-html"       % deps.core.jericho,
+      "com.mortennobel"          % "java-image-scaling" % deps.core.imageScaling,
+      "org.slf4j"                % "slf4j-api"          % deps.core.slf,
+      "org.slf4j"                % "slf4j-simple"       % deps.core.slf
     ),
     // javaSource        in Compile := baseDirectory.value / ".." / ".." / "modules" / "core" / "src",
     // resourceDirectory in Compile := baseDirectory.value / ".." / ".." / "modules" / "core" / "src",
@@ -125,7 +126,8 @@ lazy val ui = project.withId(s"$baseNameL-ui").in(file("ui"))
     description := fullDescr,
     version     := mkVersion(baseDirectory.value / ".."),
     libraryDependencies ++= Seq(
-      "com.fifesoft" % "rsyntaxtextarea" % rSyntaxVersion % "provided"  // we don't want to drag this under in 99% of cases
+      "guru.nidi.com.kitfox"  % "svgSalamander"   % deps.ui.salamander,            // we don't want to drag this under in 99% of cases
+      "com.fifesoft"          % "rsyntaxtextarea" % deps.ui.rSyntax % "provided"   // we don't want to drag this under in 99% of cases
     ),
     mainClass in (Compile,run) := Some("com.alee.laf.LibraryInfoDialog"),
     // javaSource        in Compile := baseDirectory.value / ".." / ".." / "modules" / "ui" / "src",
@@ -142,8 +144,7 @@ lazy val demo = project.withId(s"$baseNameL-demo").in(file("demo"))
     description := "Demo examples for WebLaf",
     version     := mkVersion(baseDirectory.value / ".."),
     libraryDependencies ++= Seq(
-      "com.fifesoft"   % "rsyntaxtextarea" % rSyntaxVersion,
-      "com.kitfox.svg" % "svg-salamander"  % salamanderVersion
+      "com.fifesoft"   % "rsyntaxtextarea" % deps.ui.rSyntax
     ),
     fork in run := true,
     mainClass in (Compile,run) := Some("com.alee.demo.DemoApplication"),

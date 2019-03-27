@@ -21,25 +21,25 @@ import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
+import com.alee.api.jdk.Consumer;
 
 import javax.swing.*;
 import javax.swing.colorchooser.ColorSelectionModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.plaf.ComponentUI;
-import javax.swing.plaf.basic.BasicColorChooserUI;
 import java.awt.*;
 
 /**
+ * Custom UI for {@link JColorChooser} component.
+ *
  * @author Mikle Garin
  * @author Alexandr Zernov
  */
-
-public class WebColorChooserUI extends BasicColorChooserUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebColorChooserUI extends WColorChooserUI implements ShapeSupport, MarginSupport, PaddingSupport
 {
     /**
-     * todo 1. Implement base JColorChooser features
+     * todo 1. Implement some of the missing JColorChooser features
      */
 
     /**
@@ -51,31 +51,23 @@ public class WebColorChooserUI extends BasicColorChooserUI implements Styleable,
     /**
      * Runtime variables.
      */
-    protected Insets margin = null;
-    protected Insets padding = null;
-    protected WebColorChooserPanel colorChooserPanel;
-    protected ColorSelectionModel selectionModel;
-    protected ChangeListener modelChangeListener;
-    protected boolean modifying = false;
+    protected transient WebColorChooserPanel colorChooserPanel;
+    protected transient ColorSelectionModel selectionModel;
+    protected transient ChangeListener modelChangeListener;
+    protected transient boolean modifying = false;
 
     /**
-     * Returns an instance of the WebColorChooserUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebColorChooserUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebColorChooserUI
+     * @return instance of the {@link WebColorChooserUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebColorChooserUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
@@ -89,7 +81,7 @@ public class WebColorChooserUI extends BasicColorChooserUI implements Styleable,
 
         chooser.setLayout ( new BorderLayout () );
 
-        colorChooserPanel = new WebColorChooserPanel ( false );
+        colorChooserPanel = new WebColorChooserPanel ( StyleId.colorchooserContent.at ( chooser ), false );
         colorChooserPanel.setColor ( selectionModel.getSelectedColor () );
         colorChooserPanel.addChangeListener ( new ChangeListener ()
         {
@@ -122,17 +114,9 @@ public class WebColorChooserUI extends BasicColorChooserUI implements Styleable,
         selectionModel.addChangeListener ( modelChangeListener );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
-        // Uninstalling applied skin
-        StyleManager.uninstallSkin ( chooser );
-
         // Removing content
         chooser.remove ( colorChooserPanel );
         chooser.setLayout ( null );
@@ -141,52 +125,53 @@ public class WebColorChooserUI extends BasicColorChooserUI implements Styleable,
         colorChooserPanel = null;
         selectionModel = null;
 
+        // Uninstalling applied skin
+        StyleManager.uninstallSkin ( chooser );
+
         // Removing color chooser reference
         chooser = null;
     }
 
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( chooser );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( chooser, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( chooser, painter );
     }
 
     @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( chooser, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( chooser, painter, enabled );
+    }
+
+    @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( chooser );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( chooser, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( chooser );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( chooser, padding );
     }
 
     /**
@@ -196,7 +181,7 @@ public class WebColorChooserUI extends BasicColorChooserUI implements Styleable,
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -207,69 +192,98 @@ public class WebColorChooserUI extends BasicColorChooserUI implements Styleable,
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( chooser, new DataRunnable<IColorChooserPainter> ()
+        PainterSupport.setPainter ( chooser, new Consumer<IColorChooserPainter> ()
         {
             @Override
-            public void run ( final IColorChooserPainter newPainter )
+            public void accept ( final IColorChooserPainter newPainter )
             {
                 WebColorChooserUI.this.painter = newPainter;
             }
         }, this.painter, painter, IColorChooserPainter.class, AdaptiveColorChooserPainter.class );
     }
 
+    @Override
     public boolean isShowButtonsPanel ()
     {
         return colorChooserPanel.isShowButtonsPanel ();
     }
 
-    public void setShowButtonsPanel ( final boolean showButtonsPanel )
+    @Override
+    public void setShowButtonsPanel ( final boolean display )
     {
-        colorChooserPanel.setShowButtonsPanel ( showButtonsPanel );
+        colorChooserPanel.setShowButtonsPanel ( display );
     }
 
+    @Override
     public boolean isWebOnlyColors ()
     {
         return colorChooserPanel.isWebOnlyColors ();
     }
 
-    public void setWebOnlyColors ( final boolean webOnlyColors )
+    @Override
+    public void setWebOnlyColors ( final boolean webOnly )
     {
-        colorChooserPanel.setWebOnlyColors ( webOnlyColors );
+        colorChooserPanel.setWebOnlyColors ( webOnly );
     }
 
-    public Color getOldColor ()
+    @Override
+    public Color getPreviousColor ()
     {
         return colorChooserPanel.getOldColor ();
     }
 
-    public void setOldColor ( final Color oldColor )
+    @Override
+    public void setPreviousColor ( final Color previous )
     {
-        colorChooserPanel.setOldColor ( oldColor );
+        colorChooserPanel.setOldColor ( previous );
     }
 
+    @Override
     public void resetResult ()
     {
         colorChooserPanel.resetResult ();
     }
 
+    @Override
     public void setResult ( final int result )
     {
         colorChooserPanel.setResult ( result );
     }
 
+    @Override
     public int getResult ()
     {
         return colorChooserPanel.getResult ();
     }
 
-    public void addColorChooserListener ( final ColorChooserListener colorChooserListener )
+    @Override
+    public void addColorChooserListener ( final ColorChooserListener listener )
     {
-        colorChooserPanel.addColorChooserListener ( colorChooserListener );
+        colorChooserPanel.addColorChooserListener ( listener );
     }
 
-    public void removeColorChooserListener ( final ColorChooserListener colorChooserListener )
+    @Override
+    public void removeColorChooserListener ( final ColorChooserListener listener )
     {
-        colorChooserPanel.removeColorChooserListener ( colorChooserListener );
+        colorChooserPanel.removeColorChooserListener ( listener );
+    }
+
+    @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
+    }
+
+    @Override
+    public int getBaseline ( final JComponent c, final int width, final int height )
+    {
+        return PainterSupport.getBaseline ( c, this, painter, width, height );
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
+    {
+        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
     }
 
     @Override
@@ -277,13 +291,14 @@ public class WebColorChooserUI extends BasicColorChooserUI implements Styleable,
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 
     @Override
     public Dimension getPreferredSize ( final JComponent c )
     {
-        return PainterSupport.getPreferredSize ( c, super.getPreferredSize ( c ), painter );
+        // return PainterSupport.getPreferredSize ( c, painter );
+        return null;
     }
 }

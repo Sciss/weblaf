@@ -17,8 +17,9 @@
 
 package com.alee.extended.window;
 
-import com.alee.laf.rootpane.WebWindow;
-import sun.awt.ModalExclude;
+import com.alee.laf.window.WebWindow;
+import com.alee.utils.ProprietaryUtils;
+import com.alee.utils.SystemUtils;
 
 import java.awt.*;
 
@@ -27,8 +28,7 @@ import java.awt.*;
  *
  * @author Mikle Garin
  */
-
-public class WebPopupWindow extends WebWindow implements ModalExclude
+public class WebPopupWindow extends WebWindow
 {
     /**
      * Constructs new popup window.
@@ -38,8 +38,33 @@ public class WebPopupWindow extends WebWindow implements ModalExclude
     public WebPopupWindow ( final Window owner )
     {
         super ( owner );
+
+        /**
+         * Special {@link Window} name used to trigger some Swing workarounds.
+         * In most cases it is not necessary but it doesn't hurt either.
+         */
         setName ( "###focusableSwingPopup###" );
+
+        /**
+         * Disabled to ensure we do not force {@link Window} to request focus upon display.
+         * It is reenabled within {@link #setVisible(boolean)} method.
+         */
         setFocusableWindowState ( false );
+
+        /**
+         * Configuring {@link Window} type to be {@code Window.Type.POPUP} to ensure better OS behavior.
+         * {@code Window.Type.POPUP} is not set for Unix systems due to window prioritization issues.
+         */
+        if ( !SystemUtils.isUnix () )
+        {
+            ProprietaryUtils.setPopupWindowType ( this );
+        }
+
+        /**
+         * Modal exclusion is disabled to avoid our popups being blocked by modal dialogs.
+         * This can be reenabled if necessary but in most cases it shouldn't be needed.
+         */
+        setModalExclusionType ( Dialog.ModalExclusionType.APPLICATION_EXCLUDE );
     }
 
     @Override
@@ -48,9 +73,14 @@ public class WebPopupWindow extends WebWindow implements ModalExclude
         // Updating visibility
         super.setVisible ( b );
 
-        // Enabling focusable state after window display
-        // We have to do that after due to minor issues with window focus
-        // Otherwise it causes native window decoration blink on some OS
+        /**
+         * Enabling focusable state AFTER window display.
+         * We have to do it in that specific order due to issues with window focus state on some OS.
+         * For instance it causes native window decoration to blink sometimes under Windows OS.
+         *
+         * todo In JDK7+ releases there was a new Window "type" option introduced that can be set to "POPUP".
+         * todo Maybe it can solve some of the focusing issues appearing on the later JDK releases, but that needs to be tested.
+         */
         setFocusableWindowState ( b );
     }
 }

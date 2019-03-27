@@ -17,35 +17,32 @@
 
 package com.alee.painter.decoration.background;
 
-import com.alee.painter.common.TextureType;
 import com.alee.painter.decoration.IDecoration;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 
 /**
- * Texure background.
- * Fills component shape with a texture based on the specified preset.
+ * Preset texure background.
+ * Fills component shape with a texture based on the specified {@link #preset}.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <D> decoration type
  * @param <I> background type
  * @author Mikle Garin
+ * @see AbstractImageTextureBackground
  */
-
 @XStreamAlias ( "PresetTextureBackground" )
-public class PresetTextureBackground<E extends JComponent, D extends IDecoration<E, D>, I extends PresetTextureBackground<E, D, I>>
-        extends AbstractTextureBackground<E, D, I>
+public class PresetTextureBackground<C extends JComponent, D extends IDecoration<C, D>, I extends PresetTextureBackground<C, D, I>>
+        extends AbstractImageTextureBackground<C, D, I>
 {
     /**
-     * Texture type.
-     * todo Move presets into separate library part?
+     * Texture preset type.
      */
     @XStreamAsAttribute
-    protected TextureType preset = null;
+    protected TextureType preset;
 
     @Override
     protected boolean isPaintable ()
@@ -54,20 +51,8 @@ public class PresetTextureBackground<E extends JComponent, D extends IDecoration
     }
 
     @Override
-    protected TexturePaint getTexturePaint ( final Rectangle bounds )
+    protected BufferedImage getTextureImage ()
     {
-        final BufferedImage image = preset.getTexture ();
-        return new TexturePaint ( image, new Rectangle ( bounds.x, bounds.y, image.getWidth (), image.getHeight () ) );
-    }
-
-    @Override
-    public I merge ( final I background )
-    {
-        super.merge ( background );
-        if ( background.preset != null )
-        {
-            preset = background.preset;
-        }
-        return ( I ) this;
+        return preset.getTexture ();
     }
 }

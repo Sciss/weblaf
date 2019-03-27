@@ -21,18 +21,17 @@ import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
 
 /**
- * Base painter for containers.
+ * Base painter for any container {@link JComponent}s.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @param <D> decoration type
  * @author Mikle Garin
  */
-
-public abstract class AbstractContainerPainter<E extends JComponent, U extends ComponentUI, D extends IDecoration<E, D>>
-        extends AbstractDecorationPainter<E, U, D>
+public abstract class AbstractContainerPainter<C extends JComponent, U extends ComponentUI, D extends IDecoration<C, D>>
+        extends AbstractDecorationPainter<C, U, D>
 {
     /**
-     * Implementation is used completely from {@link com.alee.painter.decoration.AbstractDecorationPainter}.
+     * Implementation is used completely from {@link AbstractDecorationPainter}.
      */
 }

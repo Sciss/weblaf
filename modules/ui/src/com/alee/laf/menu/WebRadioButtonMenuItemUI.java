@@ -21,7 +21,7 @@ import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
+import com.alee.api.jdk.Consumer;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -29,12 +29,11 @@ import javax.swing.plaf.basic.BasicRadioButtonMenuItemUI;
 import java.awt.*;
 
 /**
- * Custom UI for JRadioButtonMenuItem component.
+ * Custom UI for {@link JRadioButtonMenuItem} component.
  *
  * @author Mikle Garin
  */
-
-public class WebRadioButtonMenuItemUI extends BasicRadioButtonMenuItemUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebRadioButtonMenuItemUI extends BasicRadioButtonMenuItemUI implements ShapeSupport, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -43,43 +42,27 @@ public class WebRadioButtonMenuItemUI extends BasicRadioButtonMenuItemUI impleme
     protected IRadioButtonMenuItemPainter painter;
 
     /**
-     * Runtime variables.
-     */
-    protected Insets margin = null;
-    protected Insets padding = null;
-
-    /**
-     * Returns an instance of the WebRadioButtonMenuItemUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebRadioButtonMenuItemUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebRadioButtonMenuItemUI
+     * @return instance of the {@link WebRadioButtonMenuItemUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebRadioButtonMenuItemUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
+        // Installing UI
         super.installUI ( c );
 
         // Applying skin
         StyleManager.installSkin ( menuItem );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -91,47 +74,45 @@ public class WebRadioButtonMenuItemUI extends BasicRadioButtonMenuItemUI impleme
     }
 
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( menuItem );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( menuItem, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( menuItem, painter );
     }
 
     @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( menuItem, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( menuItem, painter, enabled );
+    }
+
+    @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( menuItem );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( menuItem, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( menuItem );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( menuItem, padding );
     }
 
     /**
@@ -141,7 +122,7 @@ public class WebRadioButtonMenuItemUI extends BasicRadioButtonMenuItemUI impleme
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -152,10 +133,10 @@ public class WebRadioButtonMenuItemUI extends BasicRadioButtonMenuItemUI impleme
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( menuItem, new DataRunnable<IRadioButtonMenuItemPainter> ()
+        PainterSupport.setPainter ( menuItem, new Consumer<IRadioButtonMenuItemPainter> ()
         {
             @Override
-            public void run ( final IRadioButtonMenuItemPainter newPainter )
+            public void accept ( final IRadioButtonMenuItemPainter newPainter )
             {
                 WebRadioButtonMenuItemUI.this.painter = newPainter;
             }
@@ -163,17 +144,35 @@ public class WebRadioButtonMenuItemUI extends BasicRadioButtonMenuItemUI impleme
     }
 
     @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
+    }
+
+    @Override
+    public int getBaseline ( final JComponent c, final int width, final int height )
+    {
+        return PainterSupport.getBaseline ( c, this, painter, width, height );
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
+    {
+        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+    }
+
+    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 
     @Override
     public Dimension getPreferredSize ( final JComponent c )
     {
-        return PainterSupport.getPreferredSize ( c, super.getPreferredSize ( c ), painter );
+        return PainterSupport.getPreferredSize ( c, painter );
     }
 }

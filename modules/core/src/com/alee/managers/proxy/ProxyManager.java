@@ -17,8 +17,9 @@
 
 package com.alee.managers.proxy;
 
+import com.alee.api.jdk.Objects;
+import com.alee.api.jdk.Supplier;
 import com.alee.managers.settings.SettingsManager;
-import com.alee.utils.CompareUtils;
 import com.alee.utils.EncryptionUtils;
 import com.alee.utils.XmlUtils;
 
@@ -34,36 +35,40 @@ import java.util.Properties;
  *
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-ProxyManager">How to use ProxyManager</a>
- * @see com.alee.managers.proxy.ProxySettings
- * @see com.alee.managers.proxy.SystemProxyConfirmationSupport
+ * @see ProxySettings
+ * @see SystemProxyConfirmationSupport
  */
-
-public class ProxyManager
+public final class ProxyManager
 {
+    /**
+     * todo 1. Rework to provide a move covenient API for initializing proxy at any point
+     * todo 2. Allow auto-detection to be enabled in runtime, long after initialization
+     */
+
     /**
      * Settings group key for proxy settings.
      */
-    public static String SETTINGS_GROUP = "ProxyManager";
+    public static final String SETTINGS_GROUP = "ProxyManager";
 
     /**
      * Settings key for proxy settings.
      */
-    public static String PROXY_SETTINGS = "ProxySettings";
+    public static final String PROXY_SETTINGS = "ProxySettings";
 
     /**
      * Settings key for automated proxy settings option.
      */
-    public static String AUTO_SETTINGS_ON = "AutoSettingsOn";
+    public static final String AUTO_SETTINGS_ON = "AutoSettingsOn";
 
     /**
      * Settings key for system proxy settings usage option.
      */
-    public static String ALWAYS_USE_SYSTEM_SETTINGS = "AlwaysUseSystemSettings";
+    public static final String ALWAYS_USE_SYSTEM_SETTINGS = "AlwaysUseSystemSettings";
 
     /**
      * Settings key for proxy settings save option.
      */
-    public static String SAVE_SETTINGS = "SaveSettings";
+    public static final String SAVE_SETTINGS = "SaveSettings";
 
     /**
      * Whether automatic proxy detection is enabled or not.
@@ -109,8 +114,8 @@ public class ProxyManager
                 // Checking if system proxy settings are not the same
                 final ProxySettings systemProxySettings = getSystemProxySettings ();
                 if ( proxySettings.isUseProxy () != systemProxySettings.isUseProxy () ||
-                        !CompareUtils.equals ( proxySettings.getProxyHost (), systemProxySettings.getProxyHost () ) ||
-                        !CompareUtils.equals ( proxySettings.getProxyPort (), systemProxySettings.getProxyPort () ) )
+                        Objects.notEquals ( proxySettings.getProxyHost (), systemProxySettings.getProxyHost () ) ||
+                        Objects.notEquals ( proxySettings.getProxyPort (), systemProxySettings.getProxyPort () ) )
                 {
                     // Checking whether we have proxy confirmation support or auto settings are enabled
                     if ( systemProxyConfirmationSupport == null || isAutoSettingsInitialization () )
@@ -238,7 +243,14 @@ public class ProxyManager
      */
     public static ProxySettings getProxySettings ()
     {
-        return SettingsManager.get ( SETTINGS_GROUP, PROXY_SETTINGS, getSystemProxySettings () );
+        return SettingsManager.get ( SETTINGS_GROUP, PROXY_SETTINGS, new Supplier<ProxySettings> ()
+        {
+            @Override
+            public ProxySettings get ()
+            {
+                return getSystemProxySettings ();
+            }
+        } );
     }
 
     /**
@@ -445,7 +457,7 @@ public class ProxyManager
                 }
             }
         }
-        catch ( final Exception e )
+        catch ( final Exception ignored )
         {
             //
         }

@@ -80,7 +80,8 @@ public class NinePatchIconConverter extends ReflectionConverter
                 final Class skinClass = ReflectUtils.getClassSafely ( skinClassName );
                 if ( skinClass == null )
                 {
-                    throw new StyleException ( "Specified skin class cannot be found: " + skinClassName );
+                    final String msg = "Specified skin class '%s' cannot be found";
+                    throw new StyleException ( String.format ( msg, skinClassName ) );
                 }
                 nearClassPath = skinClass.getPackage ().getName () + "." + nearClassPath;
                 nearClass = ReflectUtils.getClassSafely ( nearClassPath );
@@ -103,16 +104,18 @@ public class NinePatchIconConverter extends ReflectionConverter
                 // Read and return new 9-patch icon
                 return new NinePatchIcon ( nearClass.getResource ( iconPath ) );
             }
-            catch ( final Throwable e )
+            catch ( final Exception e )
             {
                 // Icon cannot be read
-                throw new StyleException ( "Unable to read 9-patch icon near class \"" + nearClassPath + "\": " + iconPath, e );
+                final String msg = "Unable to read 9-patch icon '%s' at path '%s' near class '%s'";
+                throw new StyleException ( String.format ( msg, iconPath, nearClassPath, nearClass ), e );
             }
         }
         else
         {
             // Icon location cannot be found
-            throw new StyleException ( "Unable to find relative class for 9-patch icon: " + iconPath );
+            final String msg = "Unable to find relative class for 9-patch icon '%s'";
+            throw new StyleException ( String.format ( msg, iconPath ) );
         }
     }
 }

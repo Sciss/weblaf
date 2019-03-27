@@ -21,20 +21,19 @@ import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
+import com.alee.api.jdk.Consumer;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
-import javax.swing.plaf.basic.BasicPanelUI;
 import java.awt.*;
 
 /**
- * Custom UI for JPanel component.
+ * Custom UI for {@link JPanel} component.
  *
+ * @param <C> component type
  * @author Mikle Garin
  */
-
-public class WebPanelUI extends BasicPanelUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebPanelUI<C extends JPanel> extends WPanelUI<C> implements ShapeSupport, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -43,103 +42,77 @@ public class WebPanelUI extends BasicPanelUI implements Styleable, ShapeProvider
     protected IPanelPainter painter;
 
     /**
-     * Runtime variables.
-     */
-    protected JPanel panel;
-    protected Insets margin = null;
-    protected Insets padding = null;
-
-    /**
-     * Returns an instance of the WebPanelUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebPanelUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebPanelUI
+     * @return instance of the {@link WebPanelUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebPanelUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
         // Installing UI
         super.installUI ( c );
 
-        // Saving panel to local variable
-        panel = ( JPanel ) c;
-
         // Applying skin
         StyleManager.installSkin ( panel );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( panel );
 
-        // Cleaning up reference
-        panel = null;
-
         // Uninstalling UI
         super.uninstallUI ( c );
     }
 
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( panel );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( panel, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( panel, painter );
     }
 
     @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( panel, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( panel, painter, enabled );
+    }
+
+    @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( panel );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( panel, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( panel );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( panel, padding );
     }
 
     /**
@@ -149,7 +122,7 @@ public class WebPanelUI extends BasicPanelUI implements Styleable, ShapeProvider
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -160,10 +133,10 @@ public class WebPanelUI extends BasicPanelUI implements Styleable, ShapeProvider
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( panel, new DataRunnable<IPanelPainter> ()
+        PainterSupport.setPainter ( panel, new Consumer<IPanelPainter> ()
         {
             @Override
-            public void run ( final IPanelPainter newPainter )
+            public void accept ( final IPanelPainter newPainter )
             {
                 WebPanelUI.this.painter = newPainter;
             }
@@ -171,11 +144,29 @@ public class WebPanelUI extends BasicPanelUI implements Styleable, ShapeProvider
     }
 
     @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
+    }
+
+    @Override
+    public int getBaseline ( final JComponent c, final int width, final int height )
+    {
+        return PainterSupport.getBaseline ( c, this, painter, width, height );
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
+    {
+        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+    }
+
+    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 

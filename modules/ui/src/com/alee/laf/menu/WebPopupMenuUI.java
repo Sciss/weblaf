@@ -17,25 +17,23 @@
 
 package com.alee.laf.menu;
 
+import com.alee.api.jdk.Consumer;
 import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
 import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
-import javax.swing.plaf.basic.BasicPopupMenuUI;
 import java.awt.*;
 
 /**
- * Custom UI for JPopupMenu component.
+ * Custom UI for {@link JPopupMenu} component.
  *
  * @author Mikle Garin
  */
-
-public class WebPopupMenuUI extends BasicPopupMenuUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport, SwingConstants
+public class WebPopupMenuUI extends WPopupMenuUI implements ShapeSupport, MarginSupport, PaddingSupport, SwingConstants
 {
     /**
      * Component painter.
@@ -46,117 +44,95 @@ public class WebPopupMenuUI extends BasicPopupMenuUI implements Styleable, Shape
     /**
      * Runtime variables.
      */
-    protected PopupMenuWay popupMenuWay = null;
-    protected Insets margin = null;
-    protected Insets padding = null;
+    protected transient PopupMenuWay popupMenuWay = null;
 
     /**
-     * Returns an instance of the WebPopupMenuUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebPopupMenuUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebPopupMenuUI
+     * @return instance of the {@link WebPopupMenuUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebPopupMenuUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
         // Installing UI
         super.installUI ( c );
 
-        // Default settings
+        // Installing enabled state handling marker
         SwingUtils.setHandlesEnableStateMark ( popupMenu );
 
         // Applying skin
         StyleManager.installSkin ( popupMenu );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( popupMenu );
 
+        // Uninstalling enabled state handling marker
+        SwingUtils.removeHandlesEnableStateMark ( popupMenu );
+
         // Uninstalling UI
         super.uninstallUI ( c );
     }
 
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( popupMenu );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( popupMenu, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( popupMenu, painter );
     }
 
     @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( popupMenu, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( popupMenu, painter, enabled );
+    }
+
+    @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( popupMenu );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( popupMenu, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( popupMenu );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( popupMenu, padding );
     }
 
-    /**
-     * Assists popup menu to allow it choose the best position relative to invoker.
-     * Its value nullified right after first usage to avoid popup menu display issues in future.
-     *
-     * @param way approximate popup menu display way
-     */
+    @Override
     public void setPopupMenuWay ( final PopupMenuWay way )
     {
         this.popupMenuWay = way;
     }
 
-    /**
-     * Returns currently set preferred popup menu display way.
-     * It might be null in case menu was just shown and this value wasn't updated afterwards.
-     *
-     * @return currently set preferred popup menu display way
-     */
+    @Override
     public PopupMenuWay getPopupMenuWay ()
     {
         return popupMenuWay;
@@ -169,7 +145,7 @@ public class WebPopupMenuUI extends BasicPopupMenuUI implements Styleable, Shape
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -180,10 +156,10 @@ public class WebPopupMenuUI extends BasicPopupMenuUI implements Styleable, Shape
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( popupMenu, new DataRunnable<IPopupMenuPainter> ()
+        PainterSupport.setPainter ( popupMenu, new Consumer<IPopupMenuPainter> ()
         {
             @Override
-            public void run ( final IPopupMenuPainter newPainter )
+            public void accept ( final IPopupMenuPainter newPainter )
             {
                 WebPopupMenuUI.this.painter = newPainter;
             }
@@ -232,11 +208,29 @@ public class WebPopupMenuUI extends BasicPopupMenuUI implements Styleable, Shape
     }
 
     @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
+    }
+
+    @Override
+    public int getBaseline ( final JComponent c, final int width, final int height )
+    {
+        return PainterSupport.getBaseline ( c, this, painter, width, height );
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
+    {
+        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+    }
+
+    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 

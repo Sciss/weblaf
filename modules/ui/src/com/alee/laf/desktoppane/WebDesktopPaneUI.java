@@ -21,7 +21,7 @@ import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
+import com.alee.api.jdk.Consumer;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -29,10 +29,11 @@ import javax.swing.plaf.basic.BasicDesktopPaneUI;
 import java.awt.*;
 
 /**
+ * Custom UI for {@link JDesktopPane} component.
+ *
  * @author Mikle Garin
  */
-
-public class WebDesktopPaneUI extends BasicDesktopPaneUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebDesktopPaneUI extends BasicDesktopPaneUI implements ShapeSupport, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -43,28 +44,20 @@ public class WebDesktopPaneUI extends BasicDesktopPaneUI implements Styleable, S
     /**
      * Runtime variables.
      */
-    protected JDesktopPane desktopPane = null;
-    protected Insets margin = null;
-    protected Insets padding = null;
+    protected transient JDesktopPane desktopPane = null;
 
     /**
-     * Returns an instance of the WebDesktopPaneUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebDesktopPaneUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebDesktopPaneUI
+     * @return instance of the {@link WebDesktopPaneUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebDesktopPaneUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
@@ -77,11 +70,6 @@ public class WebDesktopPaneUI extends BasicDesktopPaneUI implements Styleable, S
         StyleManager.installSkin ( desktopPane );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -96,47 +84,45 @@ public class WebDesktopPaneUI extends BasicDesktopPaneUI implements Styleable, S
     }
 
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( desktopPane );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( desktopPane, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( desktopPane, painter );
     }
 
     @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( desktopPane, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( desktopPane, painter, enabled );
+    }
+
+    @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( desktopPane );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( desktopPane, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( desktopPane );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( desktopPane, padding );
     }
 
     /**
@@ -146,7 +132,7 @@ public class WebDesktopPaneUI extends BasicDesktopPaneUI implements Styleable, S
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -157,10 +143,10 @@ public class WebDesktopPaneUI extends BasicDesktopPaneUI implements Styleable, S
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( desktopPane, new DataRunnable<IDesktopPanePainter> ()
+        PainterSupport.setPainter ( desktopPane, new Consumer<IDesktopPanePainter> ()
         {
             @Override
-            public void run ( final IDesktopPanePainter newPainter )
+            public void accept ( final IDesktopPanePainter newPainter )
             {
                 WebDesktopPaneUI.this.painter = newPainter;
             }
@@ -168,11 +154,29 @@ public class WebDesktopPaneUI extends BasicDesktopPaneUI implements Styleable, S
     }
 
     @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
+    }
+
+    @Override
+    public int getBaseline ( final JComponent c, final int width, final int height )
+    {
+        return PainterSupport.getBaseline ( c, this, painter, width, height );
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
+    {
+        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+    }
+
+    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 

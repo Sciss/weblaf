@@ -17,18 +17,25 @@
 
 package com.alee.demo.content.container;
 
-import com.alee.demo.api.AbstractExample;
-import com.alee.demo.api.FeatureType;
-import com.alee.demo.api.Preview;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
+import com.alee.demo.skin.DemoStyles;
+import com.alee.extended.layout.CompactFlowLayout;
+import com.alee.laf.button.WebButton;
+import com.alee.laf.label.WebLabel;
+import com.alee.managers.style.StyleId;
+import com.alee.painter.PainterSupport;
+import com.alee.utils.CollectionUtils;
 
-import java.util.Collections;
+import javax.swing.*;
+import java.awt.*;
 import java.util.List;
 
 /**
  * @author Mikle Garin
  */
-
-public class JPanelExample extends AbstractExample
+public class JPanelExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -49,8 +56,57 @@ public class JPanelExample extends AbstractExample
     }
 
     @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Use Panels", "panel" );
+    }
+
+    @Override
     protected List<Preview> createPreviews ()
     {
-        return Collections.emptyList ();
+        return CollectionUtils.<Preview>asList (
+                new PanelPreview ( "basic", FeatureState.updated, StyleId.panel ),
+                new PanelPreview ( "decorated", FeatureState.updated, StyleId.panelDecorated ),
+                new PanelPreview ( "transparent", FeatureState.updated, StyleId.panelTransparent ),
+                new PanelPreview ( "focusable", FeatureState.updated, StyleId.panelFocusable )
+        );
+    }
+
+    /**
+     * {@link JPanel} preview.
+     */
+    protected class PanelPreview extends AbstractStylePreview
+    {
+        /**
+         * Constructs new {@link PanelPreview}.
+         *
+         * @param id           preview ID
+         * @param featureState feature state
+         * @param styleId      preview style ID
+         */
+        public PanelPreview ( final String id, final FeatureState featureState, final StyleId styleId )
+        {
+            super ( JPanelExample.this, id, featureState, styleId );
+        }
+
+        @Override
+        protected LayoutManager createPreviewLayout ()
+        {
+            return new CompactFlowLayout ( FlowLayout.LEADING, 8, 0 );
+        }
+
+        @Override
+        protected List<? extends JComponent> createPreviewElements ()
+        {
+            final JPanel panel = new JPanel ( new BorderLayout ( 15, 15 ) );
+            panel.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            PainterSupport.setPadding ( panel, new Insets ( 15, 15, 15, 15 ) );
+            panel.add ( new WebLabel ( DemoStyles.placeholderLabel, "NORTH", WebLabel.CENTER ), BorderLayout.NORTH );
+            panel.add ( new WebLabel ( DemoStyles.placeholderLabel, "EAST" ), BorderLayout.EAST );
+            panel.add ( new WebLabel ( DemoStyles.placeholderLabel, "SOUTH", WebLabel.CENTER ), BorderLayout.SOUTH );
+            panel.add ( new WebLabel ( DemoStyles.placeholderLabel, "WEST" ), BorderLayout.WEST );
+            panel.add ( new WebButton ( "CENTER" ), BorderLayout.CENTER );
+            return CollectionUtils.asList ( panel );
+        }
     }
 }

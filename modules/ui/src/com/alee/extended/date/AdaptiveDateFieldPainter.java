@@ -21,17 +21,18 @@ import com.alee.painter.AdaptivePainter;
 import com.alee.painter.Painter;
 
 /**
- * Simple DateFieldPainter adapter class.
- * It is used to install simple non-specific painters into WebDateFieldUI.
+ * Simple {@link DateFieldPainter} adapter class.
+ * It is used to install simple non-specific painters into {@link WDateFieldUI}.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Mikle Garin
  */
-
-public final class AdaptiveDateFieldPainter<E extends WebDateField, U extends WebDateFieldUI> extends AdaptivePainter<E, U>
-        implements IDateFieldPainter<E, U>
+public final class AdaptiveDateFieldPainter<C extends WebDateField, U extends WDateFieldUI<C>> extends AdaptivePainter<C, U>
+        implements IDateFieldPainter<C, U>
 {
     /**
-     * Constructs new AdaptiveDateFieldPainter for the specified painter.
+     * Constructs new {@link AdaptiveDateFieldPainter} for the specified painter.
      *
      * @param painter painter to adapt
      */

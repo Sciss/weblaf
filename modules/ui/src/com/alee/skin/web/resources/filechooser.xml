@@ -1,4 +1,4 @@
-<skin>
+<skin xmlns="http://weblookandfeel.com/XmlSkin">
 
     <!-- com.alee.laf.filechooser.WebFileChooser -->
 
@@ -7,16 +7,18 @@
         <painter />
     </style>
 
+    <!-- WebLaF-decorated file chooser dialog -->
+    <style type="rootpane" id="filechooser" extends="dialog-decorated" />
+
     <!-- Main content panel -->
     <style type="panel" id="filechooser">
 
         <!-- Toolbar -->
-        <style type="toolbar" id="decorated-bar" extends="attached">
+        <style type="toolbar" id="decorated-bar" extends="attached-north">
             <component>
                 <floatable>false</floatable>
             </component>
             <painter>
-                <spacing>0</spacing>
                 <decorations>
                     <decoration>
                         <WebShape round="0" sides="0,0,0,0" />
@@ -44,16 +46,18 @@
 
         <!-- Central panel -->
         <style type="panel" id="center">
+            <component>
+                <background>229,233,238</background>
+            </component>
 
             <!-- Central split -->
-            <style type="splitpane" id="center">
+            <style type="splitpane" id="center" extends="undecorated">
                 <component>
-                    <background>229,233,238</background>
                     <dividerSize>8</dividerSize>
                 </component>
 
                 <!-- Files tree scrollpane -->
-                <style type="scrollpane" id="nav">
+                <style type="scrollpane" id="nav" extends="hovering">
                     <painter>
                         <decorations>
                             <decoration>
@@ -64,12 +68,12 @@
                     </painter>
 
                     <!-- Files tree -->
-                    <style type="tree" id="file" extends="filetree" />
+                    <style type="tree" id="file" extends="filetree-non-opaque" />
 
                 </style>
 
                 <!-- Files list scrollpane -->
-                <style type="scrollpane" id="view">
+                <style type="scrollpane" id="view" extends="hovering">
                     <painter>
                         <decorations>
                             <decoration>
@@ -80,11 +84,11 @@
                     </painter>
 
                     <!-- Files list -->
-                    <style type="list" id="file-tiles" extends="filelist-tiles" />
-                    <style type="list" id="file-icons" extends="filelist-icons" />
+                    <style type="list" id="file-tiles" extends="filelist-tiles-non-opaque" />
+                    <style type="list" id="file-icons" extends="filelist-icons-non-opaque" />
 
                     <!-- Files table -->
-                    <style type="table" id="file" extends="filetable" />
+                    <style type="table" id="file-table" extends="filetable-non-opaque" />
 
                 </style>
 
@@ -98,7 +102,7 @@
                 <decorations>
                     <decoration>
                         <WebShape round="0" />
-                        <GradientBackground from="0,0.5" to="0,1">
+                        <GradientBackground from="0,0" to="0,0.5">
                             <color>229,233,238</color>
                             <color>white</color>
                         </GradientBackground>
@@ -107,7 +111,7 @@
             </painter>
 
             <!-- Selected files title label -->
-            <style type="label" id="selected" extends="shade" padding="0,4,0,0" />
+            <style type="label" id="selected" extends="shadow" padding="0,4,0,0" />
 
             <!-- Control buttons -->
             <style type="button" id="control" />
@@ -117,7 +121,11 @@
         </style>
 
         <!-- Files removal confirmation list -->
-        <style type="panel" id="removal" extends="white" padding="4,4,4,4" />
+        <style type="panel" id="removal" padding="4,4,4,4">
+            <component>
+                <background>white</background>
+            </component>
+        </style>
 
     </style>
 

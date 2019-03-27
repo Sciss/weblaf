@@ -17,8 +17,6 @@
 
 package com.alee.laf.tree;
 
-import com.alee.laf.tree.ITreeDropLocationPainter;
-import com.alee.laf.tree.WebTreeUI;
 import com.alee.painter.decoration.AbstractSectionDecorationPainter;
 import com.alee.painter.decoration.DecorationState;
 import com.alee.painter.decoration.IDecoration;
@@ -30,11 +28,17 @@ import java.awt.*;
 import java.util.List;
 
 /**
+ * Simple tree drop location painter based on {@link AbstractSectionDecorationPainter}.
+ * It is used within {@link TreePainter} to paint drop location on the tree.
+ *
+ * @param <C> component type
+ * @param <U> component UI type
+ * @param <D> decoration type
  * @author Mikle Garin
  */
 
-public class TreeDropLocationPainter<E extends JTree, U extends WebTreeUI, D extends IDecoration<E, D>>
-        extends AbstractSectionDecorationPainter<E, U, D> implements ITreeDropLocationPainter<E, U>
+public class TreeDropLocationPainter<C extends JTree, U extends WTreeUI, D extends IDecoration<C, D>>
+        extends AbstractSectionDecorationPainter<C, U, D> implements ITreeDropLocationPainter<C, U>
 {
     /**
      * Tree drop location to paint visual representation for.
@@ -43,7 +47,13 @@ public class TreeDropLocationPainter<E extends JTree, U extends WebTreeUI, D ext
     protected JTree.DropLocation location;
 
     @Override
-    protected List<String> getDecorationStates ()
+    public String getSectionId ()
+    {
+        return "drop.location";
+    }
+
+    @Override
+    public List<String> getDecorationStates ()
     {
         final List<String> states = super.getDecorationStates ();
         if ( location != null )
@@ -61,24 +71,10 @@ public class TreeDropLocationPainter<E extends JTree, U extends WebTreeUI, D ext
     }
 
     @Override
-    protected Rectangle adjustBounds ( final Rectangle bounds )
-    {
-        // Actual drop view bounds
-        return getDropViewBounds ( location );
-    }
-
-    @Override
-    protected boolean isPlainBackgroundPaintAllowed ( final E c )
-    {
-        // Plain background is not needed in this painter
-        return false;
-    }
-
-    @Override
-    protected boolean isDecorationPaintAllowed ( final D decoration )
+    protected boolean isDecorationAvailable ( final D decoration )
     {
         // We don't need to paint anything when drop location is not available
-        return location != null && super.isDecorationPaintAllowed ( decoration );
+        return location != null && super.isDecorationAvailable ( decoration );
     }
 
     @Override

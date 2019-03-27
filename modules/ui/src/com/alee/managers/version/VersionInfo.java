@@ -28,9 +28,8 @@ import java.io.Serializable;
  *
  * @author Mikle Garin
  */
-
 @XStreamAlias ( "VersionInfo" )
-public class VersionInfo implements Serializable
+public final class VersionInfo implements Serializable
 {
     /**
      * Full library name.

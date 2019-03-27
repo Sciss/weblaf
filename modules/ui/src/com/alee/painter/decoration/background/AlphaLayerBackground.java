@@ -18,6 +18,7 @@
 package com.alee.painter.decoration.background;
 
 import com.alee.painter.decoration.IDecoration;
+import com.alee.utils.ColorUtils;
 import com.alee.utils.ImageUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
@@ -30,15 +31,14 @@ import java.awt.image.BufferedImage;
  * Alpha layer background.
  * Fills component shape with an alpha layer -like background.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <D> decoration type
  * @param <I> background type
  * @author Mikle Garin
  */
-
 @XStreamAlias ( "AlphaLayerBackground" )
-public class AlphaLayerBackground<E extends JComponent, D extends IDecoration<E, D>, I extends AlphaLayerBackground<E, D, I>>
-        extends AbstractTextureBackground<E, D, I>
+public class AlphaLayerBackground<C extends JComponent, D extends IDecoration<C, D>, I extends AlphaLayerBackground<C, D, I>>
+        extends AbstractTextureBackground<C, D, I>
 {
     /**
      * Cells size.
@@ -58,16 +58,62 @@ public class AlphaLayerBackground<E extends JComponent, D extends IDecoration<E,
     @XStreamAsAttribute
     protected Color lightColor;
 
+    /**
+     * Returns cells size.
+     *
+     * @return cells size
+     */
+    public Dimension getSize ()
+    {
+        return size != null ? size : new Dimension ( 10, 10 );
+    }
+
+    /**
+     * Returns dark cell color.
+     *
+     * @return dark cell color
+     */
+    public Color getDarkColor ()
+    {
+        return darkColor != null ? darkColor : ColorUtils.color ( 204, 204, 204 );
+    }
+
+    /**
+     * Returns light cell color.
+     *
+     * @return light cell color
+     */
+    public Color getLightColor ()
+    {
+        return lightColor != null ? lightColor : Color.WHITE;
+    }
+
     @Override
     protected boolean isPaintable ()
     {
-        return size != null && size.width > 0 && size.height > 0 && ( darkColor != null || lightColor != null );
+        final Dimension size = getSize ();
+        return size.width > 0 && size.height > 0;
     }
 
     @Override
     protected TexturePaint getTexturePaint ( final Rectangle bounds )
     {
-        final BufferedImage image = ImageUtils.createCompatibleImage ( size.width * 2, size.height * 2, Transparency.TRANSLUCENT );
+        final BufferedImage image = createTextureImage ();
+        final Rectangle anchor = new Rectangle ( bounds.x, bounds.y, image.getWidth (), image.getHeight () );
+        return new TexturePaint ( image, anchor );
+    }
+
+    /**
+     * Returns texture image.
+     *
+     * @return texture image
+     */
+    protected BufferedImage createTextureImage ()
+    {
+        final Dimension size = getSize ();
+        final Color darkColor = getDarkColor ();
+        final Color lightColor = getLightColor ();
+        final BufferedImage image = ImageUtils.createCompatibleImage ( size.width * 2, size.height * 2, Transparency.OPAQUE );
         final Graphics2D g2d = image.createGraphics ();
         if ( darkColor != null )
         {
@@ -82,17 +128,6 @@ public class AlphaLayerBackground<E extends JComponent, D extends IDecoration<E,
             g2d.fillRect ( 0, size.height, size.width, size.height );
         }
         g2d.dispose ();
-        return new TexturePaint ( image, new Rectangle ( bounds.x, bounds.y, image.getWidth (), image.getHeight () ) );
-    }
-
-    @Override
-    public I merge ( final I background )
-    {
-        super.merge ( background );
-        //        if ( background.color != null )
-        //        {
-        //            color = background.color;
-        //        }
-        return ( I ) this;
+        return image;
     }
 }

@@ -17,33 +17,33 @@
 
 package com.alee.laf.text;
 
+import com.alee.api.jdk.Consumer;
+import com.alee.api.jdk.Objects;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.CompareUtils;
 import com.alee.utils.ReflectUtils;
 import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
-import javax.swing.plaf.basic.BasicTextFieldUI;
 import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.beans.PropertyChangeEvent;
 
 /**
- * Custom UI for JTextField component.
+ * Custom UI for {@link JTextField} component.
  *
  * @author Mikle Garin
  * @author Alexandr Zernov
  */
-
-public class WebTextFieldUI extends BasicTextFieldUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebTextFieldUI extends WTextFieldUI implements ShapeSupport, MarginSupport, PaddingSupport
 {
+    /**
+     * Input prompt text.
+     */
+    protected String inputPrompt;
+
     /**
      * Component painter.
      */
@@ -51,69 +51,37 @@ public class WebTextFieldUI extends BasicTextFieldUI implements Styleable, Shape
     protected ITextFieldPainter painter;
 
     /**
-     * Input prompt text.
-     */
-    protected String inputPrompt;
-
-    /**
      * Runtime variables.
      */
-    protected JTextField field = null;
-    protected Insets margin = null;
-    protected Insets padding = null;
-    protected JComponent leadingComponent = null;
-    protected JComponent trailingComponent = null;
+    protected transient JTextField field = null;
+    protected transient JComponent leadingComponent = null;
+    protected transient JComponent trailingComponent = null;
 
     /**
-     * Listeners.
-     */
-    protected ComponentAdapter componentResizeListener;
-
-    /**
-     * Returns an instance of the WebTextFieldUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebTextFieldUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebTextFieldUI
+     * @return instance of the {@link WebTextFieldUI}
      */
-    @SuppressWarnings ( "UnusedParameters" )
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebTextFieldUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
-        super.installUI ( c );
-
         // Saving text field reference
+        // This have to be set before calling super to make sure field reference is available
         this.field = ( JTextField ) c;
 
-        // Custom listener for leading/trailing components
-        componentResizeListener = new ComponentAdapter ()
-        {
-            @Override
-            public void componentResized ( final ComponentEvent e )
-            {
-                PainterSupport.updateBorder ( getPainter () );
-            }
-        };
+        super.installUI ( c );
 
         // Applying skin
         StyleManager.installSkin ( field );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -121,59 +89,55 @@ public class WebTextFieldUI extends BasicTextFieldUI implements Styleable, Shape
         StyleManager.uninstallSkin ( field );
 
         // Removing internal components
-        field.putClientProperty ( SwingUtils.HANDLES_ENABLE_STATE, null );
         removeLeadingComponent ();
         removeTrailingComponent ();
-        field.setLayout ( null );
+
+        super.uninstallUI ( c );
 
         // Removing field reference
         field = null;
-
-        super.uninstallUI ( c );
     }
 
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( field );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( field, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( field, painter );
     }
 
     @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( field, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( field, painter, enabled );
+    }
+
+    @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( field );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( field, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( field );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( field, padding );
     }
 
     /**
@@ -183,7 +147,7 @@ public class WebTextFieldUI extends BasicTextFieldUI implements Styleable, Shape
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -194,10 +158,10 @@ public class WebTextFieldUI extends BasicTextFieldUI implements Styleable, Shape
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( field, new DataRunnable<ITextFieldPainter> ()
+        PainterSupport.setPainter ( field, new Consumer<ITextFieldPainter> ()
         {
             @Override
-            public void run ( final ITextFieldPainter newPainter )
+            public void accept ( final ITextFieldPainter newPainter )
             {
                 WebTextFieldUI.this.painter = newPainter;
             }
@@ -205,153 +169,115 @@ public class WebTextFieldUI extends BasicTextFieldUI implements Styleable, Shape
     }
 
     @Override
-    protected void propertyChange ( final PropertyChangeEvent evt )
-    {
-        super.propertyChange ( evt );
-
-        if ( evt.getPropertyName ().equals ( WebLookAndFeel.ENABLED_PROPERTY ) )
-        {
-            SwingUtils.setEnabledRecursively ( leadingComponent, field.isEnabled () );
-            SwingUtils.setEnabledRecursively ( trailingComponent, field.isEnabled () );
-        }
-    }
-
-    /**
-     * Returns input prompt text.
-     *
-     * @return input prompt text
-     */
     public String getInputPrompt ()
     {
         return inputPrompt;
     }
 
-    /**
-     * Sets input prompt text.
-     *
-     * @param text input prompt text
-     */
+    @Override
     public void setInputPrompt ( final String text )
     {
-        if ( !CompareUtils.equals ( text, this.inputPrompt ) )
+        if ( Objects.notEquals ( text, this.inputPrompt ) )
         {
             this.inputPrompt = text;
             field.repaint ();
         }
     }
 
-    /**
-     * Returns field leading component.
-     *
-     * @return field leading component
-     */
+    @Override
     public JComponent getLeadingComponent ()
     {
         return leadingComponent;
     }
 
-    /**
-     * Sets field leading component.
-     *
-     * @param leadingComponent field leading component
-     */
-    public void setLeadingComponent ( final JComponent leadingComponent )
+    @Override
+    public JComponent setLeadingComponent ( final JComponent leadingComponent )
     {
+        // Component haven't changed
         if ( this.leadingComponent == leadingComponent )
         {
-            return;
+            return null;
         }
 
         // Removing old leading component
-        removeLeadingComponent ();
+        final JComponent old = this.leadingComponent;
+        if ( this.leadingComponent != null )
+        {
+            field.remove ( this.leadingComponent );
+            this.leadingComponent = null;
+        }
 
         // New leading component
         if ( leadingComponent != null )
         {
             this.leadingComponent = leadingComponent;
-
-            // Registering resize listener
-            this.leadingComponent.addComponentListener ( componentResizeListener );
-
-            // Adding component
-            field.add ( leadingComponent, TextFieldLayout.LEADING );
+            field.add ( leadingComponent );
         }
+
+        // Informing about leading component change
+        SwingUtils.firePropertyChanged ( field, WebLookAndFeel.LEADING_COMPONENT_PROPERTY, old, leadingComponent );
 
         // Updating layout
         field.revalidate ();
 
-        // Updating border
-        PainterSupport.updateBorder ( getPainter () );
+        return old;
     }
 
-    /**
-     * Removes field leading component.
-     */
-    public void removeLeadingComponent ()
+    @Override
+    public JComponent removeLeadingComponent ()
     {
-        if ( this.leadingComponent != null )
-        {
-            this.leadingComponent.removeComponentListener ( componentResizeListener );
-            field.remove ( this.leadingComponent );
-            this.leadingComponent = null;
-        }
+        return setLeadingComponent ( null );
     }
 
-    /**
-     * Returns field trailing component.
-     *
-     * @return field trailing component
-     */
+    @Override
     public JComponent getTrailingComponent ()
     {
         return trailingComponent;
     }
 
-    /**
-     * Sets field trailing component.
-     *
-     * @param trailingComponent field trailing component
-     */
-    public void setTrailingComponent ( final JComponent trailingComponent )
+    @Override
+    public JComponent setTrailingComponent ( final JComponent trailingComponent )
     {
+        // Component haven't changed
         if ( this.trailingComponent == trailingComponent )
         {
-            return;
+            return null;
         }
 
         // Removing old trailing component
-        removeTrailingComponent ();
+        final JComponent old = this.trailingComponent;
+        if ( this.trailingComponent != null )
+        {
+            field.remove ( this.trailingComponent );
+            this.trailingComponent = null;
+        }
 
         // New trailing component
         if ( trailingComponent != null )
         {
             this.trailingComponent = trailingComponent;
-
-            // Registering resize listener
-            this.trailingComponent.addComponentListener ( componentResizeListener );
-
-            // Adding component
-            field.add ( trailingComponent, TextFieldLayout.TRAILING );
+            field.add ( trailingComponent );
         }
+
+        // Informing about trailing component change
+        SwingUtils.firePropertyChanged ( field, WebLookAndFeel.LEADING_COMPONENT_PROPERTY, old, trailingComponent );
 
         // Updating layout
         field.revalidate ();
 
-        // Updating border
-        PainterSupport.updateBorder ( getPainter () );
+        return old;
     }
 
-    /**
-     * Removes field trailing component.
-     */
-    public void removeTrailingComponent ()
+    @Override
+    public JComponent removeTrailingComponent ()
     {
-        if ( this.trailingComponent != null )
-        {
-            this.trailingComponent.removeComponentListener ( componentResizeListener );
-            field.remove ( this.trailingComponent );
-            this.trailingComponent = null;
-        }
+        return setTrailingComponent ( null );
+    }
+
+    @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
     }
 
     @Override
@@ -365,7 +291,7 @@ public class WebTextFieldUI extends BasicTextFieldUI implements Styleable, Shape
 
             // Painting text component
             final JComponent c = getComponent ();
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 

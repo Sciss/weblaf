@@ -17,6 +17,7 @@
 
 package com.alee.laf.menu;
 
+import com.alee.api.jdk.Objects;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.combobox.WebComboBoxUI;
 import com.alee.utils.*;
@@ -25,14 +26,15 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Base painter for JPopupMenu component.
- * It is used as WebPopupMenuUI default styling.
+ * Base painter for {@link JPopupMenu} component.
+ * It is used as {@link WebPopupMenuUI} default styling.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Mikle Garin
  */
-
-public class PopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> extends AbstractPopupPainter<E, U>
-        implements IPopupMenuPainter<E, U>
+public class PopupMenuPainter<C extends JPopupMenu, U extends WPopupMenuUI> extends AbstractPopupPainter<C, U>
+        implements IPopupMenuPainter<C, U>
 {
     /**
      * todo 1. Incorrect menu placement when corner is off (spacing == shade)
@@ -50,16 +52,16 @@ public class PopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> ex
     /**
      * Runtime variables.
      */
-    protected PopupMenuType popupMenuType = null;
+    protected transient PopupMenuType popupMenuType = null;
 
     @Override
-    protected void propertyChange ( final String property, final Object oldValue, final Object newValue )
+    protected void propertyChanged ( final String property, final Object oldValue, final Object newValue )
     {
         // Perform basic actions on property changes
-        super.propertyChange ( property, oldValue, newValue );
+        super.propertyChanged ( property, oldValue, newValue );
 
         // Visibility property changes
-        if ( CompareUtils.equals ( property, WebLookAndFeel.VISIBLE_PROPERTY ) )
+        if ( Objects.equals ( property, WebLookAndFeel.VISIBLE_PROPERTY ) )
         {
             // Updating menu type
             if ( newValue == Boolean.TRUE )
@@ -100,13 +102,13 @@ public class PopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> ex
                 if ( !SystemUtils.isUnix () )
                 {
                     // Install custom popup window settings
-                    installPopupSettings ( SwingUtils.getWindowAncestor ( component ), component );
+                    installPopupSettings ( CoreSwingUtils.getWindowAncestor ( component ), component );
                 }
             }
             else
             {
                 // Uninstall custom popup window settings
-                uninstallPopupSettings ( SwingUtils.getWindowAncestor ( component ), component );
+                uninstallPopupSettings ( CoreSwingUtils.getWindowAncestor ( component ), component );
             }
         }
     }
@@ -186,16 +188,16 @@ public class PopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> ex
     }
 
     @Override
-    public Insets getBorders ()
+    protected Insets getBorder ()
     {
-        final Insets margin = super.getBorders ();
+        final Insets margin = super.getBorder ();
         margin.top += round;
         margin.bottom += round;
         return margin;
     }
 
     @Override
-    protected void paintTransparentPopup ( final Graphics2D g2d, final E popupMenu )
+    protected void paintTransparentPopup ( final Graphics2D g2d, final C popupMenu )
     {
         final Dimension menuSize = popupMenu.getSize ();
 
@@ -220,14 +222,14 @@ public class PopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> ex
      * @param popupMenu popup menu
      * @param menuSize  menu size
      */
-    protected void paintDropdownCornerFill ( final Graphics2D g2d, final E popupMenu, final Dimension menuSize )
+    protected void paintDropdownCornerFill ( final Graphics2D g2d, final C popupMenu, final Dimension menuSize )
     {
         // Checking whether corner should be filled or not
         if ( popupStyle == PopupStyle.dropdown && round == 0 )
         {
             // Check that menu item is attached to menu side
             final boolean top = cornerSide == TOP;
-            final boolean stick = top ? getBorders ().top == 0 : getBorders ().bottom == 0;
+            final boolean stick = top ? getBorder ().top == 0 : getBorder ().bottom == 0;
             if ( stick )
             {
                 // todo Implement corner support
@@ -297,14 +299,14 @@ public class PopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> ex
      * @param popupMenu popup menu to retrieve combobox UI for
      * @return combobox UI for the specified combobox popup menu
      */
-    protected WebComboBoxUI geComboBoxUI ( final E popupMenu )
+    protected WebComboBoxUI geComboBoxUI ( final C popupMenu )
     {
         final JComboBox comboBox = ReflectUtils.getFieldValueSafely ( popupMenu, "comboBox" );
         return comboBox != null && comboBox.getUI () instanceof WebComboBoxUI ? ( WebComboBoxUI ) comboBox.getUI () : null;
     }
 
     @Override
-    public Point preparePopupMenu ( final E popupMenu, final Component invoker, int x, int y )
+    public Point preparePopupMenu ( final C popupMenu, final Component invoker, int x, int y )
     {
         // Updating popup location according to popup menu UI settings
         if ( invoker != null )
@@ -314,7 +316,7 @@ public class PopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> ex
 
             // Calculating position variables
             final boolean showing = invoker.isShowing ();
-            final Point los = showing ? invoker.getLocationOnScreen () : new Point ( 0, 0 );
+            final Point los = showing ? CoreSwingUtils.locationOnScreen ( invoker ) : new Point ( 0, 0 );
             final boolean fixLocation = this.fixLocation && showing;
             final int sideWidth = getSideWidth ();
 
@@ -451,11 +453,11 @@ public class PopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> ex
             relativeCorner = 0;
         }
 
-        return p ( x, y );
+        return new Point ( x, y );
     }
 
     @Override
-    public void configurePopup ( final E popupMenu, final Component invoker, final int x, final int y, final Popup popup )
+    public void configurePopup ( final C popupMenu, final Component invoker, final int x, final int y, final Popup popup )
     {
         // Retrieve component directly from the popup
         final Component window = ReflectUtils.callMethodSafely ( popup, "getComponent" );
@@ -472,7 +474,7 @@ public class PopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> ex
      * @param window    popup menu window
      * @param popupMenu popup menu
      */
-    protected void installPopupSettings ( final Window window, final E popupMenu )
+    protected void installPopupSettings ( final Window window, final C popupMenu )
     {
         if ( window != null && shaped && SwingUtils.isHeavyWeightWindow ( window ) )
         {
@@ -511,8 +513,7 @@ public class PopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> ex
      * @param window    popup menu window
      * @param popupMenu popup menu
      */
-    @SuppressWarnings ("UnusedParameters")
-    protected void uninstallPopupSettings ( final Window window, final E popupMenu )
+    protected void uninstallPopupSettings ( final Window window, final C popupMenu )
     {
         if ( window != null && shaped && SwingUtils.isHeavyWeightWindow ( window ) )
         {

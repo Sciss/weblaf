@@ -20,6 +20,7 @@ package com.alee.managers.glasspane;
 import com.alee.extended.layout.MultiLayout;
 import com.alee.laf.panel.WebPanel;
 import com.alee.managers.style.StyleId;
+import com.alee.utils.CoreSwingUtils;
 import com.alee.utils.GraphicsUtils;
 import com.alee.utils.SwingUtils;
 import com.alee.utils.TextUtils;
@@ -30,6 +31,7 @@ import java.awt.geom.Area;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -37,9 +39,9 @@ import java.util.List;
  * stuff atop of all components visible in window/applet. It can also be used to bring your own custom features.
  *
  * @author Mikle Garin
+ * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-GlassPaneManager">How to use GlassPaneManager</a>
  * @see GlassPaneManager
  */
-
 public class WebGlassPane extends WebPanel
 {
     /**
@@ -147,7 +149,7 @@ public class WebGlassPane extends WebPanel
     @Override
     public JRootPane getRootPane ()
     {
-        return SwingUtils.getRootPane ( this );
+        return CoreSwingUtils.getRootPane ( this );
     }
 
     /**
@@ -283,7 +285,7 @@ public class WebGlassPane extends WebPanel
         }
 
         final Rectangle finalRepaintRect = repaintRect != null ? repaintRect : oldRect;
-        SwingUtilities.invokeLater ( new Runnable ()
+        CoreSwingUtils.invokeLater ( new Runnable ()
         {
             @Override
             public void run ()
@@ -313,7 +315,7 @@ public class WebGlassPane extends WebPanel
 
         if ( oldRect != null )
         {
-            SwingUtilities.invokeLater ( new Runnable ()
+            CoreSwingUtils.invokeLater ( new Runnable ()
             {
                 @Override
                 public void run ()
@@ -381,10 +383,7 @@ public class WebGlassPane extends WebPanel
      */
     public void removeHighlightedComponents ( final Component... components )
     {
-        for ( final Component component : components )
-        {
-            highlightedComponents.remove ( component );
-        }
+        highlightedComponents.removeAll ( Arrays.asList ( components ) );
         repaint ();
     }
 
@@ -395,10 +394,7 @@ public class WebGlassPane extends WebPanel
      */
     public void removeHighlightedComponents ( final List<Component> components )
     {
-        for ( final Component component : components )
-        {
-            highlightedComponents.remove ( component );
-        }
+        highlightedComponents.removeAll ( components );
         repaint ();
     }
 
@@ -474,14 +470,14 @@ public class WebGlassPane extends WebPanel
 
         if ( highlightedComponents.size () > 0 )
         {
-            final Rectangle baseBounds = SwingUtils.getRelativeBounds ( highlightBase, WebGlassPane.this );
+            final Rectangle baseBounds = CoreSwingUtils.getRelativeBounds ( highlightBase, WebGlassPane.this );
             final Area area =
                     new Area ( new Rectangle ( baseBounds.x - 1, baseBounds.y - 1, baseBounds.width + 1, baseBounds.height + 1 ) );
             for ( final Component component : highlightedComponents )
             {
                 if ( component.isShowing () )
                 {
-                    final Rectangle bounds = SwingUtils.getRelativeBounds ( component, WebGlassPane.this );
+                    final Rectangle bounds = CoreSwingUtils.getRelativeBounds ( component, WebGlassPane.this );
                     final RoundRectangle2D.Double shape =
                             new RoundRectangle2D.Double ( bounds.x - highlightSpacing, bounds.y - highlightSpacing,
                                     bounds.width + highlightSpacing * 2 - 1, bounds.height + highlightSpacing * 2 - 1, 8, 8 );

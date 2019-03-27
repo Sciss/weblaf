@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.chooser.field;
 
-import com.alee.demo.api.*;
+import com.alee.demo.api.example.*;
 import com.alee.extended.date.DateListener;
 import com.alee.extended.date.WebDateField;
 import com.alee.laf.label.WebLabel;
@@ -33,8 +33,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebDateFieldExample extends AbstractExample
+public class WebDateFieldExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -57,8 +56,9 @@ public class WebDateFieldExample extends AbstractExample
     @Override
     protected List<Preview> createPreviews ()
     {
-        final DateField e1 = new DateField ( StyleId.datefield );
-        return CollectionUtils.<Preview>asList ( e1 );
+        return CollectionUtils.<Preview>asList (
+                new DateField ( StyleId.datefield )
+        );
     }
 
     /**
@@ -77,7 +77,7 @@ public class WebDateFieldExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebDateField dateField = new WebDateField ( getStyleId () );
             dateField.addDateListener ( new DateListener ()

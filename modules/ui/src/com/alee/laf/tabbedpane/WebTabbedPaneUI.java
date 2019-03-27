@@ -17,12 +17,15 @@
 
 package com.alee.laf.tabbedpane;
 
+import com.alee.api.clone.Clone;
+import com.alee.api.jdk.Consumer;
+import com.alee.laf.WebLookAndFeel;
 import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.MergeUtils;
-import com.alee.utils.swing.DataRunnable;
+import com.alee.painter.SectionPainter;
+import com.alee.utils.SwingUtils;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -33,18 +36,13 @@ import java.util.Map;
 import java.util.Vector;
 
 /**
+ * Custom UI for {@link JTabbedPane} component.
+ *
  * @author Mikle Garin
  * @author Alexandr Zernov
  */
-
-public class WebTabbedPaneUI extends WebBasicTabbedPaneUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebTabbedPaneUI extends WTabbedPaneUI implements ShapeSupport, MarginSupport, PaddingSupport
 {
-    /**
-     * Component painter.
-     */
-    @DefaultPainter ( TabbedPanePainter.class )
-    protected ITabbedPanePainter painter;
-
     /**
      * Style settings.
      */
@@ -57,70 +55,64 @@ public class WebTabbedPaneUI extends WebBasicTabbedPaneUI implements Styleable, 
     protected boolean rotateTabInsets = WebTabbedPaneStyle.rotateTabInsets;
 
     /**
-     * Runtime variables.
+     * Component painter.
      */
-    protected final Map<Integer, Color> selectedForegroundAt = new HashMap<Integer, Color> ();
-    protected final Map<Integer, Painter> backgroundPainterAt = new HashMap<Integer, Painter> ();
-    protected Insets margin = null;
-    protected Insets padding = null;
+    @DefaultPainter ( TabbedPanePainter.class )
+    protected ITabbedPanePainter painter;
 
     /**
-     * Returns an instance of the WebTabbedPaneUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Runtime variables.
+     */
+    protected transient final Map<Integer, SectionPainter> backgroundPainterAt = new HashMap<Integer, SectionPainter> ();
+
+    /**
+     * Returns an instance of the {@link WebTabbedPaneUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebTabbedPaneUI
+     * @return instance of the {@link WebTabbedPaneUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebTabbedPaneUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
+        // Installing UI
         super.installUI ( c );
 
         // Applying skin
         StyleManager.installSkin ( tabPane );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( tabPane );
 
+        // Uninstalling UI
         super.uninstallUI ( c );
     }
 
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( tabPane );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( tabPane, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( tabPane, painter );
+    }
+
+    @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( tabPane, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( tabPane, painter, enabled );
     }
 
     /**
@@ -130,7 +122,7 @@ public class WebTabbedPaneUI extends WebBasicTabbedPaneUI implements Styleable, 
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -141,148 +133,88 @@ public class WebTabbedPaneUI extends WebBasicTabbedPaneUI implements Styleable, 
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( tabPane, new DataRunnable<ITabbedPanePainter> ()
+        PainterSupport.setPainter ( tabPane, new Consumer<ITabbedPanePainter> ()
         {
             @Override
-            public void run ( final ITabbedPanePainter newPainter )
+            public void accept ( final ITabbedPanePainter newPainter )
             {
                 WebTabbedPaneUI.this.painter = newPainter;
             }
         }, this.painter, painter, ITabbedPanePainter.class, AdaptiveTabbedPanePainter.class );
     }
 
-    public boolean isRotateTabInsets ()
-    {
-        return rotateTabInsets;
-    }
-
-    public void setRotateTabInsets ( final boolean rotateTabInsets )
-    {
-        this.rotateTabInsets = rotateTabInsets;
-    }
-
-    public Insets getContentInsets ()
-    {
-        return contentInsets;
-    }
-
-    public void setContentInsets ( final Insets contentInsets )
-    {
-        this.contentInsets = contentInsets;
-    }
-
-    public Insets getTabInsets ()
-    {
-        return tabInsets;
-    }
-
-    public void setTabInsets ( final Insets tabInsets )
-    {
-        this.tabInsets = tabInsets;
-    }
-
-    public void setSelectedForegroundAt ( final int tabIndex, final Color foreground )
-    {
-        selectedForegroundAt.put ( tabIndex, foreground );
-    }
-
-    public Color getSelectedForegroundAt ( final int tabIndex )
-    {
-        return selectedForegroundAt.get ( tabIndex );
-    }
-
-    public void setBackgroundPainterAt ( final int tabIndex, final Painter painter )
-    {
-        backgroundPainterAt.put ( tabIndex, painter );
-    }
-
-    public Painter getBackgroundPainterAt ( final int tabIndex )
-    {
-        return backgroundPainterAt.get ( tabIndex );
-    }
-
+    @Override
     public TabbedPaneStyle getTabbedPaneStyle ()
     {
         return tabbedPaneStyle;
     }
 
+    @Override
     public void setTabbedPaneStyle ( final TabbedPaneStyle tabbedPaneStyle )
     {
+        final TabbedPaneStyle old = this.tabbedPaneStyle;
         this.tabbedPaneStyle = tabbedPaneStyle;
-        PainterSupport.updateBorder ( painter );
+        SwingUtils.firePropertyChanged ( tabPane, WebLookAndFeel.TABBED_PANE_STYLE_PROPERTY, old, tabbedPaneStyle );
     }
 
-    //    private void updateRolloverTab ( MouseEvent e )
-    //    {
-    //        if ( tabPane != null )
-    //        {
-    //            int old = rolloverTab;
-    //            rolloverTab = tabForCoordinate ( tabPane, e.getX (), e.getY () );
-    //            if ( old != rolloverTab )
-    //            {
-    //                tabPane.repaint ();
-    //            }
-    //        }
-    //    }
-
-    public int getTabRunIndent ()
-    {
-        return tabRunIndent;
-    }
-
-    public void setTabRunIndent ( final int tabRunIndent )
-    {
-        this.tabRunIndent = tabRunIndent;
-    }
-
-    public int getTabOverlay ()
-    {
-        return tabOverlay;
-    }
-
-    public void setTabOverlay ( final int tabOverlay )
-    {
-        this.tabOverlay = tabOverlay;
-    }
-
+    @Override
     public TabStretchType getTabStretchType ()
     {
         return tabStretchType;
     }
 
+    @Override
     public void setTabStretchType ( final TabStretchType tabStretchType )
     {
         this.tabStretchType = tabStretchType;
     }
 
+    @Override
     public Vector<View> getHtmlViews ()
     {
         return htmlViews;
     }
 
+    @Override
     public ScrollableTabSupport getTabScroller ()
     {
         return tabScroller;
     }
 
+    @Override
     public int[] getTabRuns ()
     {
         return tabRuns;
     }
 
+    @Override
     public Rectangle[] getRects ()
     {
         return rects;
     }
 
+    @Override
     public int getMaxTabHeight ()
     {
         return maxTabHeight;
     }
 
+    @Override
     public int getMaxTabWidth ()
     {
         return maxTabWidth;
+    }
+
+    @Override
+    public SectionPainter getBackgroundPainterAt ( final int tabIndex )
+    {
+        return backgroundPainterAt.get ( tabIndex );
+    }
+
+    @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
     }
 
     @Override
@@ -290,7 +222,7 @@ public class WebTabbedPaneUI extends WebBasicTabbedPaneUI implements Styleable, 
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 
@@ -380,7 +312,7 @@ public class WebTabbedPaneUI extends WebBasicTabbedPaneUI implements Styleable, 
     @Override
     protected Insets getTabInsets ( final int tabPlacement, final int tabIndex )
     {
-        final Insets insets = MergeUtils.clone ( tabInsets );
+        final Insets insets = Clone.basic ().clone ( tabInsets );
         if ( tabIndex == 0 && tabPane.getSelectedIndex () == 0 )
         {
             // Fix for 1st element
@@ -402,27 +334,25 @@ public class WebTabbedPaneUI extends WebBasicTabbedPaneUI implements Styleable, 
     @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( tabPane );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( tabPane, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( tabPane );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( tabPane, padding );
     }
 
     //    protected void setRolloverTab ( int index )

@@ -1,4 +1,4 @@
-<skin>
+<skin xmlns="http://weblookandfeel.com/XmlSkin">
 
     <!-- com.alee.laf.table.WebTableHeader -->
 
@@ -8,24 +8,18 @@
             <opaque>true</opaque>
         </component>
         <painter>
-            <headerHeight>20</headerHeight>
-            <topLineColor>232,234,235</topLineColor>
-            <bottomLineColor>104,104,104</bottomLineColor>
+            <headerHeight>22</headerHeight>
             <topBgColor>226,226,226</topBgColor>
             <bottomBgColor>201,201,201</bottomBgColor>
-            <gridColor>176,176,176</gridColor>
-            <borderColor>170,170,170</borderColor>
+            <gridColor>170,170,170</gridColor>
         </painter>
 
         <!-- Default table header cell renderer label -->
-        <style type="label" id="renderer" extends="shade" padding="0,10,1,10">
+        <style type="label" id="renderer" extends="shadow" padding="0,2,1,2">
             <component>
                 <opaque>true</opaque>
                 <horizontalAlignment>0</horizontalAlignment>
             </component>
-            <painter>
-                <shadeColor>230,230,230</shadeColor>
-            </painter>
         </style>
 
     </style>

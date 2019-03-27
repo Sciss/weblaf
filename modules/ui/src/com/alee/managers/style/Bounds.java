@@ -17,145 +17,152 @@
 
 package com.alee.managers.style;
 
+import com.alee.painter.SectionPainter;
 import com.alee.painter.decoration.IDecoration;
-import com.alee.utils.LafUtils;
+import com.alee.utils.SwingUtils;
 
 import javax.swing.*;
 import java.awt.*;
 
 /**
- * Enumeration referncing inner component bounds types.
- * These bounds are relative to actual component bounds within its container and not to the component container bounds.
- * It is basically made for convenient retrieval of inner bounds for various painting operations.
+ * Class describing inner component bounds.
  *
  * @author Mikle Garin
+ * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
+ * @see BoundsType
+ * @see StyleManager
  */
-
-public enum Bounds
+public final class Bounds
 {
     /**
-     * Component bounds.
-     * It represents full component bounds: [0,0,w,h]
+     * Parent bounds.
+     * Usually those cover a larger area of component.
      */
-    component,
+    private final Bounds parent;
 
     /**
-     * Component bounds minus its margin.
-     * Represents bounds in which component decoration is painted: [m,m,w-m*2,h-m*2]
+     * Bounds type.
+     * Used to retrieve different painting bounds on different abstraction levels.
      */
-    margin,
+    private final BoundsType type;
 
     /**
-     * Component bounds minus its margin and decoration border width.
-     * Represents bounds in which component background is painted: [m+b,m+b,w-m*2-b*2,h-m*2-b*2]
+     * Actual bounds represented by this class instance.
+     * These bounds are always relative to component coordinates system.
      */
-    border,
+    private final Rectangle bounds;
 
     /**
-     * Components bounds minus its margin, decoration border width and padding.
-     * Represents bounds in which component content is painted: [m+b+p,m+b+p,w-m*2-b*2-p*2,h-m*2-b*2-p*2]
-     */
-    padding;
-
-    /**
-     * Returns bounds of this type for the specified component.
+     * {@link Bounds} for the whole component of the specified size.
      *
-     * @param c component to retrieve bounds for
-     * @return bounds of this type for the specified component
+     * @param dimension component size
      */
-    public Rectangle of ( final Component c )
+    public Bounds ( final Dimension dimension )
     {
-        return of ( c, new Rectangle ( 0, 0, c.getWidth (), c.getHeight () ) );
+        super ();
+        this.parent = null;
+        this.type = BoundsType.component;
+        this.bounds = new Rectangle ( 0, 0, dimension.width, dimension.height );
     }
 
     /**
-     * Returns bounds of this type for the specified component.
+     * {@link Bounds} for the whole component.
      *
-     * @param c component to retrieve bounds for
-     * @param b component painting bounds
-     * @return bounds of this type for the specified component
+     * @param component component
      */
-    public Rectangle of ( final Component c, final Rectangle b )
+    public Bounds ( final JComponent component )
     {
-        switch ( this )
-        {
-            case padding:
-            {
-                final Insets i = LafUtils.getInsets ( c );
-                if ( i != null )
-                {
-                    return new Rectangle ( b.x + i.left, b.y + i.top, b.width - i.left - i.right, b.height - i.top - i.bottom );
-                }
-                else
-                {
-                    return component.of ( c, b );
-                }
-            }
-            case border:
-            {
-                final Insets i = LafUtils.getInsets ( c );
-                if ( i != null )
-                {
-                    final Insets p = LafUtils.getPadding ( c );
-                    if ( p != null )
-                    {
-                        return new Rectangle ( b.x + i.left - p.left, b.y + i.top - p.top, b.width - i.left - i.right + p.left + p.right,
-                                b.height - i.top - i.bottom + p.top + p.bottom );
-                    }
-                    else
-                    {
-                        return padding.of ( c, b );
-                    }
-                }
-                else
-                {
-                    return component.of ( c, b );
-                }
-            }
-            case margin:
-            {
-                final Insets m = LafUtils.getMargin ( c );
-                if ( m != null )
-                {
-                    return new Rectangle ( b.x + m.left, b.y + m.top, b.width - m.left - m.right, b.height - m.top - m.bottom );
-                }
-                else
-                {
-                    return component.of ( c, b );
-                }
-            }
-            case component:
-            default:
-            {
-                return b;
-            }
-        }
+        super ();
+        this.parent = null;
+        this.type = BoundsType.component;
+        this.bounds = new Rectangle ( 0, 0, component.getWidth (), component.getHeight () );
     }
 
     /**
-     * Returns bounds of this type for the specified decoration.
+     * {@link Bounds} for the whole component with the specified (X,Y) shift.
+     * todo This is a temporary method for supporting this workaround method:
+     * todo {@link com.alee.painter.AbstractPainter#paintSection(SectionPainter, Graphics2D, Rectangle)}
      *
-     * @param c decorated component
-     * @param d decoration to retrieve bounds for
-     * @param b decoration painting bounds
-     * @return bounds of this type for the specified decoration
+     * @param component component
+     * @param x         X coordinate shift
+     * @param y         Y coordinate shift
      */
-    public Rectangle of ( final JComponent c, final IDecoration d, final Rectangle b )
+    public Bounds ( final JComponent component, final int x, final int y )
     {
-        switch ( this )
+        super ();
+        this.parent = null;
+        this.type = BoundsType.component;
+        this.bounds = new Rectangle ( x, y, component.getWidth (), component.getHeight () );
+    }
+
+    /**
+     * {@link Bounds} for the component section.
+     *
+     * @param parent parent bounds
+     * @param bounds actual bounds
+     */
+    public Bounds ( final Bounds parent, final Rectangle bounds )
+    {
+        super ();
+        this.parent = parent;
+        this.type = BoundsType.section;
+        this.bounds = bounds;
+    }
+
+    /**
+     * {@link Bounds} for the component decoration and content.
+     *
+     * @param parent     parent bounds
+     * @param type       bounds type
+     * @param component  component
+     * @param decoration painted decoration
+     */
+    public Bounds ( final Bounds parent, final BoundsType type, final JComponent component, final IDecoration decoration )
+    {
+        super ();
+        this.parent = parent;
+        this.type = type;
+        final Insets insets = decoration.isSection () ? type.insets ( component, decoration ) : type.insets ( component );
+        this.bounds = SwingUtils.shrink ( parent.get (), insets );
+    }
+
+    /**
+     * Returns bounds type.
+     *
+     * @return bounds type
+     */
+    public BoundsType type ()
+    {
+        return type;
+    }
+
+    /**
+     * Returns actual bounds.
+     *
+     * @return actual bounds
+     */
+    public Rectangle get ()
+    {
+        return bounds;
+    }
+
+    /**
+     * Return actual bounds of specific type.
+     *
+     * @param type bounds type
+     * @return actual bounds of specific type
+     */
+    public Rectangle get ( final BoundsType type )
+    {
+        Bounds bounds = this;
+        while ( bounds != null )
         {
-            case padding:
-            case border:
+            if ( bounds.type == type )
             {
-                final Insets i = d.getBorderInsets ( c );
-                return new Rectangle ( b.x + i.left, b.y + i.top, b.width - i.left - i.right, b.height - i.top - i.bottom );
+                return bounds.bounds;
             }
-            case margin:
-            case component:
-            default:
-            {
-                return b;
-            }
+            bounds = bounds.parent;
         }
+        throw new StyleException ( String.format ( "Unknown bounds type '%s' requested", type.name () ) );
     }
 }

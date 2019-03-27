@@ -18,10 +18,13 @@
 package com.alee.demo.content.window;
 
 import com.alee.demo.DemoApplication;
-import com.alee.demo.api.*;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
+import com.alee.managers.language.UILanguageManager;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
@@ -33,8 +36,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JFrameExample extends AbstractExample
+public class JFrameExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -45,7 +47,7 @@ public class JFrameExample extends AbstractExample
     @Override
     protected String getStyleFileName ()
     {
-        return "rootpane";
+        return "frame";
     }
 
     @Override
@@ -55,11 +57,18 @@ public class JFrameExample extends AbstractExample
     }
 
     @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Make Frames", "frame" );
+    }
+
+    @Override
     protected List<Preview> createPreviews ()
     {
-        final FramePreview e1 = new FramePreview ( "basic", StyleId.frame );
-        final FramePreview e2 = new FramePreview ( "decorated", StyleId.frameDecorated );
-        return CollectionUtils.<Preview>asList ( e1, e2 );
+        return CollectionUtils.<Preview>asList (
+                new FramePreview ( "basic", FeatureState.updated, StyleId.frame ),
+                new FramePreview ( "decorated", FeatureState.updated, StyleId.frameDecorated )
+        );
     }
 
     /**
@@ -71,35 +80,37 @@ public class JFrameExample extends AbstractExample
          * Constructs new style preview.
          *
          * @param id      preview ID
+         * @param state   preview feature state
          * @param styleId preview style ID
          */
-        public FramePreview ( final String id, final StyleId styleId )
+        public FramePreview ( final String id, final FeatureState state, final StyleId styleId )
         {
-            super ( JFrameExample.this, id, FeatureState.updated, styleId );
+            super ( JFrameExample.this, id, state, styleId );
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final ImageIcon icon = loadIcon ( JFrameExample.this.getId () + "/" + getId () + ".png" );
-            final WebButton showFrame = new WebButton ( getExampleLanguagePrefix () + "show", icon );
-            showFrame.addActionListener ( new ActionListener ()
+            final WebButton button = new WebButton ( getExampleLanguagePrefix () + "show" );
+            button.addActionListener ( new ActionListener ()
             {
                 @Override
                 public void actionPerformed ( final ActionEvent e )
                 {
                     final String title = getExampleLanguagePrefix () + "content";
-                    final JFrame frame = new JFrame ( title );
+                    final JFrame frame = new JFrame ();
+                    UILanguageManager.registerComponent ( frame.getRootPane (), title );
                     frame.getRootPane ().putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
                     frame.setIconImages ( WebLookAndFeel.getImages () );
                     frame.add ( new WebLabel ( title, WebLabel.CENTER ) );
                     frame.setAlwaysOnTop ( true );
                     frame.setSize ( 500, 400 );
                     frame.setLocationRelativeTo ( DemoApplication.getInstance () );
+                    frame.setDefaultCloseOperation ( WindowConstants.DISPOSE_ON_CLOSE );
                     frame.setVisible ( true );
                 }
             } );
-            return CollectionUtils.asList ( showFrame );
+            return CollectionUtils.asList ( button );
         }
     }
 }

@@ -17,10 +17,10 @@
 
 package com.alee.painter.decoration.shape;
 
+import com.alee.api.data.CompassDirection;
+import com.alee.api.jdk.Supplier;
 import com.alee.painter.decoration.WebDecoration;
-import com.alee.painter.decoration.states.CompassDirection;
 import com.alee.utils.ShapeUtils;
-import com.alee.utils.swing.DataProvider;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
@@ -31,14 +31,13 @@ import java.awt.geom.GeneralPath;
 /**
  * Arrow shape implementation.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <D> decoration type
  * @param <I> shape type
  * @author Mikle Garin
  */
-
 @XStreamAlias ( "ArrowShape" )
-public class ArrowShape<E extends JComponent, D extends WebDecoration<E, D>, I extends ArrowShape<E, D, I>> extends AbstractShape<E, D, I>
+public class ArrowShape<C extends JComponent, D extends WebDecoration<C, D>, I extends ArrowShape<C, D, I>> extends AbstractShape<C, D, I>
 {
     /**
      * Arrow corner direction.
@@ -53,25 +52,19 @@ public class ArrowShape<E extends JComponent, D extends WebDecoration<E, D>, I e
      * @param c component
      * @return corner direction
      */
-    public CompassDirection getDirection ( final E c )
+    public CompassDirection getDirection ( final C c )
     {
         return direction != null ? direction.adjust ( c.getComponentOrientation () ) : CompassDirection.north;
     }
 
     @Override
-    public Insets getBorderInsets ( final E c, final D d )
-    {
-        return null;
-    }
-
-    @Override
-    public Shape getShape ( final ShapeType type, final Rectangle bounds, final E c, final D d )
+    public Shape getShape ( final ShapeType type, final Rectangle bounds, final C c, final D d )
     {
         final CompassDirection direction = getDirection ( c );
-        return ShapeUtils.getShape ( c, "ArrowShape." + type, new DataProvider<Shape> ()
+        return ShapeUtils.getShape ( c, "ArrowShape." + type, new Supplier<Shape> ()
         {
             @Override
-            public Shape provide ()
+            public Shape get ()
             {
                 return createArrowButtonShape ( type, bounds, direction );
             }
@@ -131,19 +124,8 @@ public class ArrowShape<E extends JComponent, D extends WebDecoration<E, D>, I e
     }
 
     @Override
-    public Object[] getShapeSettings ( final Rectangle bounds, final E c, final D d )
+    public Object[] getShapeSettings ( final Rectangle bounds, final C c, final D d )
     {
         return new Object[]{ getDirection ( c ) };
-    }
-
-    @Override
-    public I merge ( final I shape )
-    {
-        super.merge ( shape );
-        if ( shape.direction != null )
-        {
-            direction = shape.direction;
-        }
-        return ( I ) this;
     }
 }

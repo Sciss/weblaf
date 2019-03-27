@@ -19,11 +19,10 @@ package com.alee.laf.table;
 
 import com.alee.laf.table.renderers.WebTableHeaderCellRenderer;
 import com.alee.managers.style.*;
-import com.alee.managers.style.Bounds;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
+import com.alee.api.jdk.Consumer;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -31,10 +30,11 @@ import javax.swing.plaf.basic.BasicTableHeaderUI;
 import java.awt.*;
 
 /**
+ * Custom UI for {@link javax.swing.table.JTableHeader} component.
+ *
  * @author Mikle Garin
  */
-
-public class WebTableHeaderUI extends BasicTableHeaderUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebTableHeaderUI extends BasicTableHeaderUI implements ShapeSupport, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -43,29 +43,17 @@ public class WebTableHeaderUI extends BasicTableHeaderUI implements Styleable, S
     protected ITableHeaderPainter painter;
 
     /**
-     * Runtime variables.
-     */
-    protected Insets margin = null;
-    protected Insets padding = null;
-
-    /**
-     * Returns an instance of the WebTableHeaderUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebTableHeaderUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebTableHeaderUI
+     * @return instance of the {@link WebTableHeaderUI}
      */
-    @SuppressWarnings ( "UnusedParameters" )
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebTableHeaderUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
@@ -75,24 +63,9 @@ public class WebTableHeaderUI extends BasicTableHeaderUI implements Styleable, S
         StyleManager.installSkin ( header );
 
         // Default renderer
-        header.setDefaultRenderer ( new WebTableHeaderCellRenderer ()
-        {
-            @Override
-            public Component getTableCellRendererComponent ( final JTable table, final Object value, final boolean isSelected,
-                                                             final boolean hasFocus, final int row, final int column )
-            {
-                final JLabel renderer = ( JLabel ) super.getTableCellRendererComponent ( table, value, isSelected, hasFocus, row, column );
-                renderer.setHorizontalAlignment ( JLabel.CENTER );
-                return renderer;
-            }
-        } );
+        header.setDefaultRenderer ( new WebTableHeaderCellRenderer.UIResource () );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -103,47 +76,45 @@ public class WebTableHeaderUI extends BasicTableHeaderUI implements Styleable, S
     }
 
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( header );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( header, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( header, painter );
     }
 
     @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( header, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( header, painter, enabled );
+    }
+
+    @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( header );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( header, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( header );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( header, padding );
     }
 
     /**
@@ -153,7 +124,7 @@ public class WebTableHeaderUI extends BasicTableHeaderUI implements Styleable, S
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -164,14 +135,20 @@ public class WebTableHeaderUI extends BasicTableHeaderUI implements Styleable, S
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( header, new DataRunnable<ITableHeaderPainter> ()
+        PainterSupport.setPainter ( header, new Consumer<ITableHeaderPainter> ()
         {
             @Override
-            public void run ( final ITableHeaderPainter newPainter )
+            public void accept ( final ITableHeaderPainter newPainter )
             {
                 WebTableHeaderUI.this.painter = newPainter;
             }
         }, this.painter, painter, ITableHeaderPainter.class, AdaptiveTableHeaderPainter.class );
+    }
+
+    @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
     }
 
     @Override
@@ -180,7 +157,7 @@ public class WebTableHeaderUI extends BasicTableHeaderUI implements Styleable, S
         if ( painter != null )
         {
             painter.prepareToPaint ( rendererPane );
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 

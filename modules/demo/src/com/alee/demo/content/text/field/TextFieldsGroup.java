@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.text.field;
 
-import com.alee.demo.api.AbstractExampleGroup;
+import com.alee.demo.api.example.AbstractExampleGroup;
 import com.alee.utils.CollectionUtils;
 
 import java.util.List;
@@ -37,7 +37,13 @@ public class TextFieldsGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleClasses ()
     {
-        return CollectionUtils.<Class>asList ( JTextFieldExample.class, WebTextFieldExample.class, JPasswordFieldExample.class,
-                WebPasswordFieldExample.class, JFormattedTextFieldExample.class, WebFormattedTextFieldExample.class );
+        return CollectionUtils.<Class>asList (
+                JTextFieldExample.class,
+                WebTextFieldExample.class,
+                JPasswordFieldExample.class,
+                WebPasswordFieldExample.class,
+                JFormattedTextFieldExample.class,
+                WebFormattedTextFieldExample.class
+        );
     }
 }

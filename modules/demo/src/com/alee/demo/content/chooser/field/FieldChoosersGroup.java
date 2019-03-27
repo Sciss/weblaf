@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.chooser.field;
 
-import com.alee.demo.api.AbstractExampleGroup;
+import com.alee.demo.api.example.AbstractExampleGroup;
 import com.alee.utils.CollectionUtils;
 
 import java.util.List;
@@ -37,6 +37,10 @@ public class FieldChoosersGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleClasses ()
     {
-        return CollectionUtils.<Class>asList ( WebDateFieldExample.class, WebColorChooserFieldExample.class );
+        return CollectionUtils.<Class>asList (
+                WebDateFieldExample.class,
+                WebColorChooserFieldExample.class,
+                WebPathFieldExample.class
+        );
     }
 }

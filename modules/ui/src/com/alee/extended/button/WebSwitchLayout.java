@@ -20,8 +20,8 @@ package com.alee.extended.button;
 import com.alee.extended.layout.AbstractLayoutManager;
 
 import java.awt.*;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 /**
  * Special layout for {@link com.alee.extended.button.WebSwitch} component.
@@ -35,7 +35,7 @@ public class WebSwitchLayout extends AbstractLayoutManager
     public static final String RIGHT = "RIGHT";
     public static final String GRIPPER = "GRIPPER";
 
-    private final Map<Component, String> constraints = new WeakHashMap<Component, String> ();
+    private final Map<Component, String> constraints = new HashMap<Component, String> ();
 
     @Override
     public void addComponent ( final Component component, final Object constraints )
@@ -55,7 +55,7 @@ public class WebSwitchLayout extends AbstractLayoutManager
     }
 
     @Override
-    public Dimension preferredLayoutSize ( final Container parent )
+    public Dimension preferredLayoutSize ( final Container container )
     {
         int maxWidth = 0;
         int maxHeight = 0;
@@ -65,16 +65,16 @@ public class WebSwitchLayout extends AbstractLayoutManager
             maxWidth = Math.max ( ps.width, maxWidth );
             maxHeight = Math.max ( ps.height, maxHeight );
         }
-        final Insets insets = parent.getInsets ();
+        final Insets insets = container.getInsets ();
         return new Dimension ( insets.left + maxWidth * 2 + insets.right, insets.top + maxHeight + insets.bottom );
     }
 
     @Override
-    public void layoutContainer ( final Container parent )
+    public void layoutContainer ( final Container container )
     {
-        if ( parent instanceof WebSwitch )
+        if ( container instanceof WebSwitch )
         {
-            final WebSwitch wswitch = ( WebSwitch ) parent;
+            final WebSwitch wswitch = ( WebSwitch ) container;
             final boolean ltr = wswitch.getComponentOrientation ().isLeftToRight ();
             final Insets insets = wswitch.getInsets ();
             final int width = wswitch.getWidth () - insets.left - insets.right;

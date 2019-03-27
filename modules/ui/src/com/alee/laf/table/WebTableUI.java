@@ -17,20 +17,20 @@
 
 package com.alee.laf.table;
 
+import com.alee.api.data.Corner;
+import com.alee.api.jdk.Consumer;
+import com.alee.extended.canvas.WebCanvas;
 import com.alee.laf.WebLookAndFeel;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.scroll.ScrollCornerProvider;
+import com.alee.laf.scroll.ScrollPaneCornerProvider;
 import com.alee.laf.table.editors.WebBooleanEditor;
 import com.alee.laf.table.editors.WebDateEditor;
 import com.alee.laf.table.editors.WebGenericEditor;
 import com.alee.laf.table.editors.WebNumberEditor;
 import com.alee.laf.table.renderers.*;
 import com.alee.managers.style.*;
-import com.alee.managers.style.Bounds;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -42,12 +42,11 @@ import java.beans.PropertyChangeListener;
 import java.util.Date;
 
 /**
- * Custom UI for JTable component.
+ * Custom UI for {@link JTable} component.
  *
  * @author Mikle Garin
  */
-
-public class WebTableUI extends BasicTableUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport, ScrollCornerProvider
+public class WebTableUI extends BasicTableUI implements ShapeSupport, MarginSupport, PaddingSupport, ScrollPaneCornerProvider
 {
     /**
      * Component painter.
@@ -58,48 +57,42 @@ public class WebTableUI extends BasicTableUI implements Styleable, ShapeProvider
     /**
      * Listeners.
      */
-    protected PropertyChangeListener propertyChangeListener;
+    protected transient PropertyChangeListener propertyChangeListener;
 
     /**
-     * Runtime variables.
-     */
-    protected Insets margin = null;
-    protected Insets padding = null;
-
-    /**
-     * Returns an instance of the WebTreeUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebTableUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebTreeUI
+     * @return instance of the {@link WebTableUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebTableUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
         super.installUI ( c );
 
-        // todo Save and restore old renderers/editors on uninstall
-
         // Configuring default renderers
-        table.setDefaultRenderer ( Object.class, new WebTableCellRenderer () );
-        table.setDefaultRenderer ( Number.class, new WebNumberRenderer () );
-        table.setDefaultRenderer ( Double.class, new WebDoubleRenderer () );
-        table.setDefaultRenderer ( Float.class, new WebDoubleRenderer () );
-        table.setDefaultRenderer ( Date.class, new WebDateRenderer () );
-        table.setDefaultRenderer ( Icon.class, new WebIconRenderer () );
-        table.setDefaultRenderer ( ImageIcon.class, new WebIconRenderer () );
-        table.setDefaultRenderer ( Boolean.class, new WebBooleanRenderer () );
+        table.setDefaultRenderer ( Object.class,
+                new WebTableCellRenderer.UIResource<Object, JTable, TableCellParameters<Object, JTable>> () );
+        table.setDefaultRenderer ( Number.class,
+                new WebTableNumberCellRenderer.UIResource<Number, JTable, TableCellParameters<Number, JTable>> () );
+        table.setDefaultRenderer ( Double.class,
+                new WebTableDoubleCellRenderer.UIResource<Double, JTable, TableCellParameters<Double, JTable>> () );
+        table.setDefaultRenderer ( Float.class,
+                new WebTableFloatCellRenderer.UIResource<Float, JTable, TableCellParameters<Float, JTable>> () );
+        table.setDefaultRenderer ( Date.class,
+                new WebTableDateCellRenderer.UIResource<Date, JTable, TableCellParameters<Date, JTable>> () );
+        table.setDefaultRenderer ( Icon.class,
+                new WebTableIconCellRenderer.UIResource<Icon, JTable, TableCellParameters<Icon, JTable>> () );
+        table.setDefaultRenderer ( ImageIcon.class,
+                new WebTableIconCellRenderer.UIResource<ImageIcon, JTable, TableCellParameters<ImageIcon, JTable>> () );
+        table.setDefaultRenderer ( Boolean.class,
+                new WebTableBooleanCellRenderer.UIResource<JTable, TableCellParameters<Boolean, JTable>> () );
         // todo Additional renderers:
         // table.setDefaultRenderer ( Dimension.class,  );
         // table.setDefaultRenderer ( Point.class,  );
@@ -120,18 +113,13 @@ public class WebTableUI extends BasicTableUI implements Styleable, ShapeProvider
         // table.setDefaultEditor ( List.class,  );
 
         // Table header change listener
+        updateTableHeaderStyleId ();
         propertyChangeListener = new PropertyChangeListener ()
         {
             @Override
             public void propertyChange ( final PropertyChangeEvent evt )
             {
-                // Header might be null so we should guard against it here
-                final JTableHeader header = table.getTableHeader ();
-                if ( header != null )
-                {
-                    // Pairing table header style with table as parent
-                    StyleId.tableHeader.at ( table ).set ( header );
-                }
+                updateTableHeaderStyleId ();
             }
         };
         table.addPropertyChangeListener ( WebLookAndFeel.TABLE_HEADER_PROPERTY, propertyChangeListener );
@@ -140,11 +128,6 @@ public class WebTableUI extends BasicTableUI implements Styleable, ShapeProvider
         StyleManager.installSkin ( table );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -158,48 +141,61 @@ public class WebTableUI extends BasicTableUI implements Styleable, ShapeProvider
         super.uninstallUI ( c );
     }
 
-    @Override
-    public StyleId getStyleId ()
+    /**
+     * Performs table header style ID update.
+     * This method helps to keep header style ID in sync with table style.
+     */
+    protected void updateTableHeaderStyleId ()
     {
-        return StyleManager.getStyleId ( table );
+        // Header might be null so we should guard against it here
+        final JTableHeader header = table.getTableHeader ();
+        if ( header != null )
+        {
+            // Pairing table header style with table as parent
+            StyleId.tableHeader.at ( table ).set ( header );
+        }
     }
 
     @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( table, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( table, painter );
     }
 
     @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( table, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( table, painter, enabled );
+    }
+
+    @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( table );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( table, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( table );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( table, padding );
     }
 
     /**
@@ -209,7 +205,7 @@ public class WebTableUI extends BasicTableUI implements Styleable, ShapeProvider
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -220,10 +216,10 @@ public class WebTableUI extends BasicTableUI implements Styleable, ShapeProvider
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( table, new DataRunnable<ITablePainter> ()
+        PainterSupport.setPainter ( table, new Consumer<ITablePainter> ()
         {
             @Override
-            public void run ( final ITablePainter newPainter )
+            public void accept ( final ITablePainter newPainter )
             {
                 WebTableUI.this.painter = newPainter;
             }
@@ -231,9 +227,15 @@ public class WebTableUI extends BasicTableUI implements Styleable, ShapeProvider
     }
 
     @Override
-    public JComponent getCorner ( final String key )
+    public JComponent getCorner ( final Corner type )
     {
-        return JScrollPane.UPPER_TRAILING_CORNER.equals ( key ) ? new WebPanel ( StyleId.tableCorner.at ( table ) ) : null;
+        return type == Corner.upperTrailing ? new WebCanvas ( StyleId.tableCorner.at ( table ), type.name () ) : null;
+    }
+
+    @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
     }
 
     @Override
@@ -242,7 +244,7 @@ public class WebTableUI extends BasicTableUI implements Styleable, ShapeProvider
         if ( painter != null )
         {
             painter.prepareToPaint ( rendererPane );
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 

@@ -29,13 +29,17 @@ import java.util.Map;
  *
  * @author Mikle Garin
  */
-
 public class WebCheckBoxListCellRenderer implements ListCellRenderer
 {
     /**
+     * todo 1. Revamp according to {@link com.alee.laf.list.WebListCellRenderer} implementation
+     * todo 2. Provide a UIResource instance within UI by default
+     */
+
+    /**
      * Checkbox list elements cache.
      */
-    protected Map<String, WebCheckBoxListElement> elements = new HashMap<String, WebCheckBoxListElement> ();
+    protected final Map<String, WebCheckBoxListElement> elements;
 
     /**
      * Constructs default checkbox list cell renderer.
@@ -43,6 +47,7 @@ public class WebCheckBoxListCellRenderer implements ListCellRenderer
     public WebCheckBoxListCellRenderer ()
     {
         super ();
+        elements = new HashMap<String, WebCheckBoxListElement> ();
     }
 
     /**

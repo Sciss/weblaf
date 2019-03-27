@@ -18,7 +18,6 @@
 package com.alee.laf.rootpane;
 
 import com.alee.extended.layout.AbstractLayoutManager;
-import com.alee.laf.grouping.GroupPane;
 import com.alee.utils.MathUtils;
 
 import javax.swing.*;
@@ -29,33 +28,32 @@ import java.awt.*;
  *
  * @author Mikle Garin
  */
-
 public class WebRootPaneLayout extends AbstractLayoutManager
 {
     @Override
-    public Dimension preferredLayoutSize ( final Container parent )
+    public Dimension preferredLayoutSize ( final Container container )
     {
-        return calculateSize ( parent, true );
+        return calculateSize ( container, true );
     }
 
     @Override
-    public Dimension minimumLayoutSize ( final Container parent )
+    public Dimension minimumLayoutSize ( final Container container )
     {
-        return calculateSize ( parent, false );
+        return calculateSize ( container, false );
     }
 
     @Override
-    public void layoutContainer ( final Container parent )
+    public void layoutContainer ( final Container container )
     {
-        final JRootPane root = ( JRootPane ) parent;
+        final JRootPane root = ( JRootPane ) container;
         final WebRootPaneUI rootUI = ( WebRootPaneUI ) root.getUI ();
-        final Insets i = parent.getInsets ();
-        final Dimension s = parent.getSize ();
+        final Insets i = container.getInsets ();
+        final Dimension s = container.getSize ();
         final int w = s.width - i.right - i.left;
         final int h = s.height - i.top - i.bottom;
         final boolean ltr = root.getComponentOrientation ().isLeftToRight ();
 
-        final GroupPane windowButtons = rootUI.getButtonsPanel ();
+        final JComponent windowButtons = rootUI.getButtonsPanel ();
         final JComponent titleComponent = rootUI.getTitleComponent ();
         final JMenuBar menuBar = root.getJMenuBar ();
         final boolean showWindowButtons = windowButtons != null && rootUI.isDisplayWindowButtons () &&
@@ -63,14 +61,15 @@ public class WebRootPaneLayout extends AbstractLayoutManager
         final boolean showTitleComponent = titleComponent != null && rootUI.isDisplayTitleComponent ();
         final boolean showMenuBar = menuBar != null && rootUI.isDisplayMenuBar ();
 
-        int nextY = 0;
+        // Extra height taken by root pane elements
+        int extraHeight = 0;
 
         // Placing window buttons
         int buttonsWidth = 0;
         if ( showWindowButtons )
         {
             // Moving buttons to top layer
-            parent.setComponentZOrder ( windowButtons, 0 );
+            container.setComponentZOrder ( windowButtons, 0 );
 
             // Placing buttons properly
             final Dimension ps = windowButtons.getPreferredSize ();
@@ -90,7 +89,7 @@ public class WebRootPaneLayout extends AbstractLayoutManager
             final Dimension ps = titleComponent.getPreferredSize ();
             titleComponent.setVisible ( true );
             titleComponent.setBounds ( ltr ? i.left : i.left + buttonsWidth, i.top, w - buttonsWidth, ps.height );
-            nextY += ps.height;
+            extraHeight += ps.height;
         }
         else if ( titleComponent != null )
         {
@@ -101,20 +100,33 @@ public class WebRootPaneLayout extends AbstractLayoutManager
         final JLayeredPane layeredPane = root.getLayeredPane ();
         if ( layeredPane != null )
         {
-            layeredPane.setBounds ( i.left, i.top, w, h );
+            layeredPane.setBounds ( 0, 0, s.width, s.height );
+            // layeredPane.setBounds ( i.left, i.top, w, h );
         }
 
         // Placing menu bar
+        // Note that it is actually placed within JLayeredPane and not JRootPane
+        // So we need to adjust coordinates according to JLayeredPane position
         if ( showMenuBar )
         {
             final Dimension mbd = menuBar.getPreferredSize ();
             menuBar.setVisible ( true );
-            menuBar.setBounds ( 0, nextY, w, mbd.height );
-            nextY += mbd.height;
+            menuBar.setBounds ( i.left, i.top + extraHeight, w, mbd.height );
+            extraHeight += mbd.height;
         }
         else if ( menuBar != null )
         {
             menuBar.setVisible ( false );
+        }
+
+        // Placing content pane
+        // Note that it is actually placed within JLayeredPane and not JRootPane
+        // So we need to adjust coordinates according to JLayeredPane position
+        final Container contentPane = root.getContentPane ();
+        if ( contentPane != null )
+        {
+            final int contentHeight = h > extraHeight ? h - extraHeight : 0;
+            contentPane.setBounds ( i.left, i.top + extraHeight, w, contentHeight );
         }
 
         // Placing glass pane
@@ -123,28 +135,22 @@ public class WebRootPaneLayout extends AbstractLayoutManager
         {
             glassPane.setBounds ( i.left, i.top, w, h );
         }
-
-        final Container contentPane = root.getContentPane ();
-        if ( contentPane != null )
-        {
-            contentPane.setBounds ( 0, nextY, w, h < nextY ? 0 : h - nextY );
-        }
     }
 
     /**
      * Returns layout size for various cases.
      *
-     * @param parent    layout container
+     * @param container layout container
      * @param preferred whether return preferred size or not
      * @return layout size for various cases
      */
-    private Dimension calculateSize ( final Container parent, final boolean preferred )
+    private Dimension calculateSize ( final Container container, final boolean preferred )
     {
-        final Insets i = parent.getInsets ();
-        final JRootPane root = ( JRootPane ) parent;
+        final Insets i = container.getInsets ();
+        final JRootPane root = ( JRootPane ) container;
         final WebRootPaneUI rootUI = ( WebRootPaneUI ) root.getUI ();
 
-        final GroupPane windowButtons = rootUI.getButtonsPanel ();
+        final JComponent windowButtons = rootUI.getButtonsPanel ();
         final JComponent titleComponent = rootUI.getTitleComponent ();
         final JMenuBar menuBar = root.getJMenuBar ();
         final boolean showWindowButtons = windowButtons != null && rootUI.isDisplayWindowButtons () &&

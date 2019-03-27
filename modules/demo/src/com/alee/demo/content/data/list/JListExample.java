@@ -17,7 +17,9 @@
 
 package com.alee.demo.content.data.list;
 
-import com.alee.demo.api.*;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
@@ -29,8 +31,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JListExample extends AbstractExample
+public class JListExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -51,11 +52,18 @@ public class JListExample extends AbstractExample
     }
 
     @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Use Lists", "list" );
+    }
+
+    @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicList basic = new BasicList ( StyleId.list );
-        final ScrollableList scrollable = new ScrollableList ( StyleId.list );
-        return CollectionUtils.<Preview>asList ( basic, scrollable );
+        return CollectionUtils.<Preview>asList (
+                new BasicList ( StyleId.list ),
+                new ScrollableList ( StyleId.list )
+        );
     }
 
     /**
@@ -74,7 +82,7 @@ public class JListExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JList list = new JList ( createShortData () );
             list.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
@@ -98,7 +106,7 @@ public class JListExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JList list = new JList ( createLongData () );
             list.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );

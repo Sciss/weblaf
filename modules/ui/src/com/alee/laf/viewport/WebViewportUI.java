@@ -17,26 +17,27 @@
 
 package com.alee.laf.viewport;
 
-import com.alee.managers.style.*;
+import com.alee.api.jdk.Consumer;
+import com.alee.managers.style.Bounds;
+import com.alee.managers.style.ShapeSupport;
+import com.alee.managers.style.StyleManager;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
-import javax.swing.plaf.basic.BasicViewportUI;
 import java.awt.*;
 
 /**
- * Custom UI for JViewport component.
- * JViewport is an unique component that doesn't allow any borders to be set thus it doesn't support margin or padding.
+ * Custom UI for {@link JViewport} component.
+ * {@link JViewport} is an unique component that doesn't allow any borders to be set thus it doesn't support margin or padding.
  *
+ * @param <C> component type
  * @author Mikle Garin
  * @author Alexandr Zernov
  */
-
-public class WebViewportUI extends BasicViewportUI implements Styleable, ShapeProvider
+public class WebViewportUI<C extends JViewport> extends WViewportUI<C> implements ShapeSupport
 {
     /**
      * Component painter.
@@ -45,74 +46,57 @@ public class WebViewportUI extends BasicViewportUI implements Styleable, ShapePr
     protected IViewportPainter painter;
 
     /**
-     * Runtime variables.
-     */
-    protected JViewport viewport = null;
-
-    /**
-     * Returns an instance of the WebViewportUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebViewportUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebViewportUI
+     * @return instance of the {@link WebViewportUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebViewportUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
+        // Installing UI
         super.installUI ( c );
-
-        // Saving separator to local variable
-        viewport = ( JViewport ) c;
 
         // Applying skin
         StyleManager.installSkin ( viewport );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( viewport );
 
-        // Cleaning up reference
-        viewport = null;
+        // Resetting layout to default used within JViewport
+        // This update will ensure that we properly cleanup custom layout
+        viewport.setLayout ( new ViewportLayout () );
 
         // Uninstalling UI
         super.uninstallUI ( c );
     }
 
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( viewport );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( viewport, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( viewport, painter );
+    }
+
+    @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( viewport, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( viewport, painter, enabled );
     }
 
     /**
@@ -122,7 +106,7 @@ public class WebViewportUI extends BasicViewportUI implements Styleable, ShapePr
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -133,10 +117,10 @@ public class WebViewportUI extends BasicViewportUI implements Styleable, ShapePr
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( viewport, new DataRunnable<IViewportPainter> ()
+        PainterSupport.setPainter ( viewport, new Consumer<IViewportPainter> ()
         {
             @Override
-            public void run ( final IViewportPainter newPainter )
+            public void accept ( final IViewportPainter newPainter )
             {
                 WebViewportUI.this.painter = newPainter;
             }
@@ -144,13 +128,31 @@ public class WebViewportUI extends BasicViewportUI implements Styleable, ShapePr
     }
 
     @Override
-         public void paint ( final Graphics g, final JComponent c )
-         {
-             if ( painter != null )
-             {
-                 painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
-             }
-         }
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
+    }
+
+    @Override
+    public int getBaseline ( final JComponent c, final int width, final int height )
+    {
+        return PainterSupport.getBaseline ( c, this, painter, width, height );
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
+    {
+        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+    }
+
+    @Override
+    public void paint ( final Graphics g, final JComponent c )
+    {
+        if ( painter != null )
+        {
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
+        }
+    }
 
     @Override
     public Dimension getPreferredSize ( final JComponent c )

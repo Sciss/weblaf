@@ -17,7 +17,10 @@
 
 package com.alee.demo.content.chooser.dialog;
 
-import com.alee.demo.api.*;
+import com.alee.demo.DemoApplication;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.laf.button.WebButton;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
@@ -31,8 +34,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JColorChooserExample extends AbstractExample
+public class JColorChooserExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -53,9 +55,17 @@ public class JColorChooserExample extends AbstractExample
     }
 
     @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Use Color Choosers", "colorchooser" );
+    }
+
+    @Override
     protected List<Preview> createPreviews ()
     {
-        return CollectionUtils.<Preview>asList ( new ColorChooserDialog ( StyleId.textfield ) );
+        return CollectionUtils.<Preview>asList (
+                new ColorChooserDialog ( StyleId.textfield )
+        );
     }
 
     /**
@@ -74,17 +84,16 @@ public class JColorChooserExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final WebButton showChooser = new WebButton ( "Show color chooser", new ActionListener ()
+            return CollectionUtils.asList ( new WebButton ( "Show color chooser", new ActionListener ()
             {
                 @Override
                 public void actionPerformed ( final ActionEvent e )
                 {
-                    JColorChooser.showDialog ( ( Component ) e.getSource (), null, Color.WHITE );
+                    JColorChooser.showDialog ( DemoApplication.getInstance (), null, Color.WHITE );
                 }
-            } );
-            return CollectionUtils.asList ( showChooser );
+            } ) );
         }
     }
 }

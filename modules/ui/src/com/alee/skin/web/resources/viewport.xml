@@ -1,4 +1,4 @@
-<skin>
+<skin xmlns="http://weblookandfeel.com/XmlSkin">
 
     <!-- com.alee.laf.viewport.WebViewport -->
 
@@ -6,9 +6,23 @@
     <style type="viewport">
         <component>
             <opaque>false</opaque>
-            <background>237,237,237</background>
+            <layout class="WebViewportLayout$UIResource" />
         </component>
-        <painter />
+        <painter>
+            <decorations>
+                <decoration>
+                    <BoundsShape />
+                    <ColorBackground color="white" />
+                </decoration>
+            </decorations>
+        </painter>
+    </style>
+
+    <!-- Transparent viewport -->
+    <style type="viewport" id="transparent">
+        <painter>
+            <decorations overwrite="true" />
+        </painter>
     </style>
 
 </skin>

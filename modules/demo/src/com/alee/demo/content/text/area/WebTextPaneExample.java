@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.text.area;
 
-import com.alee.demo.api.*;
+import com.alee.demo.api.example.*;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.text.WebTextPane;
 import com.alee.managers.style.StyleId;
@@ -29,8 +29,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebTextPaneExample extends AbstractExample
+public class WebTextPaneExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -53,9 +52,10 @@ public class WebTextPaneExample extends AbstractExample
     @Override
     protected List<Preview> createPreviews ()
     {
-        final PromptPane e1 = new PromptPane ( "prompt", StyleId.textpane );
-        final DecoratedPane e2 = new DecoratedPane ( "decorated", StyleId.textpaneDecorated );
-        return CollectionUtils.<Preview>asList ( e1, e2 );
+        return CollectionUtils.<Preview>asList (
+                new PromptPane ( "prompt", StyleId.textpane ),
+                new DecoratedPane ( "decorated", StyleId.textpaneDecorated )
+        );
     }
 
     /**
@@ -75,7 +75,7 @@ public class WebTextPaneExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebTextPane textPane = new WebTextPane ( getStyleId () );
             textPane.setInputPrompt ( getPreviewLanguagePrefix () + "prompt" );
@@ -100,7 +100,7 @@ public class WebTextPaneExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebTextPane textPane = new WebTextPane ( getStyleId () );
             textPane.setText ( "Sample\nmultiline\ntext" );

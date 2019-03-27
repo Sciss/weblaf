@@ -17,11 +17,12 @@
 
 package com.alee.laf.scroll;
 
-import com.alee.global.StyleConstants;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.AbstractPainter;
 import com.alee.utils.ColorUtils;
 import com.alee.utils.GraphicsUtils;
 import com.alee.utils.MathUtils;
+import com.alee.utils.SwingUtils;
 import com.alee.utils.swing.WebTimer;
 
 import javax.swing.*;
@@ -32,17 +33,22 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 /**
- * Basic painter for JScrollBar component.
- * It is used as WebScrollBarUI default painter.
+ * Basic painter for {@link JScrollBar} component.
+ * It is used as {@link WebScrollBarUI} default painter.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @author Mikle Garin
  */
 
-public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> extends AbstractPainter<E, U>
-        implements IScrollBarPainter<E, U>
+public class ScrollBarPainter<C extends JScrollBar, U extends WScrollBarUI> extends AbstractPainter<C, U>
+        implements IScrollBarPainter<C, U>
 {
+    /**
+     * todo 1. Split into proper AbstractDecorationPainter & AbstractSectionDecorationPainter implementations
+     * todo 2. Add extra states (provided when scroll bar is inside of a JScrollPane) indicating whether opposite bar is visible or not
+     */
+
     /**
      * Style settings.
      */
@@ -63,31 +69,31 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
     /**
      * Listeners.
      */
-    protected MouseAdapter mouseAdapter;
+    protected transient MouseAdapter mouseAdapter;
 
     /**
      * Runtime variables.
      */
-    protected boolean animated;
-    protected WebTimer rolloverAnimator;
-    protected float rolloverState;
-    protected boolean rollover;
-    protected boolean pressed;
-    protected boolean dragged;
+    protected transient boolean animated;
+    protected transient WebTimer rolloverAnimator;
+    protected transient float rolloverState;
+    protected transient boolean rollover;
+    protected transient boolean pressed;
+    protected transient boolean dragged;
 
     /**
      * Painting variables.
      */
-    protected Rectangle trackBounds;
-    protected Rectangle thumbBounds;
-    protected Insets thumbMarginR;
-    protected Insets thumbMarginHL;
-    protected Insets thumbMarginHR;
+    protected transient Rectangle trackBounds;
+    protected transient Rectangle thumbBounds;
+    protected transient Insets thumbMarginR;
+    protected transient Insets thumbMarginHL;
+    protected transient Insets thumbMarginHR;
 
     @Override
-    public void install ( final E c, final U ui )
+    protected void installPropertiesAndListeners ()
     {
-        super.install ( c, ui );
+        super.installPropertiesAndListeners ();
 
         // This styling is animated
         animated = true;
@@ -110,13 +116,13 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
             @Override
             public void mouseEntered ( final MouseEvent e )
             {
-                setRollover ( thumbBounds.contains ( e.getPoint () ) );
+                setRollover ( thumbBounds != null && thumbBounds.contains ( e.getPoint () ) );
             }
 
             @Override
             public void mouseMoved ( final MouseEvent e )
             {
-                setRollover ( thumbBounds.contains ( e.getPoint () ) );
+                setRollover ( thumbBounds != null && thumbBounds.contains ( e.getPoint () ) );
             }
 
             @Override
@@ -130,13 +136,13 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
     }
 
     @Override
-    public void uninstall ( final E c, final U ui )
+    protected void uninstallPropertiesAndListeners ()
     {
         // Removing listeners
         component.removeMouseListener ( mouseAdapter );
         component.removeMouseMotionListener ( mouseAdapter );
 
-        super.uninstall ( c, ui );
+        super.uninstallPropertiesAndListeners ();
     }
 
     /**
@@ -173,7 +179,7 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
                 {
                     if ( rolloverAnimator == null )
                     {
-                        rolloverAnimator = new WebTimer ( StyleConstants.fps36, new ActionListener ()
+                        rolloverAnimator = new WebTimer ( SwingUtils.frameRateDelay ( 36 ), new ActionListener ()
                         {
                             @Override
                             public void actionPerformed ( final ActionEvent e )
@@ -248,30 +254,33 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
     @Override
     public Boolean isOpaque ()
     {
-        return this.ui.isPaintTrack ();
+        return this.ui.isDisplayTrack ();
     }
 
     @Override
-    public Insets getBorders ()
+    protected Insets getBorder ()
     {
-        if ( ui.isPaintTrack () )
+        final Insets border;
+        if ( ui.isDisplayTrack () )
         {
             // Additional 1px border at scroll bar side
             // Orientation will be taken into account by the UI itself
             final boolean hor = component.getOrientation () == Adjustable.HORIZONTAL;
-            return i ( hor ? 1 : 0, hor ? 0 : 1, 0, 0 );
+            border = new Insets ( hor ? 1 : 0, hor ? 0 : 1, 0, 0 );
         }
         else
         {
-            return super.getBorders ();
+            // Using default border
+            border = super.getBorder ();
         }
+        return border;
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E scrollbar, final U ui )
+    public void paint ( final Graphics2D g2d, final C scrollbar, final U ui, final Bounds bounds )
     {
         final Object aa = GraphicsUtils.setupAntialias ( g2d );
-        paintBackground ( g2d, scrollbar, bounds );
+        paintBackground ( g2d, scrollbar, bounds.get () );
         paintTrack ( g2d, scrollbar, trackBounds );
         paintThumb ( g2d, scrollbar, thumbBounds );
         GraphicsUtils.restoreAntialias ( g2d, aa );
@@ -285,10 +294,9 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
      * @param scrollbar scroll bar
      * @param bounds    scroll bar bounds
      */
-    @SuppressWarnings ("UnusedParameters")
-    protected void paintBackground ( final Graphics2D g2d, final E scrollbar, final Rectangle bounds )
+    protected void paintBackground ( final Graphics2D g2d, final C scrollbar, final Rectangle bounds )
     {
-        if ( ui.isPaintTrack () )
+        if ( ui.isDisplayTrack () )
         {
             g2d.setPaint ( trackBackgroundColor );
             g2d.fillRect ( bounds.x, bounds.y, bounds.width, bounds.height );
@@ -315,7 +323,7 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
      * @param scrollbar scroll bar
      * @param bounds    track bounds
      */
-    protected void paintTrack ( final Graphics2D g2d, final E scrollbar, final Rectangle bounds )
+    protected void paintTrack ( final Graphics2D g2d, final C scrollbar, final Rectangle bounds )
     {
         // You can paint your own track decoration by overriding this method
     }
@@ -328,7 +336,7 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
      * @param scrollbar scroll bar component
      * @param bounds    thumb bounds
      */
-    protected void paintThumb ( final Graphics2D g2d, final E scrollbar, final Rectangle bounds )
+    protected void paintThumb ( final Graphics2D g2d, final C scrollbar, final Rectangle bounds )
     {
         final Insets m = getCurrentThumbMargin ( scrollbar );
         final int w = bounds.width - m.left - m.right;
@@ -352,8 +360,9 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
      * @param scrollbar scroll bar component
      * @return current thumb margin rotated into proper position
      */
-    protected Insets getCurrentThumbMargin ( final E scrollbar )
+    protected Insets getCurrentThumbMargin ( final C scrollbar )
     {
+        final Insets margin;
         if ( thumbMargin != null )
         {
             if ( thumbMarginR == null )
@@ -361,12 +370,13 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
                 updateThumbMargins ();
             }
             final boolean ver = scrollbar.getOrientation () == Adjustable.VERTICAL;
-            return ver ? ltr ? thumbMargin : thumbMarginR : ltr ? thumbMarginHL : thumbMarginHR;
+            margin = ver ? ltr ? thumbMargin : thumbMarginR : ltr ? thumbMarginHL : thumbMarginHR;
         }
         else
         {
-            return i ( 0, 0, 0, 0 );
+            margin = new Insets ( 0, 0, 0, 0 );
         }
+        return margin;
     }
 
     /**
@@ -374,9 +384,9 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
      */
     protected void updateThumbMargins ()
     {
-        this.thumbMarginR = i ( thumbMargin.top, thumbMargin.right, thumbMargin.bottom, thumbMargin.left );
-        this.thumbMarginHL = i ( thumbMargin.left, thumbMargin.bottom, thumbMargin.right, thumbMargin.top );
-        this.thumbMarginHR = i ( thumbMargin.right, thumbMargin.top, thumbMargin.left, thumbMargin.bottom );
+        thumbMarginR = new Insets ( thumbMargin.top, thumbMargin.right, thumbMargin.bottom, thumbMargin.left );
+        thumbMarginHL = new Insets ( thumbMargin.left, thumbMargin.bottom, thumbMargin.right, thumbMargin.top );
+        thumbMarginHR = new Insets ( thumbMargin.right, thumbMargin.top, thumbMargin.left, thumbMargin.bottom );
     }
 
     /**
@@ -385,10 +395,10 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
      * @param scrollbar scroll bar component
      * @return current thumb border color
      */
-    protected Color getCurrentThumbBorderColor ( final E scrollbar )
+    protected Color getCurrentThumbBorderColor ( final C scrollbar )
     {
         return scrollbar.isEnabled () ? pressed || dragged ? thumbPressedBorderColor : rollover ? thumbRolloverBorderColor :
-                ColorUtils.getIntermediateColor ( thumbBorderColor, thumbRolloverBorderColor, rolloverState ) : thumbDisabledBorderColor;
+                ColorUtils.intermediate ( thumbBorderColor, thumbRolloverBorderColor, rolloverState ) : thumbDisabledBorderColor;
     }
 
     /**
@@ -397,10 +407,10 @@ public class ScrollBarPainter<E extends JScrollBar, U extends WebScrollBarUI> ex
      * @param scrollbar scroll bar component
      * @return current thumb background color
      */
-    protected Color getCurrentThumbBackgroundColor ( final E scrollbar )
+    protected Color getCurrentThumbBackgroundColor ( final C scrollbar )
     {
         return scrollbar.isEnabled () ? pressed || dragged ? thumbPressedBackgroundColor : rollover ? thumbRolloverBackgroundColor :
-                ColorUtils.getIntermediateColor ( thumbBackgroundColor, thumbRolloverBackgroundColor, rolloverState ) :
+                ColorUtils.intermediate ( thumbBackgroundColor, thumbRolloverBackgroundColor, rolloverState ) :
                 thumbDisabledBackgroundColor;
     }
 

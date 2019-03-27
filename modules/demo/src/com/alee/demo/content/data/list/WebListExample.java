@@ -17,7 +17,7 @@
 
 package com.alee.demo.content.data.list;
 
-import com.alee.demo.api.*;
+import com.alee.demo.api.example.*;
 import com.alee.laf.list.WebList;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.style.StyleId;
@@ -30,8 +30,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebListExample extends AbstractExample
+public class WebListExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -54,10 +53,11 @@ public class WebListExample extends AbstractExample
     @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicList basic = new BasicList ( StyleId.list );
-        final ScrollableList scrollable = new ScrollableList ( StyleId.list );
-        final EditableList editable = new EditableList ( StyleId.list );
-        return CollectionUtils.<Preview>asList ( basic, scrollable, editable );
+        return CollectionUtils.<Preview>asList (
+                new BasicList ( StyleId.list ),
+                new ScrollableList ( StyleId.list ),
+                new EditableList ( StyleId.list )
+        );
     }
 
     /**
@@ -76,7 +76,7 @@ public class WebListExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebList list = new WebList ( getStyleId (), createShortData () );
             return CollectionUtils.asList ( list );
@@ -99,7 +99,7 @@ public class WebListExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebList list = new WebList ( getStyleId (), createLongData () );
             list.setVisibleRowCount ( 4 );
@@ -123,7 +123,7 @@ public class WebListExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebList list = new WebList ( getStyleId (), createLongData () );
             list.setVisibleRowCount ( 4 );

@@ -21,7 +21,7 @@ import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
+import com.alee.api.jdk.Consumer;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -29,11 +29,12 @@ import javax.swing.plaf.basic.BasicMenuBarUI;
 import java.awt.*;
 
 /**
+ * Custom UI for {@link JMenuBar} component.
+ *
  * @author Mikle Garin
  * @author Alexandr Zernov
  */
-
-public class WebMenuBarUI extends BasicMenuBarUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebMenuBarUI extends BasicMenuBarUI implements ShapeSupport, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -42,96 +43,116 @@ public class WebMenuBarUI extends BasicMenuBarUI implements Styleable, ShapeProv
     protected IMenuBarPainter painter;
 
     /**
-     * Runtime variables.
+     * Preserved old layout.
      */
-    protected Insets margin = null;
-    protected Insets padding = null;
+    protected transient LayoutManager oldLayout;
 
     /**
-     * Returns an instance of the WebMenuBarUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebMenuBarUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebMenuBarUI
+     * @return instance of the {@link WebMenuBarUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebMenuBarUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
         // Installing UI
         super.installUI ( c );
 
+        // Installing custom layout
+        installLayout ();
+
         // Applying skin
         StyleManager.installSkin ( menuBar );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( menuBar );
 
+        // Uninstalling custom layout
+        uninstallLayout ();
+
         // Uninstalling UI
         super.uninstallUI ( c );
     }
 
-    @Override
-    public StyleId getStyleId ()
+    /**
+     * Installs custom {@link LayoutManager} into {@link JMenuBar}.
+     */
+    protected void installLayout ()
     {
-        return StyleManager.getStyleId ( menuBar );
+        oldLayout = menuBar.getLayout ();
+        menuBar.setLayout ( createLayout () );
+    }
+
+    /**
+     * Uninstalls custom {@link LayoutManager} from {@link JMenuBar}.
+     */
+    protected void uninstallLayout ()
+    {
+        menuBar.setLayout ( oldLayout );
+        oldLayout = null;
+    }
+
+    /**
+     * Returns custom {@link LayoutManager} for the menubar.
+     *
+     * @return custom {@link LayoutManager} for the menubar
+     */
+    protected LayoutManager createLayout ()
+    {
+        return new MenuBarLayout ();
     }
 
     @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( menuBar, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( menuBar, painter );
     }
 
     @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return PainterSupport.isShapeDetectionEnabled ( menuBar, painter );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        PainterSupport.setShapeDetectionEnabled ( menuBar, painter, enabled );
+    }
+
+    @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( menuBar );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( menuBar, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( menuBar );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( menuBar, padding );
     }
 
     /**
@@ -141,7 +162,7 @@ public class WebMenuBarUI extends BasicMenuBarUI implements Styleable, ShapeProv
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -152,10 +173,10 @@ public class WebMenuBarUI extends BasicMenuBarUI implements Styleable, ShapeProv
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( menuBar, new DataRunnable<IMenuBarPainter> ()
+        PainterSupport.setPainter ( menuBar, new Consumer<IMenuBarPainter> ()
         {
             @Override
-            public void run ( final IMenuBarPainter newPainter )
+            public void accept ( final IMenuBarPainter newPainter )
             {
                 WebMenuBarUI.this.painter = newPainter;
             }
@@ -163,11 +184,29 @@ public class WebMenuBarUI extends BasicMenuBarUI implements Styleable, ShapeProv
     }
 
     @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
+    }
+
+    @Override
+    public int getBaseline ( final JComponent c, final int width, final int height )
+    {
+        return PainterSupport.getBaseline ( c, this, painter, width, height );
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
+    {
+        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+    }
+
+    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 

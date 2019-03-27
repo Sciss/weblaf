@@ -17,12 +17,21 @@
 
 package com.alee.managers.style.data;
 
-import com.alee.managers.log.Log;
+import com.alee.api.clone.Clone;
+import com.alee.api.clone.CloneBehavior;
+import com.alee.api.clone.RecursiveClone;
+import com.alee.api.clone.behavior.PreserveOnClone;
+import com.alee.api.jdk.Objects;
+import com.alee.api.merge.Merge;
 import com.alee.managers.style.*;
 import com.alee.painter.Painter;
-import com.alee.utils.*;
+import com.alee.utils.CollectionUtils;
+import com.alee.utils.LafUtils;
+import com.alee.utils.ReflectUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
+import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 import com.thoughtworks.xstream.annotations.XStreamConverter;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
@@ -31,7 +40,6 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,65 +49,74 @@ import java.util.Map;
  *
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
- * @see com.alee.managers.style.StyleManager
+ * @see StyleManager
  */
-
-@XStreamAlias ("style")
-@XStreamConverter (ComponentStyleConverter.class)
-public final class ComponentStyle implements Serializable, Cloneable
+@XStreamAlias ( "style" )
+@XStreamConverter ( ComponentStyleConverter.class )
+public final class ComponentStyle implements CloneBehavior<ComponentStyle>, Serializable
 {
     /**
-     * Base painter ID.
+     * Component painter identifier.
      */
-    public static final String BASE_PAINTER_ID = "painter";
+    public static final String COMPONENT_PAINTER_ID = "painter";
 
     /**
      * Style component type.
-     * Refers to component type this style belongs to.
+     * Refers to identifier of a component this style belongs to.
+     *
+     * @see ComponentDescriptor#getId()
      */
-    private StyleableComponent type;
+    @XStreamAsAttribute
+    private String type;
 
     /**
-     * Unique component style ID.
-     * Default component style depends on component type.
-     * Use {@link com.alee.managers.style.StyleableComponent#getDefaultStyleId()} to retrieve default style ID.
+     * Unique component style identifier.
+     * Default component style depends on component type and might also depend on the instance.
+     *
+     * @see ComponentDescriptor#getDefaultStyleId()
+     * @see ComponentDescriptor#getDefaultStyleId(JComponent)
+     * @see StyleId#getDefault(JComponent)
+     * @see StyleId#getDefault(Window)
      */
+    @XStreamAsAttribute
     private String id;
 
     /**
-     * Another component style ID which is extended by this style.
-     * You can specify any existing style ID here to extend it.
+     * Different style identifier which is extended by this style.
+     * Any existing style identifier of the same component type can be used here, though extended style must be defined first.
      */
+    @XStreamAsAttribute
     private String extendsId;
 
     /**
-     * Component settings.
+     * Component's settings.
      * Contains field-value pairs which will be applied to component fields.
      */
-    private Map<String, Object> componentProperties;
+    private LinkedHashMap<String, Object> componentProperties;
 
     /**
-     * Component UI settings.
+     * Component's UI settings.
      * Contains field-value pairs which will be applied to component UI fields.
      */
-    private Map<String, Object> uiProperties;
+    private LinkedHashMap<String, Object> uiProperties;
 
     /**
-     * Component painters settings.
-     * Contains list of painter style information objects.
+     * {@link PainterStyle} for component's {@link Painter}.
+     *
+     * @see PainterStyle
      */
-    private List<PainterStyle> painters;
+    private PainterStyle painterStyle;
 
     /**
-     * Nested styles.
-     * Contains list of styles usually provided for child elements.
+     * {@link List} of nested {@link ComponentStyle}s.
      */
-    private List<ComponentStyle> styles;
+    private List<ComponentStyle> nestedStyles;
 
     /**
-     * Parent style.
+     * Parent {@link ComponentStyle}.
      * This variable is only set in runtime for style usage convenience.
      */
+    @PreserveOnClone
     private transient ComponentStyle parent;
 
     /**
@@ -115,7 +132,7 @@ public final class ComponentStyle implements Serializable, Cloneable
      *
      * @return supported component type
      */
-    public StyleableComponent getType ()
+    public String getType ()
     {
         return type;
     }
@@ -126,16 +143,16 @@ public final class ComponentStyle implements Serializable, Cloneable
      * @param type new supported component type
      * @return this style
      */
-    public ComponentStyle setType ( final StyleableComponent type )
+    public ComponentStyle setType ( final String type )
     {
         this.type = type;
         return this;
     }
 
     /**
-     * Returns component style ID.
+     * Returns component style identifier.
      *
-     * @return component style ID
+     * @return component style identifier
      */
     public String getId ()
     {
@@ -143,25 +160,43 @@ public final class ComponentStyle implements Serializable, Cloneable
     }
 
     /**
-     * Returns complete style ID.
+     * Returns complete style identifier.
+     * Not that it will also include types of each of the parents.
      *
-     * @return complete style ID
+     * @return complete style identifier
+     * @see StyleId#getCompleteId()
      */
     public String getCompleteId ()
     {
-        return getParent () != null ? getParent ().getCompleteId () + StyleId.styleSeparator + getId () : getId ();
+        final ComponentStyle parentStyle = getParent ();
+        return parentStyle != null ? parentStyle.getPathId () + StyleId.styleSeparator + getId () : getId ();
+    }
+
+    /**
+     * Returns path for complete style ID.
+     * Not that it will also include types of each of the parents.
+     *
+     * @return path for complete style ID
+     * @see StyleId#getPathId(JComponent)
+     */
+    private String getPathId ()
+    {
+        // Full identifier for this part of the path
+        final String fullId = getType () + ":" + getId ();
+
+        // Combined identifiers path
+        final ComponentStyle parentStyle = getParent ();
+        return parentStyle != null ? parentStyle.getPathId () + StyleId.styleSeparator + fullId : fullId;
     }
 
     /**
      * Sets component style ID.
      *
      * @param id new component style ID
-     * @return this style
      */
-    public ComponentStyle setId ( final String id )
+    public void setId ( final String id )
     {
         this.id = id;
-        return this;
     }
 
     /**
@@ -179,12 +214,10 @@ public final class ComponentStyle implements Serializable, Cloneable
      * Set this to null in case you don't want to extend any style.
      *
      * @param id new extended component style ID
-     * @return this style
      */
-    public ComponentStyle setExtendsId ( final String id )
+    public void setExtendsId ( final String id )
     {
         this.extendsId = id;
-        return this;
     }
 
     /**
@@ -192,7 +225,7 @@ public final class ComponentStyle implements Serializable, Cloneable
      *
      * @return component properties
      */
-    public Map<String, Object> getComponentProperties ()
+    public LinkedHashMap<String, Object> getComponentProperties ()
     {
         return componentProperties;
     }
@@ -201,12 +234,10 @@ public final class ComponentStyle implements Serializable, Cloneable
      * Sets component properties.
      *
      * @param componentProperties new component properties
-     * @return this style
      */
-    public ComponentStyle setComponentProperties ( final Map<String, Object> componentProperties )
+    public void setComponentProperties ( final LinkedHashMap<String, Object> componentProperties )
     {
         this.componentProperties = componentProperties;
-        return this;
     }
 
     /**
@@ -214,7 +245,7 @@ public final class ComponentStyle implements Serializable, Cloneable
      *
      * @return component UI properties
      */
-    public Map<String, Object> getUIProperties ()
+    public LinkedHashMap<String, Object> getUIProperties ()
     {
         return uiProperties;
     }
@@ -223,68 +254,50 @@ public final class ComponentStyle implements Serializable, Cloneable
      * Sets component UI properties
      *
      * @param uiProperties new component UI properties
-     * @return this style
      */
-    public ComponentStyle setUIProperties ( final Map<String, Object> uiProperties )
+    public void setUIProperties ( final LinkedHashMap<String, Object> uiProperties )
     {
         this.uiProperties = uiProperties;
-        return this;
     }
 
     /**
-     * Returns component painters.
+     * Returns component's {@link PainterStyle}.
      *
-     * @return component painters
+     * @return component's {@link PainterStyle}
      */
-    public List<PainterStyle> getPainters ()
+    public PainterStyle getPainterStyle ()
     {
-        return painters;
+        return painterStyle;
     }
 
     /**
-     * Sets component painters.
+     * Sets component's {@link PainterStyle}.
      *
-     * @param painters new component painters
-     * @return this style
+     * @param painterStyle new component's {@link PainterStyle}
      */
-    public ComponentStyle setPainters ( final List<PainterStyle> painters )
+    public void setPainterStyle ( final PainterStyle painterStyle )
     {
-        this.painters = painters;
-        return this;
+        this.painterStyle = painterStyle;
     }
 
     /**
-     * Returns component base painter.
+     * Returns {@link List} of nested {@link ComponentStyle}s.
      *
-     * @return component base painter
+     * @return {@link List} of nested {@link ComponentStyle}s
      */
-    public PainterStyle getBasePainter ()
+    public List<ComponentStyle> getNestedStyles ()
     {
-        if ( painters.size () == 1 )
-        {
-            return painters.get ( 0 );
-        }
-        else
-        {
-            for ( final PainterStyle painter : painters )
-            {
-                if ( painter.isBase () )
-                {
-                    return painter;
-                }
-            }
-            return null;
-        }
+        return nestedStyles;
     }
 
     /**
-     * Returns nested styles list.
+     * Sets {@link List} of nested {@link ComponentStyle}s.
      *
-     * @return nested styles list
+     * @param nestedStyles new {@link List} of nested {@link ComponentStyle}s
      */
-    public List<ComponentStyle> getStyles ()
+    public void setNestedStyles ( final List<ComponentStyle> nestedStyles )
     {
-        return styles;
+        this.nestedStyles = nestedStyles;
     }
 
     /**
@@ -294,25 +307,13 @@ public final class ComponentStyle implements Serializable, Cloneable
      */
     public int getStylesCount ()
     {
-        return getStyles () != null ? getStyles ().size () : 0;
+        return getNestedStyles () != null ? getNestedStyles ().size () : 0;
     }
 
     /**
-     * Sets nested styles list.
+     * Returns parent {@link ComponentStyle}.
      *
-     * @param styles nested styles list
-     * @return this style
-     */
-    public ComponentStyle setStyles ( final List<ComponentStyle> styles )
-    {
-        this.styles = styles;
-        return this;
-    }
-
-    /**
-     * Returns parent component style.
-     *
-     * @return parent component style
+     * @return parent {@link ComponentStyle}
      */
     public ComponentStyle getParent ()
     {
@@ -320,76 +321,72 @@ public final class ComponentStyle implements Serializable, Cloneable
     }
 
     /**
-     * Sets parent component style.
+     * Sets parent {@link ComponentStyle}.
      *
-     * @param parent parent component style
-     * @return this style
+     * @param parent parent {@link ComponentStyle}
      */
-    public ComponentStyle setParent ( final ComponentStyle parent )
+    public void setParent ( final ComponentStyle parent )
     {
         this.parent = parent;
-        return this;
     }
 
     /**
-     * Applies this style to the specified component.
+     * Applies this {@link ComponentStyle} to the specified {@link JComponent}.
      * Returns whether style was successfully applied or not.
      *
-     * @param component component to apply style to
-     * @return true if style was applied, false otherwise
+     * @param component {@link JComponent} to apply this {@link ComponentStyle} to
+     * @return {@code true} if style was applied successfully, {@code false} otherwise
      */
     public boolean apply ( final JComponent component )
     {
         try
         {
-            final ComponentUI ui = getComponentUIImpl ( component );
-
-            // Installing painters
-            for ( final PainterStyle painterStyle : getPainters () )
-            {
-                installPainter ( ui, component, true, painterStyle );
-            }
-
-            // Applying UI properties
-            applyProperties ( ui, appendEmptyUIProperties ( ui, getUIProperties () ) );
+            final ComponentUI ui = getComponentUI ( component );
 
             // Applying component properties
             applyProperties ( component, getComponentProperties () );
 
+            // Applying UI properties
+            applyProperties ( ui, appendEmptyUIProperties ( ui, getUIProperties () ) );
+
+            // Installing painter
+            installPainter ( ui, component, true, COMPONENT_PAINTER_ID, getPainterStyle () );
+
             return true;
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
-            Log.error ( this, e );
+            LoggerFactory.getLogger ( ComponentStyle.class ).error ( e.toString (), e );
             return false;
         }
     }
 
     /**
-     * Installs painter into specified object based on provided painter style.
+     * Installs {@link Painter} based on {@link PainterStyle} into specified object based on provided painter style.
      *
      * @param object       object to install painter into
      * @param component    component painter is installed for
-     * @param customizable whether or not this painter customizable through {@link com.alee.managers.style.StyleManager}
-     * @param painterStyle painter style
+     * @param customizable whether or not this painter customizable through {@link StyleManager}
+     * @param painterId    {@link Painter} identifier
+     * @param painterStyle {@link PainterStyle}
      * @throws NoSuchFieldException      if painter could not be set into object
      * @throws NoSuchMethodException     if painter setter method could not be found
      * @throws InvocationTargetException if painter setter method invocation failed
      * @throws IllegalAccessException    if painter setter method is not accessible
      */
     protected void installPainter ( final Object object, final JComponent component, final boolean customizable,
-                                    final PainterStyle painterStyle )
+                                    final String painterId, final PainterStyle painterStyle )
             throws NoSuchFieldException, NoSuchMethodException, InvocationTargetException, IllegalAccessException
     {
         // Retrieving painter to install into component
-        // Custom painter can be null - that will just mean that component should not have painter installed
+        // There could be a custom painter present which will take over one offered by painter style
         final Painter painter;
-        final Map<String, Painter> customPainters = customizable ? StyleManager.getCustomPainters ( component ) : null;
-        if ( customPainters != null && customPainters.containsKey ( painterStyle.getId () ) )
+        final Painter customPainter = customizable ? StyleManager.getCustomPainter ( component ) : null;
+        if ( customPainter != null )
         {
             // Using custom painter provided in the application code
             // This painter is set through API provided by {@link com.alee.painter.Paintable} interface
-            painter = customPainters.get ( painterStyle.getId () );
+            painter = customPainter;
         }
         else
         {
@@ -400,8 +397,8 @@ public final class ComponentStyle implements Serializable, Cloneable
             painter = ReflectUtils.createInstanceSafely ( painterClass );
             if ( painter == null )
             {
-                final String msg = "Unable to create painter \"%s\" for component \"%s\" in style \"%s\"";
                 final String componentType = component != null ? component.toString () : "none";
+                final String msg = "Unable to create painter '%s' for component '%s' in style '%s'";
                 throw new StyleException ( String.format ( msg, painterClass, componentType, getId () ) );
             }
 
@@ -412,7 +409,7 @@ public final class ComponentStyle implements Serializable, Cloneable
 
         // Installing painter into the UI
         // todo Update component instead of reinstalling painter if it is the same?
-        setFieldValue ( object, painterStyle.getId (), painter );
+        setFieldValue ( object, painterId, painter );
     }
 
     /**
@@ -438,8 +435,7 @@ public final class ComponentStyle implements Serializable, Cloneable
                 {
                     // PainterStyle is handled differently
                     final PainterStyle style = ( PainterStyle ) value;
-                    style.setId ( entry.getKey () );
-                    installPainter ( object, null, false, style );
+                    installPainter ( object, null, false, entry.getKey (), style );
                 }
                 else
                 {
@@ -471,29 +467,24 @@ public final class ComponentStyle implements Serializable, Cloneable
     }
 
     /**
-     * Removes this style from the specified component.
+     * Removes this {@link ComponentStyle} from the specified {@link JComponent}.
      *
-     * @param component component to remove style from
-     * @return true if style was successfully removed, false otherwise
+     * @param component {@link JComponent} to remove this {@link ComponentStyle} from
+     * @return {@code true} if style was successfully removed, {@code false} otherwise
      */
     public boolean remove ( final JComponent component )
     {
         try
         {
-            final ComponentUI ui = getComponentUIImpl ( component );
-
             // Uninstalling skin painters from the UI
-            for ( final PainterStyle painterStyle : getPainters () )
-            {
-                final String setterMethod = ReflectUtils.getSetterMethodName ( painterStyle.getId () );
-                ReflectUtils.callMethod ( ui, setterMethod, ( Painter ) null );
-            }
-
+            final ComponentUI ui = getComponentUI ( component );
+            final String setterMethod = ReflectUtils.getSetterMethodName ( COMPONENT_PAINTER_ID );
+            ReflectUtils.callMethod ( ui, setterMethod, ( Painter ) null );
             return true;
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
-            Log.error ( this, e );
+            LoggerFactory.getLogger ( ComponentStyle.class ).error ( e.toString (), e );
             return false;
         }
     }
@@ -506,43 +497,57 @@ public final class ComponentStyle implements Serializable, Cloneable
      * @param object object instance
      * @param field  object field
      * @param value  field value
-     * @return true if value was applied successfully, false otherwise
      * @throws java.lang.reflect.InvocationTargetException if method throws an exception
      * @throws java.lang.IllegalAccessException            if method is inaccessible
      */
-    private boolean setFieldValue ( final Object object, final String field, final Object value )
+    private void setFieldValue ( final Object object, final String field, final Object value )
             throws InvocationTargetException, IllegalAccessException
     {
-        // Skip ignored values
+        // Skipping value if it is marked as ignored
         if ( value == IgnoredValue.VALUE )
         {
-            return false;
+            return;
         }
 
-        // todo Still need to check method here? Throw exceptions?
-        // Trying to use setter method to apply the specified value
+        // Creating separate usable value to avoid source object modifications
+        // We have limited options here, so for now we simply clone objects which are defined as Cloneable
+        final Object usable;
+        if ( value instanceof Painter )
+        {
+            usable = value;
+        }
+        else
+        {
+            try
+            {
+                usable = Clone.deep ().clone ( value );
+            }
+            catch ( final Exception e )
+            {
+                final String msg = "Unable to clone value: %s";
+                throw new StyleException ( String.format ( msg, value ), e );
+            }
+        }
+
         try
         {
+            // todo Add more options on the method names here?
+            // Trying to use setter method to apply the specified value
             final String setterMethod = ReflectUtils.getSetterMethodName ( field );
-            ReflectUtils.callMethod ( object, setterMethod, value );
-            return true;
+            ReflectUtils.callMethod ( object, setterMethod, usable );
         }
         catch ( final NoSuchMethodException e )
         {
-            // Ignoring this error and proceeding to direct field access
-        }
-
-        // Applying field value directly
-        try
-        {
-            final Field actualField = ReflectUtils.getField ( object.getClass (), field );
-            actualField.set ( object, value );
-            return true;
-        }
-        catch ( final NoSuchFieldException e )
-        {
-            Log.error ( ComponentStyle.class, e );
-            return false;
+            try
+            {
+                // Applying field value directly
+                ReflectUtils.setFieldValue ( object, field, usable );
+            }
+            catch ( final Exception fe )
+            {
+                final String msg = "Unable to set `%s` object `%s` field value to: %s";
+                throw new StyleException ( String.format ( msg, object, field, usable ), fe );
+            }
         }
     }
 
@@ -552,12 +557,13 @@ public final class ComponentStyle implements Serializable, Cloneable
      * @param component component instance
      * @return component UI object
      */
-    private ComponentUI getComponentUIImpl ( final JComponent component )
+    private ComponentUI getComponentUI ( final JComponent component )
     {
         final ComponentUI ui = LafUtils.getUI ( component );
         if ( ui == null )
         {
-            throw new StyleException ( "Unable to retrieve UI from component: " + component );
+            final String msg = "Unable to retrieve UI from component '%s'";
+            throw new StyleException ( String.format ( msg, component ) );
         }
         return ui;
     }
@@ -571,22 +577,8 @@ public final class ComponentStyle implements Serializable, Cloneable
      */
     public <T extends Painter> T getPainter ( final JComponent component )
     {
-        return getPainter ( component, BASE_PAINTER_ID );
-    }
-
-    /**
-     * Returns actual painter used within specified component.
-     *
-     * @param component component to retrieve painter from
-     * @param painterId painter ID
-     * @param <T>       painter type
-     * @return actual painter used within specified component
-     */
-    public <T extends Painter> T getPainter ( final JComponent component, final String painterId )
-    {
-        final String pid = painterId != null ? painterId : getBasePainter ().getId ();
-        final ComponentUI ui = getComponentUIImpl ( component );
-        return getFieldValue ( ui, pid );
+        final ComponentUI ui = getComponentUI ( component );
+        return getFieldValue ( ui, COMPONENT_PAINTER_ID );
     }
 
     /**
@@ -599,7 +591,7 @@ public final class ComponentStyle implements Serializable, Cloneable
      * @param <T>    value type
      * @return field value for the specified object or null
      */
-    public static <T> T getFieldValue ( final Object object, final String field )
+    private <T> T getFieldValue ( final Object object, final String field )
     {
         final Class<?> objectClass = object.getClass ();
 
@@ -613,11 +605,11 @@ public final class ComponentStyle implements Serializable, Cloneable
         }
         catch ( final InvocationTargetException e )
         {
-            Log.error ( ComponentStyle.class, e );
+            LoggerFactory.getLogger ( ComponentStyle.class ).error ( e.toString (), e );
         }
         catch ( final IllegalAccessException e )
         {
-            Log.error ( ComponentStyle.class, e );
+            LoggerFactory.getLogger ( ComponentStyle.class ).error ( e.toString (), e );
         }
 
         // Retrieving field value directly
@@ -629,12 +621,12 @@ public final class ComponentStyle implements Serializable, Cloneable
         }
         catch ( final NoSuchFieldException e )
         {
-            Log.error ( ComponentStyle.class, e );
+            LoggerFactory.getLogger ( ComponentStyle.class ).error ( e.toString (), e );
             return null;
         }
         catch ( final IllegalAccessException e )
         {
-            Log.error ( ComponentStyle.class, e );
+            LoggerFactory.getLogger ( ComponentStyle.class ).error ( e.toString (), e );
             return null;
         }
     }
@@ -684,21 +676,21 @@ public final class ComponentStyle implements Serializable, Cloneable
         if ( nestedCount > 0 && mergedCount > 0 )
         {
             // Inherits items that have a parent in a new element, but not in the current
-            for ( final ComponentStyle child : getStyles () )
+            for ( final ComponentStyle child : getNestedStyles () )
             {
                 extendChild ( style, child );
             }
 
             // Merge styles
-            final List<ComponentStyle> nestedStyles = getStyles ();
-            for ( final ComponentStyle mergedNestedStyle : style.getStyles () )
+            final List<ComponentStyle> nestedStyles = getNestedStyles ();
+            for ( final ComponentStyle mergedNestedStyle : style.getNestedStyles () )
             {
                 // Looking for existing style with the same ID and type
                 ComponentStyle existing = null;
-                for ( final ComponentStyle nestedStyle : getStyles () )
+                for ( final ComponentStyle nestedStyle : getNestedStyles () )
                 {
-                    if ( mergedNestedStyle.getType () == nestedStyle.getType () &&
-                            CompareUtils.equals ( mergedNestedStyle.getId (), nestedStyle.getId () ) )
+                    if ( Objects.equals ( mergedNestedStyle.getType (), nestedStyle.getType () ) &&
+                            Objects.equals ( mergedNestedStyle.getId (), nestedStyle.getId () ) )
                     {
                         existing = nestedStyle;
                         break;
@@ -721,27 +713,27 @@ public final class ComponentStyle implements Serializable, Cloneable
                     nestedStyles.add ( mergedNestedStyleClone );
                 }
             }
-            setStyles ( nestedStyles );
+            setNestedStyles ( nestedStyles );
         }
         else if ( mergedCount > 0 )
         {
             // Simply set merged styles
-            final List<ComponentStyle> mergedStylesClone = MergeUtils.clone ( style.getStyles () );
+            final List<ComponentStyle> mergedStylesClone = Clone.deep ().clone ( style.getNestedStyles () );
             for ( final ComponentStyle mergedStyleClone : mergedStylesClone )
             {
                 mergedStyleClone.setParent ( this );
             }
-            setStyles ( mergedStylesClone );
+            setNestedStyles ( mergedStylesClone );
         }
         else if ( nestedCount > 0 )
         {
             // Simply set base styles
-            final List<ComponentStyle> baseStylesClone = MergeUtils.clone ( getStyles () );
+            final List<ComponentStyle> baseStylesClone = Clone.deep ().clone ( getNestedStyles () );
             for ( final ComponentStyle baseStyleClone : baseStylesClone )
             {
                 baseStyleClone.setParent ( this );
             }
-            setStyles ( baseStylesClone );
+            setNestedStyles ( baseStylesClone );
         }
         return this;
     }
@@ -755,7 +747,7 @@ public final class ComponentStyle implements Serializable, Cloneable
     private void extendChild ( final ComponentStyle style, final ComponentStyle child )
     {
         // Skipping styles that are already provided in style merged on top of this
-        for ( final ComponentStyle newParentChild : style.getStyles () )
+        for ( final ComponentStyle newParentChild : style.getNestedStyles () )
         {
             if ( child.getId ().equals ( newParentChild.getId () ) )
             {
@@ -764,93 +756,77 @@ public final class ComponentStyle implements Serializable, Cloneable
         }
 
         // Overriding provided style with this style child
-        for ( final ComponentStyle mergedChild : style.getStyles () )
+        for ( final ComponentStyle mergedChild : style.getNestedStyles () )
         {
-            if ( CompareUtils.equals ( child.getExtendsId (), mergedChild.getId () ) )
+            if ( Objects.equals ( child.getExtendsId (), mergedChild.getId () ) )
             {
-                style.getStyles ().add ( child.clone ().extend ( mergedChild ) );
+                style.getNestedStyles ().add ( child.clone ().extend ( mergedChild ) );
                 return;
             }
         }
     }
 
     /**
-     * Performs painter settings copy from extended style.
+     * Merges two {@link PainterStyle} settings together.
      *
-     * @param merged style
-     * @param style  extended style
+     * @param style       extended {@link ComponentStyle}
+     * @param mergedStyle merged {@link ComponentStyle}
      */
-    private void mergePainters ( final ComponentStyle style, final ComponentStyle merged )
+    private void mergePainters ( final ComponentStyle style, final ComponentStyle mergedStyle )
     {
-        // Converting painters into maps
-        final Map<String, PainterStyle> stylePainters = collectPainters ( style, style.getPainters () );
-        final Map<String, PainterStyle> mergedPainters = collectPainters ( merged, merged.getPainters () );
+        final PainterStyle resultPainterStyle;
 
-        // Copying proper painters data
-        for ( final Map.Entry<String, PainterStyle> entry : stylePainters.entrySet () )
+        // Resolving resulting style
+        final PainterStyle painterStyle = style.getPainterStyle ();
+        final PainterStyle mergedPainterStyle = mergedStyle.getPainterStyle ();
+        if ( painterStyle != null )
         {
-            final String painterId = entry.getKey ();
-            final PainterStyle stylePainter = entry.getValue ();
-            if ( mergedPainters.containsKey ( painterId ) )
+            if ( mergedPainterStyle != null )
             {
                 // Copying painter properties if extended painter class type is assignable from current painter class type
-                final PainterStyle mergedPainter = mergedPainters.get ( painterId );
-                final Class painterClass = ReflectUtils.getClassSafely ( mergedPainter.getPainterClass () );
-                final Class extendedPainterClass = ReflectUtils.getClassSafely ( stylePainter.getPainterClass () );
+                final Class painterClass = ReflectUtils.getClassSafely ( mergedPainterStyle.getPainterClass () );
+                final Class extendedPainterClass = ReflectUtils.getClassSafely ( painterStyle.getPainterClass () );
                 if ( painterClass == null || extendedPainterClass == null )
                 {
-                    final String pc = painterClass == null ? mergedPainter.getPainterClass () : stylePainter.getPainterClass ();
-                    final String sid = merged.getType () + ":" + merged.getId ();
-                    throw new StyleException ( "Component style \"" + sid + "\" points to missing painter class: \"" + pc + "\"" );
+                    final String pc = painterClass == null ? mergedPainterStyle.getPainterClass () : painterStyle.getPainterClass ();
+                    final String msg = "Component style '%s' points to a missing painter class: %s";
+                    throw new StyleException ( String.format ( msg, mergedStyle, pc ) );
                 }
                 if ( ReflectUtils.isAssignable ( extendedPainterClass, painterClass ) )
                 {
-                    // Adding painter based on extended one and merged
-                    stylePainter.setBase ( mergedPainter.isBase () );
-                    stylePainter.setPainterClass ( mergedPainter.getPainterClass () );
-                    mergeProperties ( stylePainter.getProperties (), mergedPainter.getProperties () );
-                    mergedPainters.put ( painterId, stylePainter );
+                    // Adding painter styles merge result
+                    painterStyle.setPainterClass ( mergedPainterStyle.getPainterClass () );
+                    mergeProperties ( painterStyle.getProperties (), mergedPainterStyle.getProperties () );
+                    resultPainterStyle = painterStyle;
                 }
                 else
                 {
-                    // Adding painter fully based on merged painter
-                    mergedPainters.put ( painterId, mergedPainter.clone () );
+                    // Adding a full copy of merged painter style
+                    resultPainterStyle = Clone.deep ().clone ( mergedPainterStyle );
                 }
             }
             else
             {
-                // todo Base painters might clash as the result
                 // Adding a full copy of base painter style
-                mergedPainters.put ( painterId, stylePainter.clone () );
+                resultPainterStyle = Clone.deep ().clone ( painterStyle );
             }
         }
-
-        // Fixing possible base mark issues
-        if ( mergedPainters.size () > 0 )
+        else
         {
-            boolean hasBase = false;
-            for ( final Map.Entry<String, PainterStyle> entry : mergedPainters.entrySet () )
+            if ( mergedPainterStyle != null )
             {
-                final PainterStyle painterStyle = entry.getValue ();
-                if ( painterStyle.isBase () )
-                {
-                    hasBase = true;
-                    break;
-                }
+                // Adding a full copy of merged painter style
+                resultPainterStyle = Clone.deep ().clone ( mergedPainterStyle );
             }
-            if ( !hasBase )
+            else
             {
-                PainterStyle painterStyle = mergedPainters.get ( BASE_PAINTER_ID );
-                if ( painterStyle == null )
-                {
-                    painterStyle = mergedPainters.entrySet ().iterator ().next ().getValue ();
-                }
-                painterStyle.setBase ( true );
+                // No painter style
+                resultPainterStyle = null;
             }
         }
 
         // Updating painters list
-        style.setPainters ( new ArrayList<PainterStyle> ( mergedPainters.values () ) );
+        style.setPainterStyle ( resultPainterStyle );
     }
 
     /**
@@ -864,79 +840,55 @@ public final class ComponentStyle implements Serializable, Cloneable
         for ( final Map.Entry<String, Object> property : merged.entrySet () )
         {
             final String key = property.getKey ();
-            final Object e = properties.get ( key );
-            final Object m = property.getValue ();
+            final Object existingValue = properties.get ( key );
+            final Object mergedValue = property.getValue ();
 
             try
             {
-                // Cloning existing property value properly
-                final Object existing = MergeUtils.clone ( e );
-
-                // Merging another one on top of it
-                final Object result = MergeUtils.merge ( existing, m );
+                // Merging value on top of existing one
+                final Object result = Merge.deep ().merge ( existingValue, mergedValue );
 
                 // Saving merge result
                 properties.put ( key, result );
             }
-            catch ( final Throwable ex )
+            catch ( final Exception ex )
             {
-                Log.get ().error ( "Unable to merge property \"" + key + "\" values: " + e + " and " + m, ex );
+                final String msg = "Unable to merge property '%s' values: '%s' and '%s'";
+                LoggerFactory.getLogger ( ComponentStyle.class ).error ( String.format ( msg, key, existingValue, mergedValue ), ex );
             }
         }
     }
 
-    /**
-     * Collects all specified painters into map by their IDs.
-     *
-     * @param style    component style
-     * @param painters painters list
-     * @return map of painters by their IDs
-     */
-    private Map<String, PainterStyle> collectPainters ( final ComponentStyle style, final List<PainterStyle> painters )
+    @Override
+    public ComponentStyle clone ( final RecursiveClone clone, final int depth )
     {
-        final Map<String, PainterStyle> paintersMap = new LinkedHashMap<String, PainterStyle> ( painters.size () );
-        for ( final PainterStyle painter : painters )
+        final ComponentStyle styleCopy = clone.cloneFields ( this, depth );
+
+        /**
+         * Updating transient parent field for child {@link ComponentStyle}s.
+         * This is important since their parent have been cloned and needs to be updated.
+         * Zero depth cloned object doesn't need parent to be updated, it is preserved upon clone.
+         */
+        if ( CollectionUtils.notEmpty ( styleCopy.getNestedStyles () ) )
         {
-            final String painterId = painter.getId ();
-            if ( paintersMap.containsKey ( painterId ) )
+            for ( final ComponentStyle styleCopyChild : styleCopy.getNestedStyles () )
             {
-                final String sid = style.getType () + ":" + style.getId ();
-                throw new StyleException ( "Component style \"" + sid + "\" has duplicate painters for id \"" + painterId + "\"" );
+                styleCopyChild.setParent ( styleCopy );
             }
-            paintersMap.put ( painterId, painter );
         }
-        return paintersMap;
+
+        return styleCopy;
     }
 
-    /**
-     * Returns cloned instance of this component style.
-     *
-     * @return cloned instance of this component style
-     */
     @Override
     public ComponentStyle clone ()
     {
-        // Creating style clone
-        final ComponentStyle clone = MergeUtils.cloneByFieldsSafely ( this );
-
-        // Updating transient parent field
-        clone.setParent ( getParent () );
-
-        // Updating transient parent field for children to cloned one
-        if ( !CollectionUtils.isEmpty ( clone.getStyles () ) )
-        {
-            for ( final ComponentStyle style : clone.getStyles () )
-            {
-                style.setParent ( clone );
-            }
-        }
-
-        return clone;
+        return Clone.deep ().clone ( this );
     }
 
     @Override
     public String toString ()
     {
-        return getType () + ":" + getCompleteId ();
+        return "ComponentStyle [ id: " + getCompleteId () + " ]";
     }
 }

@@ -17,9 +17,10 @@
 
 package com.alee.demo.content.tooltip;
 
-import com.alee.demo.api.*;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.laf.label.WebLabel;
-import com.alee.managers.language.LM;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
@@ -29,8 +30,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JTooltipExample extends AbstractExample
+public class JTooltipExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -51,10 +51,17 @@ public class JTooltipExample extends AbstractExample
     }
 
     @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Use Tool Tips", "tooltip" );
+    }
+
+    @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicTooltip e1 = new BasicTooltip ( FeatureState.updated, StyleId.tooltip );
-        return CollectionUtils.<Preview>asList ( e1 );
+        return CollectionUtils.<Preview>asList (
+                new BasicTooltip ( FeatureState.updated, StyleId.tooltip )
+        );
     }
 
     /**
@@ -74,10 +81,9 @@ public class JTooltipExample extends AbstractExample
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebLabel label = new WebLabel ( getPreviewLanguagePrefix () + "text" );
-            label.setToolTipText ( LM.get ( getPreviewLanguagePrefix () + "tip" ) );
             return CollectionUtils.asList ( label );
         }
     }

@@ -17,14 +17,14 @@
 
 package com.alee.utils.xml;
 
+import com.alee.utils.CollectionUtils;
 import com.thoughtworks.xstream.converters.basic.AbstractSingleValueConverter;
 
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Custom {@link java.awt.Stroke} object converter.
+ * Custom {@link Stroke} object converter.
  *
  * @author Mikle Garin
  */
@@ -35,17 +35,18 @@ public class StrokeConverter extends AbstractSingleValueConverter
      * Stroke settings separators.
      */
     public static final String separator = ";";
+
+    /**
+     * Single setting parts separator.
+     */
     public static final String subSeparator = ",";
 
     /**
      * Supported stroke types.
      */
-    public static final List<StrokeConverterSupport> supported = new ArrayList<StrokeConverterSupport> ();
-
-    static
-    {
-        supported.add ( new BasicStrokeConverterSupport () );
-    }
+    public static final List<StrokeConverterSupport> supported = CollectionUtils.<StrokeConverterSupport>asList (
+            new BasicStrokeConverterSupport ()
+    );
 
     @Override
     public boolean canConvert ( final Class type )
@@ -68,6 +69,20 @@ public class StrokeConverter extends AbstractSingleValueConverter
     }
 
     @Override
+    public String toString ( final Object stroke )
+    {
+        final Class<?> type = stroke.getClass ();
+        for ( final StrokeConverterSupport supportedStroke : supported )
+        {
+            if ( supportedStroke.getType () == type )
+            {
+                return supportedStroke.toString ( ( Stroke ) stroke );
+            }
+        }
+        throw new RuntimeException ( "Unsupported stroke provided: " + type );
+    }
+
+    @Override
     public Object fromString ( final String stroke )
     {
         final int idEnd = stroke.indexOf ( separator );
@@ -80,19 +95,5 @@ public class StrokeConverter extends AbstractSingleValueConverter
             }
         }
         throw new RuntimeException ( "Unsupported stroke ID provided: " + id );
-    }
-
-    @Override
-    public String toString ( final Object stroke )
-    {
-        final Class<?> type = stroke.getClass ();
-        for ( final StrokeConverterSupport supportedStroke : supported )
-        {
-            if ( supportedStroke.getType () == type )
-            {
-                return supportedStroke.toString ( ( Stroke ) stroke );
-            }
-        }
-        throw new RuntimeException ( "Unsupported stroke provided: " + type );
     }
 }

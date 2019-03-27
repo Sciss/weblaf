@@ -1,8 +1,10 @@
 package com.alee.extended.panel;
 
-import com.alee.global.StyleConstants;
 import com.alee.laf.panel.WebPanelUI;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.AbstractPainter;
+import com.alee.utils.ColorUtils;
+import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 import java.awt.*;
 
@@ -12,6 +14,7 @@ import java.awt.*;
  * @author Mikle Garin
  */
 
+@XStreamAlias ( "SelectablePanelPainter" )
 public class SelectablePanelPainter extends AbstractPainter<WebSelectablePanel, WebPanelUI>
 {
     public static final int GRIPPER_SIZE = 7;
@@ -21,8 +24,8 @@ public class SelectablePanelPainter extends AbstractPainter<WebSelectablePanel, 
      * Style settings.
      */
     protected float[] fractions = { 0f, 0.25f, 0.75f, 1f };
-    protected Color[] lightColors = { StyleConstants.transparent, Color.WHITE, Color.WHITE, StyleConstants.transparent };
-    protected Color[] darkColors = { StyleConstants.transparent, Color.GRAY, Color.GRAY, StyleConstants.transparent };
+    protected Color[] lightColors = { ColorUtils.transparent (), Color.WHITE, Color.WHITE, ColorUtils.transparent () };
+    protected Color[] darkColors = { ColorUtils.transparent (), Color.GRAY, Color.GRAY, ColorUtils.transparent () };
 
     @Override
     public Boolean isOpaque ()
@@ -31,28 +34,29 @@ public class SelectablePanelPainter extends AbstractPainter<WebSelectablePanel, 
     }
 
     @Override
-    public Insets getBorders ()
+    protected Insets getBorder ()
     {
-        return i ( 0, GRIPPER_SIZE, 0, 0 );
+        return new Insets ( 0, GRIPPER_SIZE, 0, 0 );
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final WebSelectablePanel panel, final WebPanelUI ui )
+    public void paint ( final Graphics2D g2d, final WebSelectablePanel panel, final WebPanelUI ui, final Bounds b )
     {
         final boolean notFirst = panel.getIndex () > 0;
         final boolean notLast = panel.getIndex () < component.getTotal () - 1;
+        final Rectangle bounds = b.get ();
 
         if ( panel.isFocused () )
         {
             // Background
-            g2d.setPaint ( new GradientPaint ( bounds.x, bounds.y, StyleConstants.topBgColor, bounds.x, bounds.y + bounds.height,
-                    StyleConstants.bottomBgColor ) );
+            g2d.setPaint ( new GradientPaint ( bounds.x, bounds.y, Color.WHITE, bounds.x, bounds.y + bounds.height,
+                    new Color ( 223, 223, 223 ) ) );
             g2d.fill ( bounds );
 
             // Borders
             final Integer shift = panel.getComponentPane ().getContainerLayout ().getComponentShift ( panel );
             final boolean moved = panel.isDragged () && shift != null && shift != 0;
-            g2d.setPaint ( StyleConstants.darkBorderColor );
+            g2d.setPaint ( Color.GRAY );
             if ( notFirst || moved )
             {
                 g2d.drawLine ( bounds.x, bounds.y, bounds.x + bounds.width - 1, bounds.y );

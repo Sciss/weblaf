@@ -1,6 +1,6 @@
 package com.alee.laf.slider;
 
-import com.alee.global.StyleConstants;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.AbstractPainter;
 import com.alee.utils.ColorUtils;
 import com.alee.utils.GraphicsUtils;
@@ -19,16 +19,20 @@ import java.util.Dictionary;
 import java.util.Enumeration;
 
 /**
- * Basic painter for JSlider component.
- * It is used as WebSliderUI default painter.
+ * Basic painter for {@link JSlider} component.
+ * It is used as {@link WebSliderUI} default painter.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
 
-public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends AbstractPainter<E, U> implements ISliderPainter<E, U>
+public class SliderPainter<C extends JSlider, U extends WebSliderUI> extends AbstractPainter<C, U> implements ISliderPainter<C, U>
 {
+    /**
+     * todo 1. Split into proper AbstractDecorationPainter & AbstractSectionDecorationPainter implementations
+     */
+
     public static final int MAX_DARKNESS = 5;
 
     /**
@@ -60,39 +64,35 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
     /**
      * Listeners.
      */
-    protected MouseWheelListener mouseWheelListener;
-    protected ChangeListener changeListener;
-    protected MouseAdapter mouseAdapter;
+    protected transient MouseWheelListener mouseWheelListener;
+    protected transient ChangeListener changeListener;
+    protected transient MouseAdapter mouseAdapter;
 
     /**
      * Runtime variables.
      */
-    protected boolean rollover = false;
-    protected int rolloverDarkness = 0;
-    protected WebTimer rolloverTimer;
+    protected transient boolean rollover = false;
+    protected transient int rolloverDarkness = 0;
+    protected transient WebTimer rolloverTimer;
 
     /**
      * Painting variables.
      */
-    protected int trackBuffer = 0;  // The distance that the track is from the side of the control
-    protected Insets insetCache = null;
-    protected Rectangle focusRect = null;
-    protected Rectangle contentRect = null;
-    protected Rectangle labelRect = null;
-    protected Rectangle tickRect = null;
-    protected Rectangle trackRect = null;
-    protected Rectangle thumbRect = null;
-    protected boolean leftToRightCache = true;
-    protected boolean dragging = false;
+    protected transient int trackBuffer = 0;  // The distance that the track is from the side of the control
+    protected transient Rectangle focusRect = null;
+    protected transient Rectangle contentRect = null;
+    protected transient Rectangle labelRect = null;
+    protected transient Rectangle tickRect = null;
+    protected transient Rectangle trackRect = null;
+    protected transient Rectangle thumbRect = null;
+    protected transient boolean dragging = false;
 
     @Override
-    public void install ( final E c, final U ui )
+    protected void installPropertiesAndListeners ()
     {
-        super.install ( c, ui );
+        super.installPropertiesAndListeners ();
 
         // Initializing caches
-        insetCache = c.getInsets ();
-        leftToRightCache = c.getComponentOrientation ().isLeftToRight ();
         focusRect = new Rectangle ();
         contentRect = new Rectangle ();
         labelRect = new Rectangle ();
@@ -106,8 +106,11 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
             @Override
             public void mouseWheelMoved ( final MouseWheelEvent e )
             {
-                final int v = component.getValue () - e.getWheelRotation ();
-                component.setValue ( MathUtils.limit ( component.getMinimum (), v, component.getMaximum () ) );
+                if ( component.isEnabled () )
+                {
+                    final int v = component.getValue () - e.getWheelRotation ();
+                    component.setValue ( MathUtils.limit ( component.getMinimum (), v, component.getMaximum () ) );
+                }
             }
         };
         component.addMouseWheelListener ( mouseWheelListener );
@@ -172,7 +175,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
             public void mouseEntered ( final MouseEvent e )
             {
                 rollover = true;
-                if ( animated && c.isEnabled () )
+                if ( animated && component.isEnabled () )
                 {
                     rolloverTimer.start ();
                 }
@@ -187,7 +190,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
             public void mouseExited ( final MouseEvent e )
             {
                 rollover = false;
-                if ( animated && c.isEnabled () )
+                if ( animated && component.isEnabled () )
                 {
                     rolloverTimer.start ();
                 }
@@ -203,7 +206,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
     }
 
     @Override
-    public void uninstall ( final E c, final U ui )
+    protected void uninstallPropertiesAndListeners ()
     {
         // Removing listeners
         component.removeMouseWheelListener ( mouseWheelListener );
@@ -215,8 +218,6 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
         mouseAdapter = null;
 
         // Cleaning up caches
-        insetCache = null;
-        leftToRightCache = true;
         focusRect = null;
         contentRect = null;
         labelRect = null;
@@ -224,20 +225,15 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
         trackRect = null;
         thumbRect = null;
 
-        super.uninstall ( c, ui );
+        super.uninstallPropertiesAndListeners ();
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
+    public void paint ( final Graphics2D g2d, final C c, final U ui, final Bounds bounds )
     {
-        recalculateIfInsetsChanged ();
-        recalculateIfOrientationChanged ();
-        final Rectangle clip = g2d.getClipBounds ();
+        calculateGeometry ();
 
-        if ( component.getPaintTrack () && !clip.intersects ( trackRect ) )
-        {
-            calculateGeometry ();
-        }
+        final Rectangle clip = g2d.getClipBounds ();
         if ( component.getPaintTrack () && clip.intersects ( trackRect ) )
         {
             paintTrack ( g2d );
@@ -250,31 +246,9 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
         {
             paintLabels ( g2d );
         }
-        //        if ( component.hasFocus() && clip.intersects( focusRect ) ) {
-        //            paintFocus( g2d );
-        //        }
         if ( clip.intersects ( thumbRect ) )
         {
             paintThumb ( g2d );
-        }
-    }
-
-    protected void recalculateIfInsetsChanged ()
-    {
-        final Insets newInsets = component.getInsets ();
-        if ( !newInsets.equals ( insetCache ) )
-        {
-            insetCache = newInsets;
-            calculateGeometry ();
-        }
-    }
-
-    protected void recalculateIfOrientationChanged ()
-    {
-        if ( ltr != leftToRightCache )
-        {
-            leftToRightCache = ltr;
-            calculateGeometry ();
         }
     }
 
@@ -292,10 +266,11 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
 
     protected void calculateFocusRect ()
     {
-        focusRect.x = insetCache.left;
-        focusRect.y = insetCache.top;
-        focusRect.width = component.getWidth () - ( insetCache.left + insetCache.right );
-        focusRect.height = component.getHeight () - ( insetCache.top + insetCache.bottom );
+        final Insets insets = component.getInsets ();
+        focusRect.x = insets.left;
+        focusRect.y = insets.top;
+        focusRect.width = component.getWidth () - ( insets.left + insets.right );
+        focusRect.height = component.getHeight () - ( insets.top + insets.bottom );
     }
 
     protected void calculateThumbSize ()
@@ -338,7 +313,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
                 {
                     final float temp = ( float ) ( sliderValue - component.getMinimum () ) / ( float ) tickSpacing;
                     final int whichTick = Math.round ( temp );
-                    snappedValue = component.getMinimum () + ( whichTick * tickSpacing );
+                    snappedValue = component.getMinimum () + whichTick * tickSpacing;
                 }
 
                 if ( snappedValue != sliderValue )
@@ -352,7 +327,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
         {
             final int valuePosition = xPositionForValue ( component.getValue () );
 
-            thumbRect.x = valuePosition - ( thumbRect.width / 2 );
+            thumbRect.x = valuePosition - thumbRect.width / 2;
             thumbRect.y = trackRect.y;
         }
         else
@@ -360,7 +335,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
             final int valuePosition = yPositionForValue ( component.getValue () );
 
             thumbRect.x = trackRect.x;
-            thumbRect.y = valuePosition - ( thumbRect.height / 2 );
+            thumbRect.y = valuePosition - thumbRect.height / 2;
         }
     }
 
@@ -411,7 +386,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
             }
             trackRect.x = contentRect.x + trackBuffer;
             trackRect.y = contentRect.y + ( contentRect.height - centerSpacing - 1 ) / 2;
-            trackRect.width = contentRect.width - ( trackBuffer * 2 );
+            trackRect.width = contentRect.width - trackBuffer * 2;
             trackRect.height = thumbRect.height;
         }
         else
@@ -442,7 +417,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
             trackRect.x = contentRect.x + ( contentRect.width - centerSpacing - 1 ) / 2;
             trackRect.y = contentRect.y + trackBuffer;
             trackRect.width = thumbRect.width;
-            trackRect.height = contentRect.height - ( trackBuffer * 2 );
+            trackRect.height = contentRect.height - trackBuffer * 2;
         }
     }
 
@@ -464,11 +439,11 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
             tickRect.x = trackRect.x;
             tickRect.y = trackRect.y + trackRect.height;
             tickRect.width = trackRect.width;
-            tickRect.height = ( component.getPaintTicks () ) ? getTickLength () : 0;
+            tickRect.height = component.getPaintTicks () ? getTickLength () : 0;
         }
         else
         {
-            tickRect.width = ( component.getPaintTicks () ) ? getTickLength () : 0;
+            tickRect.width = component.getPaintTicks () ? getTickLength () : 0;
             if ( ltr )
             {
                 tickRect.x = trackRect.x + trackRect.width;
@@ -490,7 +465,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
             {
                 labelRect.x = tickRect.x - trackBuffer;
                 labelRect.y = tickRect.y + tickRect.height;
-                labelRect.width = tickRect.width + ( trackBuffer * 2 );
+                labelRect.width = tickRect.width + trackBuffer * 2;
                 labelRect.height = getHeightOfTallestLabel ();
             }
             else
@@ -506,7 +481,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
                     labelRect.x = tickRect.x - labelRect.width;
                 }
                 labelRect.y = tickRect.y - trackBuffer;
-                labelRect.height = tickRect.height + ( trackBuffer * 2 );
+                labelRect.height = tickRect.height + trackBuffer * 2;
             }
         }
         else
@@ -543,7 +518,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
         final double valueRange = ( double ) max - ( double ) min;
         final double pixelsPerValue = ( double ) trackLength / valueRange;
         final int trackLeft = trackRect.x;
-        final int trackRight = trackRect.x + ( trackRect.width - 1 );
+        final int trackRight = trackRect.x + trackRect.width - 1;
         int xPosition;
 
         if ( !drawInverted () )
@@ -583,7 +558,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
         final int max = component.getMaximum ();
         final double valueRange = ( double ) max - ( double ) min;
         final double pixelsPerValue = ( double ) trackHeight / valueRange;
-        final int trackBottom = trackY + ( trackHeight - 1 );
+        final int trackBottom = trackY + trackHeight - 1;
         int yPosition;
 
         if ( !drawInverted () )
@@ -787,7 +762,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
             g2d.fill ( ts );
 
             // Thumb border
-            g2d.setPaint ( component.isEnabled () ? StyleConstants.darkBorderColor : StyleConstants.disabledBorderColor );
+            g2d.setPaint ( component.isEnabled () ? Color.GRAY : Color.LIGHT_GRAY );
             g2d.draw ( ts );
 
             // Thumb focus
@@ -890,7 +865,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
             // Track shade
             if ( component.isEnabled () )
             {
-                GraphicsUtils.drawShade ( g2d, ss, component.isFocusOwner () ? StyleConstants.fieldFocusColor : new Color ( 210, 210, 210 ),
+                GraphicsUtils.drawShade ( g2d, ss, component.isFocusOwner () ? new Color ( 85, 142, 239 ) : new Color ( 210, 210, 210 ),
                         trackShadeWidth );
             }
 
@@ -933,16 +908,15 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
             g2d.fill ( ps );
 
             // Progress border
-            g2d.setPaint ( component.isEnabled () ? progressBorderColor : StyleConstants.disabledBorderColor );
+            g2d.setPaint ( component.isEnabled () ? progressBorderColor : Color.LIGHT_GRAY );
             g2d.draw ( ps );
         }
 
         // Track border & focus
         {
             // Track border
-            g2d.setPaint (
-                    component.isEnabled () ? rolloverDarkBorderOnly && !dragging ? getBorderColor () : StyleConstants.darkBorderColor :
-                            StyleConstants.disabledBorderColor );
+            g2d.setPaint ( component.isEnabled () ? rolloverDarkBorderOnly && !dragging ?
+                    getBorderColor () : Color.GRAY : Color.LIGHT_GRAY );
             g2d.draw ( ss );
         }
 
@@ -1042,7 +1016,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
     {
         final Rectangle tickBounds = tickRect;
 
-        g.setColor ( /*DefaultLookup.getColor ( component, this, "Slider.tickColor",*/ Color.black/* ) */ );
+        g.setColor ( component.isEnabled () ? Color.BLACK : Color.LIGHT_GRAY );
 
         if ( component.getOrientation () == JSlider.HORIZONTAL )
         {
@@ -1201,7 +1175,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
     protected void paintHorizontalLabel ( final Graphics g, final int value, final Component label )
     {
         final int labelCenter = xPositionForValue ( value );
-        final int labelLeft = labelCenter - ( label.getPreferredSize ().width / 2 );
+        final int labelLeft = labelCenter - label.getPreferredSize ().width / 2;
         g.translate ( labelLeft, 0 );
         label.paint ( g );
         g.translate ( -labelLeft, 0 );
@@ -1216,7 +1190,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
     protected void paintVerticalLabel ( final Graphics g, final int value, final Component label )
     {
         final int labelCenter = yPositionForValue ( value );
-        final int labelTop = labelCenter - ( label.getPreferredSize ().height / 2 );
+        final int labelTop = labelCenter - label.getPreferredSize ().height / 2;
         g.translate ( 0, labelTop );
         label.paint ( g );
         g.translate ( 0, -labelTop );
@@ -1229,7 +1203,7 @@ public class SliderPainter<E extends JSlider, U extends WebSliderUI> extends Abs
 
     protected Color getBorderColor ()
     {
-        return ColorUtils.getIntermediateColor ( StyleConstants.borderColor, StyleConstants.darkBorderColor, getProgress () );
+        return ColorUtils.intermediate ( new Color ( 170, 170, 170 ), Color.GRAY, getProgress () );
     }
 
     @Override

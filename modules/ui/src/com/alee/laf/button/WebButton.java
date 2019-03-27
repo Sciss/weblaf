@@ -17,30 +17,24 @@
 
 package com.alee.laf.button;
 
-import com.alee.painter.Paintable;
-import com.alee.painter.Painter;
-import com.alee.laf.WebLookAndFeel;
 import com.alee.managers.hotkey.HotkeyData;
 import com.alee.managers.hotkey.HotkeyInfo;
 import com.alee.managers.hotkey.HotkeyManager;
-import com.alee.managers.language.LanguageManager;
-import com.alee.managers.language.LanguageMethods;
-import com.alee.managers.language.LanguageUtils;
-import com.alee.managers.language.data.TooltipWay;
+import com.alee.managers.language.*;
 import com.alee.managers.language.updaters.LanguageUpdater;
-import com.alee.managers.log.Log;
+import com.alee.managers.settings.Configuration;
+import com.alee.managers.settings.SettingsMethods;
+import com.alee.managers.settings.SettingsProcessor;
+import com.alee.managers.settings.UISettingsManager;
 import com.alee.managers.style.*;
-import com.alee.managers.style.Skin;
-import com.alee.managers.style.StyleListener;
-import com.alee.managers.style.Skinnable;
 import com.alee.managers.tooltip.ToolTipMethods;
 import com.alee.managers.tooltip.TooltipManager;
+import com.alee.managers.tooltip.TooltipWay;
 import com.alee.managers.tooltip.WebCustomTooltip;
-import com.alee.utils.EventUtils;
-import com.alee.utils.ReflectUtils;
-import com.alee.utils.SizeUtils;
-import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.*;
+import com.alee.painter.Paintable;
+import com.alee.painter.Painter;
+import com.alee.utils.swing.MouseButton;
+import com.alee.utils.swing.extensions.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -49,144 +43,257 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.KeyAdapter;
 import java.awt.event.MouseAdapter;
 import java.util.List;
-import java.util.Map;
 
 /**
+ * {@link JButton} extension class.
+ * It contains various useful methods to simplify core component usage.
+ *
+ * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
+ * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
+ *
  * @author Mikle Garin
+ * @see ButtonDescriptor
+ * @see WButtonUI
+ * @see WebButtonUI
+ * @see IButtonPainter
+ * @see ButtonPainter
+ * @see JButton
  */
-
-public class WebButton extends JButton
-        implements Styleable, Skinnable, Paintable, ShapeProvider, MarginSupport, PaddingSupport, EventMethods, ToolTipMethods,
-        LanguageMethods, FontMethods<WebButton>, SizeMethods<WebButton>
+public class WebButton extends JButton implements Styleable, Paintable, ShapeMethods, MarginMethods, PaddingMethods, EventMethods,
+        ToolTipMethods, LanguageMethods, LanguageEventMethods, SettingsMethods, FontMethods<WebButton>, SizeMethods<WebButton>
 {
+    /**
+     * Constructs new {@link WebButton}.
+     */
     public WebButton ()
     {
-        super ();
+        this ( StyleId.auto );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param action button {@link Action}
+     */
+    public WebButton ( final Action action )
+    {
+        this ( StyleId.auto, action );
+    }
+
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param icon button {@link Icon}
+     */
     public WebButton ( final Icon icon )
     {
-        super ( icon );
-        setStyleId ( StyleId.buttonIcon );
+        this ( StyleId.auto, icon );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param icon         button {@link Icon}
+     * @param rolloverIcon button hover icon
+     */
     public WebButton ( final Icon icon, final Icon rolloverIcon )
     {
-        super ( icon );
-        setRolloverIcon ( rolloverIcon );
-        setStyleId ( StyleId.buttonIcon );
+        this ( StyleId.auto, icon, rolloverIcon );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param text button text
+     */
     public WebButton ( final String text )
     {
-        super ( text );
+        this ( StyleId.auto, text );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param text button text
+     * @param icon button {@link Icon}
+     */
     public WebButton ( final String text, final Icon icon )
     {
-        super ( text, icon );
+        this ( StyleId.auto, text, icon );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param listener button {@link Action} listener
+     */
     public WebButton ( final ActionListener listener )
     {
-        super ();
-        addActionListener ( listener );
+        this ( StyleId.auto, listener );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param icon     button {@link Icon}
+     * @param listener button {@link ActionListener}
+     */
     public WebButton ( final Icon icon, final ActionListener listener )
     {
-        super ( icon );
-        setStyleId ( StyleId.buttonIcon );
-        addActionListener ( listener );
+        this ( StyleId.auto, icon, listener );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param text     button text
+     * @param listener button {@link ActionListener}
+     */
     public WebButton ( final String text, final ActionListener listener )
     {
         super ( text );
         addActionListener ( listener );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param text     button text
+     * @param icon     button {@link Icon}
+     * @param listener button {@link ActionListener}
+     */
     public WebButton ( final String text, final Icon icon, final ActionListener listener )
     {
-        super ( text, icon );
-        addActionListener ( listener );
+        this ( StyleId.auto, text, icon, listener );
     }
 
-    public WebButton ( final Action a )
-    {
-        super ( a );
-    }
-
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param id {@link StyleId}
+     */
     public WebButton ( final StyleId id )
     {
-        super ();
-        setStyleId ( id );
+        this ( id, null, null, null );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param id     {@link StyleId}
+     * @param action button {@link Action}
+     */
+    public WebButton ( final StyleId id, final Action action )
+    {
+        this ( id, null, null, null );
+        setAction ( action );
+    }
+
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param id   {@link StyleId}
+     * @param icon button {@link Icon}
+     */
     public WebButton ( final StyleId id, final Icon icon )
     {
-        super ( icon );
-        setStyleId ( id );
+        this ( id, null, icon, null );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param id           {@link StyleId}
+     * @param icon         button {@link Icon}
+     * @param rolloverIcon button hover icon
+     */
     public WebButton ( final StyleId id, final Icon icon, final Icon rolloverIcon )
     {
-        super ( icon );
+        this ( id, null, icon, null );
         setRolloverIcon ( rolloverIcon );
-        setStyleId ( id );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param id   {@link StyleId}
+     * @param text button text
+     */
     public WebButton ( final StyleId id, final String text )
     {
-        super ( text );
-        setStyleId ( id );
+        this ( id, text, null, null );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param id   {@link StyleId}
+     * @param text button text
+     * @param icon button {@link Icon}
+     */
     public WebButton ( final StyleId id, final String text, final Icon icon )
     {
-        super ( text, icon );
-        setStyleId ( id );
+        this ( id, text, icon, null );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param listener button {@link ActionListener}
+     */
     public WebButton ( final StyleId id, final ActionListener listener )
     {
-        super ();
-        setStyleId ( id );
-        addActionListener ( listener );
+        this ( id, null, null, listener );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param icon     button {@link Icon}
+     * @param listener button {@link ActionListener}
+     */
     public WebButton ( final StyleId id, final Icon icon, final ActionListener listener )
     {
-        super ( icon );
-        setStyleId ( id );
-        addActionListener ( listener );
+        this ( id, null, icon, listener );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param text     button text
+     * @param listener button {@link ActionListener}
+     */
     public WebButton ( final StyleId id, final String text, final ActionListener listener )
     {
-        super ( text );
-        setStyleId ( id );
-        addActionListener ( listener );
+        this ( id, text, null, listener );
     }
 
+    /**
+     * Constructs new {@link WebButton}.
+     *
+     * @param id       {@link StyleId}
+     * @param text     button text
+     * @param icon     button {@link Icon}
+     * @param listener button {@link ActionListener}
+     */
     public WebButton ( final StyleId id, final String text, final Icon icon, final ActionListener listener )
     {
         super ( text, icon );
         setStyleId ( id );
-        addActionListener ( listener );
-    }
-
-    public WebButton ( final StyleId id, final Action action )
-    {
-        super ( action );
-        setStyleId ( id );
+        if ( listener != null )
+        {
+            addActionListener ( listener );
+        }
     }
 
     @Override
     protected void init ( final String text, final Icon icon )
     {
-        super.init ( LanguageUtils.getInitialText ( text ), icon );
-        LanguageUtils.registerInitialLanguage ( this, text );
+        super.init ( UILanguageManager.getInitialText ( text ), icon );
+        UILanguageManager.registerInitialLanguage ( this, text );
     }
 
     /**
@@ -249,15 +356,27 @@ public class WebButton extends JButton
     }
 
     @Override
+    public StyleId getDefaultStyleId ()
+    {
+        return getIcon () != null && getText () == null ? StyleId.buttonIcon : StyleId.button;
+    }
+
+    @Override
     public StyleId getStyleId ()
     {
-        return getWebUI ().getStyleId ();
+        return StyleManager.getStyleId ( this );
     }
 
     @Override
     public StyleId setStyleId ( final StyleId id )
     {
-        return getWebUI ().setStyleId ( id );
+        return StyleManager.setStyleId ( this, id );
+    }
+
+    @Override
+    public StyleId resetStyleId ()
+    {
+        return StyleManager.resetStyleId ( this );
     }
 
     @Override
@@ -279,9 +398,9 @@ public class WebButton extends JButton
     }
 
     @Override
-    public Skin restoreSkin ()
+    public Skin resetSkin ()
     {
-        return StyleManager.restoreSkin ( this );
+        return StyleManager.resetSkin ( this );
     }
 
     @Override
@@ -297,21 +416,9 @@ public class WebButton extends JButton
     }
 
     @Override
-    public Map<String, Painter> getCustomPainters ()
-    {
-        return StyleManager.getCustomPainters ( this );
-    }
-
-    @Override
     public Painter getCustomPainter ()
     {
         return StyleManager.getCustomPainter ( this );
-    }
-
-    @Override
-    public Painter getCustomPainter ( final String id )
-    {
-        return StyleManager.getCustomPainter ( this, id );
     }
 
     @Override
@@ -321,233 +428,195 @@ public class WebButton extends JButton
     }
 
     @Override
-    public Painter setCustomPainter ( final String id, final Painter painter )
+    public boolean resetCustomPainter ()
     {
-        return StyleManager.setCustomPainter ( this, id, painter );
+        return StyleManager.resetCustomPainter ( this );
     }
 
     @Override
-    public boolean restoreDefaultPainters ()
+    public Shape getShape ()
     {
-        return StyleManager.restoreDefaultPainters ( this );
+        return ShapeMethodsImpl.getShape ( this );
     }
 
     @Override
-    public Shape provideShape ()
+    public boolean isShapeDetectionEnabled ()
     {
-        return getWebUI ().provideShape ();
+        return ShapeMethodsImpl.isShapeDetectionEnabled ( this );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        ShapeMethodsImpl.setShapeDetectionEnabled ( this, enabled );
     }
 
     @Override
     public Insets getMargin ()
     {
-        return getWebUI ().getMargin ();
+        return MarginMethodsImpl.getMargin ( this );
     }
 
-    /**
-     * Sets new margin.
-     *
-     * @param margin new margin
-     */
+    @Override
     public void setMargin ( final int margin )
     {
-        setMargin ( margin, margin, margin, margin );
+        MarginMethodsImpl.setMargin ( this, margin );
     }
 
-    /**
-     * Sets new margin.
-     *
-     * @param top    new top margin
-     * @param left   new left margin
-     * @param bottom new bottom margin
-     * @param right  new right margin
-     */
+    @Override
     public void setMargin ( final int top, final int left, final int bottom, final int right )
     {
-        setMargin ( new Insets ( top, left, bottom, right ) );
+        MarginMethodsImpl.setMargin ( this, top, left, bottom, right );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        getWebUI ().setMargin ( margin );
+        MarginMethodsImpl.setMargin ( this, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return getWebUI ().getPadding ();
+        return PaddingMethodsImpl.getPadding ( this );
     }
 
-    /**
-     * Sets new padding.
-     *
-     * @param padding new padding
-     */
+    @Override
     public void setPadding ( final int padding )
     {
-        setPadding ( padding, padding, padding, padding );
+        PaddingMethodsImpl.setPadding ( this, padding );
     }
 
-    /**
-     * Sets new padding.
-     *
-     * @param top    new top padding
-     * @param left   new left padding
-     * @param bottom new bottom padding
-     * @param right  new right padding
-     */
+    @Override
     public void setPadding ( final int top, final int left, final int bottom, final int right )
     {
-        setPadding ( new Insets ( top, left, bottom, right ) );
+        PaddingMethodsImpl.setPadding ( this, top, left, bottom, right );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        getWebUI ().setPadding ( padding );
-    }
-
-    /**
-     * Returns Web-UI applied to this class.
-     *
-     * @return Web-UI applied to this class
-     */
-    private WebButtonUI getWebUI ()
-    {
-        return ( WebButtonUI ) getUI ();
-    }
-
-    /**
-     * Installs a Web-UI into this component.
-     */
-    @Override
-    public void updateUI ()
-    {
-        if ( getUI () == null || !( getUI () instanceof WebButtonUI ) )
-        {
-            try
-            {
-                setUI ( ( WebButtonUI ) ReflectUtils.createInstance ( WebLookAndFeel.buttonUI ) );
-            }
-            catch ( final Throwable e )
-            {
-                Log.error ( this, e );
-                setUI ( new WebButtonUI () );
-            }
-        }
-        else
-        {
-            setUI ( getUI () );
-        }
+        PaddingMethodsImpl.setPadding ( this, padding );
     }
 
     @Override
     public MouseAdapter onMousePress ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMousePress ( this, runnable );
+        return EventMethodsImpl.onMousePress ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMousePress ( final MouseButton mouseButton, final MouseEventRunnable runnable )
     {
-        return EventUtils.onMousePress ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMousePress ( this, mouseButton, runnable );
     }
 
     @Override
     public MouseAdapter onMouseEnter ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseEnter ( this, runnable );
+        return EventMethodsImpl.onMouseEnter ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseExit ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseExit ( this, runnable );
+        return EventMethodsImpl.onMouseExit ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseDrag ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseDrag ( this, runnable );
+        return EventMethodsImpl.onMouseDrag ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseDrag ( final MouseButton mouseButton, final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseDrag ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMouseDrag ( this, mouseButton, runnable );
     }
 
     @Override
     public MouseAdapter onMouseClick ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseClick ( this, runnable );
+        return EventMethodsImpl.onMouseClick ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMouseClick ( final MouseButton mouseButton, final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseClick ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMouseClick ( this, mouseButton, runnable );
     }
 
     @Override
     public MouseAdapter onDoubleClick ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onDoubleClick ( this, runnable );
+        return EventMethodsImpl.onDoubleClick ( this, runnable );
     }
 
     @Override
     public MouseAdapter onMenuTrigger ( final MouseEventRunnable runnable )
     {
-        return EventUtils.onMenuTrigger ( this, runnable );
+        return EventMethodsImpl.onMenuTrigger ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyType ( final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyType ( this, runnable );
+        return EventMethodsImpl.onKeyType ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyType ( final HotkeyData hotkey, final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyType ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyType ( this, hotkey, runnable );
     }
 
     @Override
     public KeyAdapter onKeyPress ( final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyPress ( this, runnable );
+        return EventMethodsImpl.onKeyPress ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyPress ( final HotkeyData hotkey, final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyPress ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyPress ( this, hotkey, runnable );
     }
 
     @Override
     public KeyAdapter onKeyRelease ( final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyRelease ( this, runnable );
+        return EventMethodsImpl.onKeyRelease ( this, runnable );
     }
 
     @Override
     public KeyAdapter onKeyRelease ( final HotkeyData hotkey, final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyRelease ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyRelease ( this, hotkey, runnable );
     }
 
     @Override
     public FocusAdapter onFocusGain ( final FocusEventRunnable runnable )
     {
-        return EventUtils.onFocusGain ( this, runnable );
+        return EventMethodsImpl.onFocusGain ( this, runnable );
     }
 
     @Override
     public FocusAdapter onFocusLoss ( final FocusEventRunnable runnable )
     {
-        return EventUtils.onFocusLoss ( this, runnable );
+        return EventMethodsImpl.onFocusLoss ( this, runnable );
+    }
+
+    @Override
+    public MouseAdapter onDragStart ( final int shift, final MouseEventRunnable runnable )
+    {
+        return EventMethodsImpl.onDragStart ( this, shift, runnable );
+    }
+
+    @Override
+    public MouseAdapter onDragStart ( final int shift, final MouseButton mouseButton, final MouseEventRunnable runnable )
+    {
+        return EventMethodsImpl.onDragStart ( this, shift, mouseButton, runnable );
     }
 
     @Override
@@ -695,236 +764,347 @@ public class WebButton extends JButton
     }
 
     @Override
+    public String getLanguage ()
+    {
+        return UILanguageManager.getComponentKey ( this );
+    }
+
+    @Override
     public void setLanguage ( final String key, final Object... data )
     {
-        LanguageManager.registerComponent ( this, key, data );
+        UILanguageManager.registerComponent ( this, key, data );
     }
 
     @Override
     public void updateLanguage ( final Object... data )
     {
-        LanguageManager.updateComponent ( this, data );
+        UILanguageManager.updateComponent ( this, data );
     }
 
     @Override
     public void updateLanguage ( final String key, final Object... data )
     {
-        LanguageManager.updateComponent ( this, key, data );
+        UILanguageManager.updateComponent ( this, key, data );
     }
 
     @Override
     public void removeLanguage ()
     {
-        LanguageManager.unregisterComponent ( this );
+        UILanguageManager.unregisterComponent ( this );
     }
 
     @Override
     public boolean isLanguageSet ()
     {
-        return LanguageManager.isRegisteredComponent ( this );
+        return UILanguageManager.isRegisteredComponent ( this );
     }
 
     @Override
     public void setLanguageUpdater ( final LanguageUpdater updater )
     {
-        LanguageManager.registerLanguageUpdater ( this, updater );
+        UILanguageManager.registerLanguageUpdater ( this, updater );
     }
 
     @Override
     public void removeLanguageUpdater ()
     {
-        LanguageManager.unregisterLanguageUpdater ( this );
+        UILanguageManager.unregisterLanguageUpdater ( this );
+    }
+
+    @Override
+    public void addLanguageListener ( final LanguageListener listener )
+    {
+        UILanguageManager.addLanguageListener ( this, listener );
+    }
+
+    @Override
+    public void removeLanguageListener ( final LanguageListener listener )
+    {
+        UILanguageManager.removeLanguageListener ( this, listener );
+    }
+
+    @Override
+    public void removeLanguageListeners ()
+    {
+        UILanguageManager.removeLanguageListeners ( this );
+    }
+
+    @Override
+    public void addDictionaryListener ( final DictionaryListener listener )
+    {
+        UILanguageManager.addDictionaryListener ( this, listener );
+    }
+
+    @Override
+    public void removeDictionaryListener ( final DictionaryListener listener )
+    {
+        UILanguageManager.removeDictionaryListener ( this, listener );
+    }
+
+    @Override
+    public void removeDictionaryListeners ()
+    {
+        UILanguageManager.removeDictionaryListeners ( this );
+    }
+
+    @Override
+    public void registerSettings ( final Configuration configuration )
+    {
+        UISettingsManager.registerComponent ( this, configuration );
+    }
+
+    @Override
+    public void registerSettings ( final SettingsProcessor processor )
+    {
+        UISettingsManager.registerComponent ( this, processor );
+    }
+
+    @Override
+    public void unregisterSettings ()
+    {
+        UISettingsManager.unregisterComponent ( this );
+    }
+
+    @Override
+    public void loadSettings ()
+    {
+        UISettingsManager.loadSettings ( this );
+    }
+
+    @Override
+    public void saveSettings ()
+    {
+        UISettingsManager.saveSettings ( this );
     }
 
     @Override
     public WebButton setPlainFont ()
     {
-        return SwingUtils.setPlainFont ( this );
+        return FontMethodsImpl.setPlainFont ( this );
     }
 
     @Override
     public WebButton setPlainFont ( final boolean apply )
     {
-        return SwingUtils.setPlainFont ( this, apply );
+        return FontMethodsImpl.setPlainFont ( this, apply );
     }
 
     @Override
     public boolean isPlainFont ()
     {
-        return SwingUtils.isPlainFont ( this );
+        return FontMethodsImpl.isPlainFont ( this );
     }
 
     @Override
     public WebButton setBoldFont ()
     {
-        return SwingUtils.setBoldFont ( this );
+        return FontMethodsImpl.setBoldFont ( this );
     }
 
     @Override
     public WebButton setBoldFont ( final boolean apply )
     {
-        return SwingUtils.setBoldFont ( this, apply );
+        return FontMethodsImpl.setBoldFont ( this, apply );
     }
 
     @Override
     public boolean isBoldFont ()
     {
-        return SwingUtils.isBoldFont ( this );
+        return FontMethodsImpl.isBoldFont ( this );
     }
 
     @Override
     public WebButton setItalicFont ()
     {
-        return SwingUtils.setItalicFont ( this );
+        return FontMethodsImpl.setItalicFont ( this );
     }
 
     @Override
     public WebButton setItalicFont ( final boolean apply )
     {
-        return SwingUtils.setItalicFont ( this, apply );
+        return FontMethodsImpl.setItalicFont ( this, apply );
     }
 
     @Override
     public boolean isItalicFont ()
     {
-        return SwingUtils.isItalicFont ( this );
+        return FontMethodsImpl.isItalicFont ( this );
     }
 
     @Override
     public WebButton setFontStyle ( final boolean bold, final boolean italic )
     {
-        return SwingUtils.setFontStyle ( this, bold, italic );
+        return FontMethodsImpl.setFontStyle ( this, bold, italic );
     }
 
     @Override
     public WebButton setFontStyle ( final int style )
     {
-        return SwingUtils.setFontStyle ( this, style );
+        return FontMethodsImpl.setFontStyle ( this, style );
     }
 
     @Override
     public WebButton setFontSize ( final int fontSize )
     {
-        return SwingUtils.setFontSize ( this, fontSize );
+        return FontMethodsImpl.setFontSize ( this, fontSize );
     }
 
     @Override
     public WebButton changeFontSize ( final int change )
     {
-        return SwingUtils.changeFontSize ( this, change );
+        return FontMethodsImpl.changeFontSize ( this, change );
     }
 
     @Override
     public int getFontSize ()
     {
-        return SwingUtils.getFontSize ( this );
+        return FontMethodsImpl.getFontSize ( this );
     }
 
     @Override
     public WebButton setFontSizeAndStyle ( final int fontSize, final boolean bold, final boolean italic )
     {
-        return SwingUtils.setFontSizeAndStyle ( this, fontSize, bold, italic );
+        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, bold, italic );
     }
 
     @Override
     public WebButton setFontSizeAndStyle ( final int fontSize, final int style )
     {
-        return SwingUtils.setFontSizeAndStyle ( this, fontSize, style );
+        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, style );
     }
 
     @Override
     public WebButton setFontName ( final String fontName )
     {
-        return SwingUtils.setFontName ( this, fontName );
+        return FontMethodsImpl.setFontName ( this, fontName );
     }
 
     @Override
     public String getFontName ()
     {
-        return SwingUtils.getFontName ( this );
+        return FontMethodsImpl.getFontName ( this );
     }
 
     @Override
     public int getPreferredWidth ()
     {
-        return SizeUtils.getPreferredWidth ( this );
+        return SizeMethodsImpl.getPreferredWidth ( this );
     }
 
     @Override
     public WebButton setPreferredWidth ( final int preferredWidth )
     {
-        return SizeUtils.setPreferredWidth ( this, preferredWidth );
+        return SizeMethodsImpl.setPreferredWidth ( this, preferredWidth );
     }
 
     @Override
     public int getPreferredHeight ()
     {
-        return SizeUtils.getPreferredHeight ( this );
+        return SizeMethodsImpl.getPreferredHeight ( this );
     }
 
     @Override
     public WebButton setPreferredHeight ( final int preferredHeight )
     {
-        return SizeUtils.setPreferredHeight ( this, preferredHeight );
+        return SizeMethodsImpl.setPreferredHeight ( this, preferredHeight );
     }
 
     @Override
     public int getMinimumWidth ()
     {
-        return SizeUtils.getMinimumWidth ( this );
+        return SizeMethodsImpl.getMinimumWidth ( this );
     }
 
     @Override
     public WebButton setMinimumWidth ( final int minimumWidth )
     {
-        return SizeUtils.setMinimumWidth ( this, minimumWidth );
+        return SizeMethodsImpl.setMinimumWidth ( this, minimumWidth );
     }
 
     @Override
     public int getMinimumHeight ()
     {
-        return SizeUtils.getMinimumHeight ( this );
+        return SizeMethodsImpl.getMinimumHeight ( this );
     }
 
     @Override
     public WebButton setMinimumHeight ( final int minimumHeight )
     {
-        return SizeUtils.setMinimumHeight ( this, minimumHeight );
+        return SizeMethodsImpl.setMinimumHeight ( this, minimumHeight );
     }
 
     @Override
     public int getMaximumWidth ()
     {
-        return SizeUtils.getMaximumWidth ( this );
+        return SizeMethodsImpl.getMaximumWidth ( this );
     }
 
     @Override
     public WebButton setMaximumWidth ( final int maximumWidth )
     {
-        return SizeUtils.setMaximumWidth ( this, maximumWidth );
+        return SizeMethodsImpl.setMaximumWidth ( this, maximumWidth );
     }
 
     @Override
     public int getMaximumHeight ()
     {
-        return SizeUtils.getMaximumHeight ( this );
+        return SizeMethodsImpl.getMaximumHeight ( this );
     }
 
     @Override
     public WebButton setMaximumHeight ( final int maximumHeight )
     {
-        return SizeUtils.setMaximumHeight ( this, maximumHeight );
+        return SizeMethodsImpl.setMaximumHeight ( this, maximumHeight );
     }
 
     @Override
     public Dimension getPreferredSize ()
     {
-        return SizeUtils.getPreferredSize ( this, super.getPreferredSize () );
+        return SizeMethodsImpl.getPreferredSize ( this, super.getPreferredSize () );
+    }
+
+    @Override
+    public Dimension getOriginalPreferredSize ()
+    {
+        return SizeMethodsImpl.getOriginalPreferredSize ( this, super.getPreferredSize () );
     }
 
     @Override
     public WebButton setPreferredSize ( final int width, final int height )
     {
-        return SizeUtils.setPreferredSize ( this, width, height );
+        return SizeMethodsImpl.setPreferredSize ( this, width, height );
+    }
+
+    /**
+     * Returns the look and feel (LaF) object that renders this component.
+     *
+     * @return the {@link WButtonUI} object that renders this component
+     */
+    @Override
+    public WButtonUI getUI ()
+    {
+        return ( WButtonUI ) ui;
+    }
+
+    /**
+     * Sets the LaF object that renders this component.
+     *
+     * @param ui {@link WButtonUI}
+     */
+    public void setUI ( final WButtonUI ui )
+    {
+        super.setUI ( ui );
+    }
+
+    @Override
+    public void updateUI ()
+    {
+        StyleManager.getDescriptor ( this ).updateUI ( this );
+    }
+
+    @Override
+    public String getUIClassID ()
+    {
+        return StyleManager.getDescriptor ( this ).getUIClassId ();
     }
 }

@@ -18,7 +18,6 @@
 package com.alee.painter.decoration.shape;
 
 import com.alee.painter.decoration.IDecoration;
-import com.alee.utils.MergeUtils;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
 import javax.swing.*;
@@ -27,14 +26,13 @@ import java.awt.*;
 /**
  * Abstract shape providing some general method implementations.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <D> decoration type
  * @param <I> shape type
  * @author Mikle Garin
  */
-
-public abstract class AbstractShape<E extends JComponent, D extends IDecoration<E, D>, I extends AbstractShape<E, D, I>>
-        implements IShape<E, D, I>
+public abstract class AbstractShape<C extends JComponent, D extends IDecoration<C, D>, I extends AbstractShape<C, D, I>>
+        implements IShape<C, D, I>
 {
     /**
      * Shape ID.
@@ -42,50 +40,52 @@ public abstract class AbstractShape<E extends JComponent, D extends IDecoration<
     @XStreamAsAttribute
     protected String id;
 
+    /**
+     * Whether or not this shape should overwrite previous one when merged.
+     */
+    @XStreamAsAttribute
+    protected Boolean overwrite;
+
     @Override
     public String getId ()
     {
-        return id != null ? id : getDefaultId ();
-    }
-
-    /**
-     * Returns default shape ID.
-     *
-     * @return default shape ID
-     */
-    protected String getDefaultId ()
-    {
-        return "shape";
+        return id != null ? id : "shape";
     }
 
     @Override
-    public boolean isVisible ( final ShapeType type, final E c, final D d )
+    public boolean isOverwrite ()
+    {
+        return overwrite != null && overwrite;
+    }
+
+    @Override
+    public void activate ( final C c, final D d )
+    {
+        // Do nothing by default
+    }
+
+    @Override
+    public void deactivate ( final C c, final D d )
+    {
+        // Do nothing by default
+    }
+
+    @Override
+    public boolean isVisible ( final ShapeType type, final Rectangle bounds, final C c, final D d )
     {
         return true;
     }
 
     @Override
-    public Object[] getShapeSettings ( final Rectangle bounds, final E c, final D d )
+    public Object[] getShapeSettings ( final Rectangle bounds, final C c, final D d )
     {
         return null;
     }
 
     @Override
-    public StretchInfo getStretchInfo ( final Rectangle bounds, final E c, final D d )
+    public StretchInfo getStretchInfo ( final Rectangle bounds, final C c, final D d )
     {
         return null;
-    }
-
-    @Override
-    public I merge ( final I shape )
-    {
-        return ( I ) this;
-    }
-
-    @Override
-    public I clone ()
-    {
-        return ( I ) MergeUtils.cloneByFieldsSafely ( this );
     }
 
     /**

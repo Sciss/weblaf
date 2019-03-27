@@ -18,7 +18,6 @@
 package com.alee.laf.tabbedpane;
 
 import com.alee.painter.Painter;
-import com.alee.global.StyleConstants;
 
 import java.awt.*;
 
@@ -104,7 +103,7 @@ public final class WebTabbedPaneStyle
     /**
      * Color of the tab border.
      */
-    public static Color tabBorderColor = StyleConstants.darkBorderColor;
+    public static Color tabBorderColor = Color.GRAY;
 
     /**
      * Color of the content border.
@@ -120,11 +119,6 @@ public final class WebTabbedPaneStyle
      * If true, the selected tab background colors will be used in every case.
      */
     public static boolean forceUseSelectedTabBgColors = false;
-
-    /**
-     * Default background color.
-     */
-    public static Color backgroundColor = new Color ( 237, 237, 237 );
 
     /**
      * If true, only the top border is painted.

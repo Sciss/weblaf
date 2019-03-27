@@ -17,49 +17,79 @@
 
 package com.alee.laf.tooltip;
 
+import com.alee.managers.language.*;
+import com.alee.managers.language.updaters.LanguageUpdater;
+import com.alee.managers.settings.Configuration;
+import com.alee.managers.settings.SettingsMethods;
+import com.alee.managers.settings.SettingsProcessor;
+import com.alee.managers.settings.UISettingsManager;
+import com.alee.managers.style.*;
 import com.alee.painter.Paintable;
 import com.alee.painter.Painter;
-import com.alee.laf.WebLookAndFeel;
-import com.alee.managers.log.Log;
-import com.alee.managers.style.*;
-import com.alee.managers.style.Skin;
-import com.alee.managers.style.StyleListener;
-import com.alee.managers.style.Skinnable;
-import com.alee.utils.ReflectUtils;
-import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.FontMethods;
+import com.alee.utils.swing.extensions.FontMethods;
+import com.alee.utils.swing.extensions.FontMethodsImpl;
+import com.alee.utils.swing.extensions.SizeMethods;
+import com.alee.utils.swing.extensions.SizeMethodsImpl;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.Map;
 
 /**
- * This JToolTip extension class provides a direct access to WebToolTipUI methods.
+ * {@link JToolTip} extension class.
+ * It contains various useful methods to simplify core component usage.
+ *
+ * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
+ * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
  *
  * @author Mikle Garin
+ * @see JToolTip
+ * @see WebToolTipUI
+ * @see ToolTipPainter
  */
-
-public class WebToolTip extends JToolTip
-        implements Styleable, Skinnable, Paintable, ShapeProvider, MarginSupport, PaddingSupport, FontMethods<WebToolTip>
+public class WebToolTip extends JToolTip implements Styleable, Paintable, ShapeMethods, MarginMethods, PaddingMethods,
+        LanguageMethods, LanguageEventMethods, SettingsMethods, FontMethods<WebToolTip>, SizeMethods<WebToolTip>
 {
     /**
      * Constructs empty tooltip.
      */
     public WebToolTip ()
     {
+        this ( StyleId.auto );
+    }
+
+    /**
+     * Constructs empty tooltip.
+     *
+     * @param id style ID
+     */
+    public WebToolTip ( final StyleId id )
+    {
         super ();
+        setStyleId ( id );
+    }
+
+    @Override
+    public StyleId getDefaultStyleId ()
+    {
+        return StyleId.tooltip;
     }
 
     @Override
     public StyleId getStyleId ()
     {
-        return getWebUI ().getStyleId ();
+        return StyleManager.getStyleId ( this );
     }
 
     @Override
     public StyleId setStyleId ( final StyleId id )
     {
-        return getWebUI ().setStyleId ( id );
+        return StyleManager.setStyleId ( this, id );
+    }
+
+    @Override
+    public StyleId resetStyleId ()
+    {
+        return StyleManager.resetStyleId ( this );
     }
 
     @Override
@@ -81,9 +111,9 @@ public class WebToolTip extends JToolTip
     }
 
     @Override
-    public Skin restoreSkin ()
+    public Skin resetSkin ()
     {
-        return StyleManager.restoreSkin ( this );
+        return StyleManager.resetSkin ( this );
     }
 
     @Override
@@ -99,21 +129,9 @@ public class WebToolTip extends JToolTip
     }
 
     @Override
-    public Map<String, Painter> getCustomPainters ()
-    {
-        return StyleManager.getCustomPainters ( this );
-    }
-
-    @Override
     public Painter getCustomPainter ()
     {
         return StyleManager.getCustomPainter ( this );
-    }
-
-    @Override
-    public Painter getCustomPainter ( final String id )
-    {
-        return StyleManager.getCustomPainter ( this, id );
     }
 
     @Override
@@ -123,232 +141,419 @@ public class WebToolTip extends JToolTip
     }
 
     @Override
-    public Painter setCustomPainter ( final String id, final Painter painter )
+    public boolean resetCustomPainter ()
     {
-        return StyleManager.setCustomPainter ( this, id, painter );
+        return StyleManager.resetCustomPainter ( this );
     }
 
     @Override
-    public boolean restoreDefaultPainters ()
+    public Shape getShape ()
     {
-        return StyleManager.restoreDefaultPainters ( this );
+        return ShapeMethodsImpl.getShape ( this );
     }
 
     @Override
-    public Shape provideShape ()
+    public boolean isShapeDetectionEnabled ()
     {
-        return getWebUI ().provideShape ();
+        return ShapeMethodsImpl.isShapeDetectionEnabled ( this );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        ShapeMethodsImpl.setShapeDetectionEnabled ( this, enabled );
     }
 
     @Override
     public Insets getMargin ()
     {
-        return getWebUI ().getMargin ();
+        return MarginMethodsImpl.getMargin ( this );
     }
 
-    /**
-     * Sets new margin.
-     *
-     * @param margin new margin
-     */
+    @Override
     public void setMargin ( final int margin )
     {
-        setMargin ( margin, margin, margin, margin );
+        MarginMethodsImpl.setMargin ( this, margin );
     }
 
-    /**
-     * Sets new margin.
-     *
-     * @param top    new top margin
-     * @param left   new left margin
-     * @param bottom new bottom margin
-     * @param right  new right margin
-     */
+    @Override
     public void setMargin ( final int top, final int left, final int bottom, final int right )
     {
-        setMargin ( new Insets ( top, left, bottom, right ) );
+        MarginMethodsImpl.setMargin ( this, top, left, bottom, right );
     }
 
     @Override
     public void setMargin ( final Insets margin )
     {
-        getWebUI ().setMargin ( margin );
+        MarginMethodsImpl.setMargin ( this, margin );
     }
 
     @Override
     public Insets getPadding ()
     {
-        return getWebUI ().getPadding ();
+        return PaddingMethodsImpl.getPadding ( this );
     }
 
-    /**
-     * Sets new padding.
-     *
-     * @param padding new padding
-     */
+    @Override
     public void setPadding ( final int padding )
     {
-        setPadding ( padding, padding, padding, padding );
+        PaddingMethodsImpl.setPadding ( this, padding );
     }
 
-    /**
-     * Sets new padding.
-     *
-     * @param top    new top padding
-     * @param left   new left padding
-     * @param bottom new bottom padding
-     * @param right  new right padding
-     */
+    @Override
     public void setPadding ( final int top, final int left, final int bottom, final int right )
     {
-        setPadding ( new Insets ( top, left, bottom, right ) );
+        PaddingMethodsImpl.setPadding ( this, top, left, bottom, right );
     }
 
     @Override
     public void setPadding ( final Insets padding )
     {
-        getWebUI ().setPadding ( padding );
+        PaddingMethodsImpl.setPadding ( this, padding );
     }
 
-    /**
-     * Returns Web-UI applied to this class.
-     *
-     * @return Web-UI applied to this class
-     */
-    private WebToolTipUI getWebUI ()
-    {
-        return ( WebToolTipUI ) getUI ();
-    }
-
-    /**
-     * Installs a Web-UI into this component.
-     */
     @Override
-    public void updateUI ()
+    public String getLanguage ()
     {
-        if ( getUI () == null || !( getUI () instanceof WebToolTipUI ) )
-        {
-            try
-            {
-                setUI ( ( WebToolTipUI ) ReflectUtils.createInstance ( WebLookAndFeel.toolTipUI ) );
-            }
-            catch ( final Throwable e )
-            {
-                Log.error ( this, e );
-                setUI ( new WebToolTipUI () );
-            }
-        }
-        else
-        {
-            setUI ( getUI () );
-        }
+        return UILanguageManager.getComponentKey ( this );
+    }
+
+    @Override
+    public void setLanguage ( final String key, final Object... data )
+    {
+        UILanguageManager.registerComponent ( this, key, data );
+    }
+
+    @Override
+    public void updateLanguage ( final Object... data )
+    {
+        UILanguageManager.updateComponent ( this, data );
+    }
+
+    @Override
+    public void updateLanguage ( final String key, final Object... data )
+    {
+        UILanguageManager.updateComponent ( this, key, data );
+    }
+
+    @Override
+    public void removeLanguage ()
+    {
+        UILanguageManager.unregisterComponent ( this );
+    }
+
+    @Override
+    public boolean isLanguageSet ()
+    {
+        return UILanguageManager.isRegisteredComponent ( this );
+    }
+
+    @Override
+    public void setLanguageUpdater ( final LanguageUpdater updater )
+    {
+        UILanguageManager.registerLanguageUpdater ( this, updater );
+    }
+
+    @Override
+    public void removeLanguageUpdater ()
+    {
+        UILanguageManager.unregisterLanguageUpdater ( this );
+    }
+
+    @Override
+    public void addLanguageListener ( final LanguageListener listener )
+    {
+        UILanguageManager.addLanguageListener ( getRootPane (), listener );
+    }
+
+    @Override
+    public void removeLanguageListener ( final LanguageListener listener )
+    {
+        UILanguageManager.removeLanguageListener ( getRootPane (), listener );
+    }
+
+    @Override
+    public void removeLanguageListeners ()
+    {
+        UILanguageManager.removeLanguageListeners ( getRootPane () );
+    }
+
+    @Override
+    public void addDictionaryListener ( final DictionaryListener listener )
+    {
+        UILanguageManager.addDictionaryListener ( getRootPane (), listener );
+    }
+
+    @Override
+    public void removeDictionaryListener ( final DictionaryListener listener )
+    {
+        UILanguageManager.removeDictionaryListener ( getRootPane (), listener );
+    }
+
+    @Override
+    public void removeDictionaryListeners ()
+    {
+        UILanguageManager.removeDictionaryListeners ( getRootPane () );
+    }
+
+    @Override
+    public void registerSettings ( final Configuration configuration )
+    {
+        UISettingsManager.registerComponent ( this, configuration );
+    }
+
+    @Override
+    public void registerSettings ( final SettingsProcessor processor )
+    {
+        UISettingsManager.registerComponent ( this, processor );
+    }
+
+    @Override
+    public void unregisterSettings ()
+    {
+        UISettingsManager.unregisterComponent ( this );
+    }
+
+    @Override
+    public void loadSettings ()
+    {
+        UISettingsManager.loadSettings ( this );
+    }
+
+    @Override
+    public void saveSettings ()
+    {
+        UISettingsManager.saveSettings ( this );
     }
 
     @Override
     public WebToolTip setPlainFont ()
     {
-        return SwingUtils.setPlainFont ( this );
+        return FontMethodsImpl.setPlainFont ( this );
     }
 
     @Override
     public boolean isPlainFont ()
     {
-        return SwingUtils.isPlainFont ( this );
+        return FontMethodsImpl.isPlainFont ( this );
     }
 
     @Override
     public WebToolTip setPlainFont ( final boolean apply )
     {
-        return SwingUtils.setPlainFont ( this, apply );
+        return FontMethodsImpl.setPlainFont ( this, apply );
     }
 
     @Override
     public WebToolTip setBoldFont ()
     {
-        return SwingUtils.setBoldFont ( this );
+        return FontMethodsImpl.setBoldFont ( this );
     }
 
     @Override
     public boolean isBoldFont ()
     {
-        return SwingUtils.isBoldFont ( this );
+        return FontMethodsImpl.isBoldFont ( this );
     }
 
     @Override
     public WebToolTip setBoldFont ( final boolean apply )
     {
-        return SwingUtils.setBoldFont ( this, apply );
+        return FontMethodsImpl.setBoldFont ( this, apply );
     }
 
     @Override
     public WebToolTip setItalicFont ()
     {
-        return SwingUtils.setItalicFont ( this );
+        return FontMethodsImpl.setItalicFont ( this );
     }
 
     @Override
     public boolean isItalicFont ()
     {
-        return SwingUtils.isItalicFont ( this );
+        return FontMethodsImpl.isItalicFont ( this );
     }
 
     @Override
     public WebToolTip setItalicFont ( final boolean apply )
     {
-        return SwingUtils.setItalicFont ( this, apply );
+        return FontMethodsImpl.setItalicFont ( this, apply );
     }
 
     @Override
     public WebToolTip setFontStyle ( final boolean bold, final boolean italic )
     {
-        return SwingUtils.setFontStyle ( this, bold, italic );
+        return FontMethodsImpl.setFontStyle ( this, bold, italic );
     }
 
     @Override
     public WebToolTip setFontStyle ( final int style )
     {
-        return SwingUtils.setFontStyle ( this, style );
+        return FontMethodsImpl.setFontStyle ( this, style );
     }
 
     @Override
     public WebToolTip changeFontSize ( final int change )
     {
-        return SwingUtils.changeFontSize ( this, change );
+        return FontMethodsImpl.changeFontSize ( this, change );
     }
 
     @Override
     public int getFontSize ()
     {
-        return SwingUtils.getFontSize ( this );
+        return FontMethodsImpl.getFontSize ( this );
     }
 
     @Override
     public WebToolTip setFontSize ( final int fontSize )
     {
-        return SwingUtils.setFontSize ( this, fontSize );
+        return FontMethodsImpl.setFontSize ( this, fontSize );
     }
 
     @Override
     public WebToolTip setFontSizeAndStyle ( final int fontSize, final boolean bold, final boolean italic )
     {
-        return SwingUtils.setFontSizeAndStyle ( this, fontSize, bold, italic );
+        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, bold, italic );
     }
 
     @Override
     public WebToolTip setFontSizeAndStyle ( final int fontSize, final int style )
     {
-        return SwingUtils.setFontSizeAndStyle ( this, fontSize, style );
+        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, style );
     }
 
     @Override
     public String getFontName ()
     {
-        return SwingUtils.getFontName ( this );
+        return FontMethodsImpl.getFontName ( this );
     }
 
     @Override
     public WebToolTip setFontName ( final String fontName )
     {
-        return SwingUtils.setFontName ( this, fontName );
+        return FontMethodsImpl.setFontName ( this, fontName );
+    }
+
+    @Override
+    public int getPreferredWidth ()
+    {
+        return SizeMethodsImpl.getPreferredWidth ( this );
+    }
+
+    @Override
+    public WebToolTip setPreferredWidth ( final int preferredWidth )
+    {
+        return SizeMethodsImpl.setPreferredWidth ( this, preferredWidth );
+    }
+
+    @Override
+    public int getPreferredHeight ()
+    {
+        return SizeMethodsImpl.getPreferredHeight ( this );
+    }
+
+    @Override
+    public WebToolTip setPreferredHeight ( final int preferredHeight )
+    {
+        return SizeMethodsImpl.setPreferredHeight ( this, preferredHeight );
+    }
+
+    @Override
+    public int getMinimumWidth ()
+    {
+        return SizeMethodsImpl.getMinimumWidth ( this );
+    }
+
+    @Override
+    public WebToolTip setMinimumWidth ( final int minimumWidth )
+    {
+        return SizeMethodsImpl.setMinimumWidth ( this, minimumWidth );
+    }
+
+    @Override
+    public int getMinimumHeight ()
+    {
+        return SizeMethodsImpl.getMinimumHeight ( this );
+    }
+
+    @Override
+    public WebToolTip setMinimumHeight ( final int minimumHeight )
+    {
+        return SizeMethodsImpl.setMinimumHeight ( this, minimumHeight );
+    }
+
+    @Override
+    public int getMaximumWidth ()
+    {
+        return SizeMethodsImpl.getMaximumWidth ( this );
+    }
+
+    @Override
+    public WebToolTip setMaximumWidth ( final int maximumWidth )
+    {
+        return SizeMethodsImpl.setMaximumWidth ( this, maximumWidth );
+    }
+
+    @Override
+    public int getMaximumHeight ()
+    {
+        return SizeMethodsImpl.getMaximumHeight ( this );
+    }
+
+    @Override
+    public WebToolTip setMaximumHeight ( final int maximumHeight )
+    {
+        return SizeMethodsImpl.setMaximumHeight ( this, maximumHeight );
+    }
+
+    @Override
+    public Dimension getPreferredSize ()
+    {
+        return SizeMethodsImpl.getPreferredSize ( this, super.getPreferredSize () );
+    }
+
+    @Override
+    public Dimension getOriginalPreferredSize ()
+    {
+        return SizeMethodsImpl.getOriginalPreferredSize ( this, super.getPreferredSize () );
+    }
+
+    @Override
+    public WebToolTip setPreferredSize ( final int width, final int height )
+    {
+        return SizeMethodsImpl.setPreferredSize ( this, width, height );
+    }
+
+    /**
+     * Returns the look and feel (LaF) object that renders this component.
+     *
+     * @return the {@link WToolTipUI} object that renders this component
+     */
+    @Override
+    public WToolTipUI getUI ()
+    {
+        return ( WToolTipUI ) super.getUI ();
+    }
+
+    /**
+     * Sets the LaF object that renders this component.
+     *
+     * @param ui {@link WToolTipUI}
+     */
+    public void setUI ( final WToolTipUI ui )
+    {
+        super.setUI ( ui );
+    }
+
+    @Override
+    public void updateUI ()
+    {
+        StyleManager.getDescriptor ( this ).updateUI ( this );
+    }
+
+    @Override
+    public String getUIClassID ()
+    {
+        return StyleManager.getDescriptor ( this ).getUIClassId ();
     }
 }

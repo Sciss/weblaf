@@ -18,13 +18,16 @@
 package com.alee.demo.content.window;
 
 import com.alee.demo.DemoApplication;
-import com.alee.demo.api.*;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
+import com.alee.managers.language.UILanguageManager;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
-import com.alee.utils.SwingUtils;
+import com.alee.utils.CoreSwingUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -35,8 +38,7 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JDialogExample extends AbstractExample
+public class JDialogExample extends AbstractStylePreviewExample
 {
     @Override
     public String getId ()
@@ -47,7 +49,7 @@ public class JDialogExample extends AbstractExample
     @Override
     protected String getStyleFileName ()
     {
-        return "rootpane";
+        return "dialog";
     }
 
     @Override
@@ -57,11 +59,18 @@ public class JDialogExample extends AbstractExample
     }
 
     @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Make Dialogs", "dialog" );
+    }
+
+    @Override
     protected List<Preview> createPreviews ()
     {
-        final DialogPreview e1 = new DialogPreview ( "basic", StyleId.dialog );
-        final DialogPreview e2 = new DialogPreview ( "decorated", StyleId.dialogDecorated );
-        return CollectionUtils.<Preview>asList ( e1, e2 );
+        return CollectionUtils.<Preview>asList (
+                new DialogPreview ( "basic", FeatureState.updated, StyleId.dialog ),
+                new DialogPreview ( "decorated", FeatureState.updated, StyleId.dialogDecorated )
+        );
     }
 
     /**
@@ -73,35 +82,37 @@ public class JDialogExample extends AbstractExample
          * Constructs new style preview.
          *
          * @param id      preview ID
+         * @param state   preview feature state
          * @param styleId preview style ID
          */
-        public DialogPreview ( final String id, final StyleId styleId )
+        public DialogPreview ( final String id, final FeatureState state, final StyleId styleId )
         {
-            super ( JDialogExample.this, id, FeatureState.updated, styleId );
+            super ( JDialogExample.this, id, state, styleId );
         }
 
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final ImageIcon icon = loadIcon ( JDialogExample.this.getId () + "/" + getId () + ".png" );
-            final WebButton showFrame = new WebButton ( getExampleLanguagePrefix () + "show", icon );
-            showFrame.addActionListener ( new ActionListener ()
+            final WebButton button = new WebButton ( getExampleLanguagePrefix () + "show" );
+            button.addActionListener ( new ActionListener ()
             {
                 @Override
                 public void actionPerformed ( final ActionEvent e )
                 {
-                    final Window parent = SwingUtils.getWindowAncestor ( showFrame );
+                    final Window parent = CoreSwingUtils.getWindowAncestor ( button );
                     final String title = getExampleLanguagePrefix () + "content";
-                    final JDialog dialog = new JDialog ( parent, title );
+                    final JDialog dialog = new JDialog ( parent );
+                    UILanguageManager.registerComponent ( dialog.getRootPane (), title );
                     dialog.getRootPane ().putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
                     dialog.setIconImages ( WebLookAndFeel.getImages () );
                     dialog.add ( new WebLabel ( title, WebLabel.CENTER ) );
                     dialog.setSize ( 500, 400 );
                     dialog.setLocationRelativeTo ( DemoApplication.getInstance () );
+                    dialog.setDefaultCloseOperation ( WindowConstants.DISPOSE_ON_CLOSE );
                     dialog.setVisible ( true );
                 }
             } );
-            return CollectionUtils.asList ( showFrame );
+            return CollectionUtils.asList ( button );
         }
     }
 }

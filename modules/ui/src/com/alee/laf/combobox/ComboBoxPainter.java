@@ -1,125 +1,171 @@
 package com.alee.laf.combobox;
 
+import com.alee.api.jdk.Objects;
 import com.alee.laf.WebLookAndFeel;
+import com.alee.managers.language.Language;
+import com.alee.managers.language.LanguageListener;
+import com.alee.managers.language.LanguageSensitive;
+import com.alee.managers.language.UILanguageManager;
 import com.alee.painter.decoration.AbstractDecorationPainter;
 import com.alee.painter.decoration.DecorationState;
 import com.alee.painter.decoration.IDecoration;
-import com.alee.utils.CompareUtils;
-import com.alee.utils.MathUtils;
-import com.alee.utils.swing.PopupMenuAdapter;
+import com.alee.utils.swing.EditabilityListener;
+import com.alee.utils.swing.VisibilityListener;
 
 import javax.swing.*;
-import javax.swing.event.PopupMenuEvent;
 import java.awt.*;
-import java.awt.event.MouseWheelEvent;
-import java.awt.event.MouseWheelListener;
 import java.util.List;
 
 /**
+ * Basic painter for {@link JComboBox} component.
+ * It is used as {@link WebComboBoxUI} default painter.
+ *
+ * @param <C> component type
+ * @param <U> component UI type
+ * @param <D> decoration type
  * @author Alexandr Zernov
  */
 
-public class ComboBoxPainter<E extends JComboBox, U extends WebComboBoxUI, D extends IDecoration<E, D>>
-        extends AbstractDecorationPainter<E, U, D> implements IComboBoxPainter<E, U>
+public class ComboBoxPainter<C extends JComboBox, U extends WComboBoxUI, D extends IDecoration<C, D>>
+        extends AbstractDecorationPainter<C, U, D> implements IComboBoxPainter<C, U>, EditabilityListener, VisibilityListener
 {
     /**
      * Listeners.
      */
-    protected PopupMenuAdapter menuListener;
-    protected MouseWheelListener mouseWheelListener = null;
+    protected transient LanguageListener languageSensitive;
 
     /**
      * Painting variables.
      */
-    protected CellRendererPane currentValuePane = null;
+    protected transient CellRendererPane currentValuePane = null;
 
     @Override
-    public void install ( final E c, final U ui )
+    protected void installPropertiesAndListeners ()
     {
-        super.install ( c, ui );
-
-        // Menu visibility listener
-        menuListener = new PopupMenuAdapter ()
-        {
-            @Override
-            public void popupMenuWillBecomeVisible ( final PopupMenuEvent e )
-            {
-                SwingUtilities.invokeLater ( new Runnable ()
-                {
-                    @Override
-                    public void run ()
-                    {
-                        updateDecorationState ();
-                    }
-                } );
-            }
-
-            @Override
-            public void popupMenuWillBecomeInvisible ( final PopupMenuEvent e )
-            {
-                SwingUtilities.invokeLater ( new Runnable ()
-                {
-                    @Override
-                    public void run ()
-                    {
-                        updateDecorationState ();
-                    }
-                } );
-            }
-        };
-        component.addPopupMenuListener ( menuListener );
-
-        // Rollover scrolling listener
-        mouseWheelListener = new MouseWheelListener ()
-        {
-            @Override
-            public void mouseWheelMoved ( final MouseWheelEvent e )
-            {
-                if ( ui.isMouseWheelScrollingEnabled () && component.isEnabled () && isFocused () )
-                {
-                    // Changing selection in case index actually changed
-                    final int index = component.getSelectedIndex ();
-                    final int newIndex = MathUtils.limit ( 0, index + e.getWheelRotation (), component.getModel ().getSize () - 1 );
-                    if ( newIndex != index )
-                    {
-                        component.setSelectedIndex ( newIndex );
-                    }
-                }
-            }
-        };
-        component.addMouseWheelListener ( mouseWheelListener );
+        super.installPropertiesAndListeners ();
+        installComboBoxListeners ();
+        installLanguageListeners ();
     }
 
     @Override
-    public void uninstall ( final E c, final U ui )
+    protected void uninstallPropertiesAndListeners ()
     {
-        // Removing listeners
-        component.removeMouseWheelListener ( mouseWheelListener );
-        mouseWheelListener = null;
-        component.removePopupMenuListener ( menuListener );
-        menuListener = null;
-
-        super.uninstall ( c, ui );
+        uninstallLanguageListeners ();
+        uninstallComboBoxListeners ();
+        super.uninstallPropertiesAndListeners ();
     }
 
     @Override
-    protected void propertyChange ( final String property, final Object oldValue, final Object newValue )
+    protected void propertyChanged ( final String property, final Object oldValue, final Object newValue )
     {
         // Perform basic actions on property changes
-        super.propertyChange ( property, oldValue, newValue );
+        super.propertyChanged ( property, oldValue, newValue );
 
         // Updating combobox popup list state
         // This is a workaround to allow box renderer properly inherit enabled state
-        if ( CompareUtils.equals ( property, WebLookAndFeel.ENABLED_PROPERTY ) )
+        if ( Objects.equals ( property, WebLookAndFeel.ENABLED_PROPERTY ) )
         {
             ui.getListBox ().setEnabled ( component.isEnabled () );
         }
     }
 
+    /**
+     * Installs combobox listeners that update decoration states.
+     */
+    protected void installComboBoxListeners ()
+    {
+        ui.addEditabilityListener ( this );
+        ui.addPopupVisibilityListener ( this );
+    }
+
     @Override
-    protected List<String> getDecorationStates ()
+    public void editabilityChanged ( final boolean editable )
+    {
+        updateDecorationState ();
+    }
+
+    @Override
+    public void visibilityChanged ( final boolean visible )
+    {
+        updateDecorationState ();
+    }
+
+    /**
+     * Uninstalls combobox listeners that update decoration states.
+     */
+    protected void uninstallComboBoxListeners ()
+    {
+        ui.removePopupVisibilityListener ( this );
+        ui.removeEditabilityListener ( this );
+    }
+
+    /**
+     * Installs language listeners.
+     */
+    protected void installLanguageListeners ()
+    {
+        languageSensitive = new LanguageListener ()
+        {
+            @Override
+            public void languageChanged ( final Language oldLanguage, final Language newLanguage )
+            {
+                if ( isLanguageSensitive () )
+                {
+                    // Updating sizes according to renderer changes
+                    ui.updateRendererSize ();
+                }
+            }
+        };
+        UILanguageManager.addLanguageListener ( component, languageSensitive );
+    }
+
+    /**
+     * Returns whether or not table is language-sensitive.
+     *
+     * @return {@code true} if table is language-sensitive, {@code false} otherwise
+     */
+    protected boolean isLanguageSensitive ()
+    {
+        boolean sensitive = false;
+        if ( component instanceof LanguageSensitive ||
+                component.getRenderer () instanceof LanguageSensitive )
+        {
+            // Either table header or its default renderer is language-sensitive
+            sensitive = true;
+        }
+        else
+        {
+            // Checking existing combobox items for being language-sensitive
+            final ListModel model = component.getModel ();
+            for ( int i = 0; i < model.getSize (); i++ )
+            {
+                if ( model.getElementAt ( i ) instanceof LanguageSensitive )
+                {
+                    sensitive = true;
+                    break;
+                }
+            }
+        }
+        return sensitive;
+    }
+
+    /**
+     * Uninstalls language listeners.
+     */
+    protected void uninstallLanguageListeners ()
+    {
+        UILanguageManager.removeLanguageListener ( component, languageSensitive );
+        languageSensitive = null;
+    }
+
+    @Override
+    public List<String> getDecorationStates ()
     {
         final List<String> states = super.getDecorationStates ();
+        if ( component.isEditable () )
+        {
+            states.add ( DecorationState.editable );
+        }
         states.add ( ui.isPopupVisible ( component ) ? DecorationState.expanded : DecorationState.collapsed );
         return states;
     }
@@ -131,7 +177,7 @@ public class ComboBoxPainter<E extends JComboBox, U extends WebComboBoxUI, D ext
     }
 
     @Override
-    protected void paintContent ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
+    protected void paintContent ( final Graphics2D g2d, final Rectangle bounds, final C c, final U ui )
     {
         // Selected non-editable value
         paintCurrentValue ( g2d, ui.getValueBounds () );
@@ -158,42 +204,23 @@ public class ComboBoxPainter<E extends JComboBox, U extends WebComboBoxUI, D ext
     {
         if ( !component.isEditable () )
         {
+            // Retrieving configured renderer
+            final JList list = ui.getListBox ();
+            final Object value = component.getSelectedItem ();
+            final boolean selected = !component.isPopupVisible ();
+            final boolean isFocused = isFocused ();
             final ListCellRenderer renderer = component.getRenderer ();
-            final Component c;
+            final Component c = renderer.getListCellRendererComponent ( list, value, -1, selected, isFocused );
 
-            if ( isFocused () && !component.isPopupVisible () )
-            {
-                c = renderer.getListCellRendererComponent ( ui.getListBox (), component.getSelectedItem (), -1, true, false );
-            }
-            else
-            {
-                c = renderer.getListCellRendererComponent ( ui.getListBox (), component.getSelectedItem (), -1, false, false );
-                c.setBackground ( UIManager.getColor ( "ComboBox.background" ) );
-            }
+            // Updating combobox-related renderer settings
             c.setFont ( component.getFont () );
 
-            if ( component.isEnabled () )
-            {
-                c.setForeground ( component.getForeground () );
-                c.setBackground ( component.getBackground () );
-            }
-            else
-            {
-                c.setForeground ( UIManager.getColor ( "ComboBox.disabledForeground" ) );
-                c.setBackground ( UIManager.getColor ( "ComboBox.disabledBackground" ) );
-            }
-
-            boolean shouldValidate = false;
-            if ( c instanceof JPanel )
-            {
-                shouldValidate = true;
-            }
-
+            // Painting current value
             final int x = bounds.x;
             final int y = bounds.y;
             final int w = bounds.width;
             final int h = bounds.height;
-
+            final boolean shouldValidate = c instanceof JPanel;
             currentValuePane.paintComponent ( g2d, c, component, x, y, w, h, shouldValidate );
         }
     }

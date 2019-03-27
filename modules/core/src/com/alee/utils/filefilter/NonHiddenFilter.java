@@ -17,7 +17,8 @@
 
 package com.alee.utils.filefilter;
 
-import com.alee.managers.language.LanguageManager;
+import com.alee.api.ui.RenderingParameters;
+import com.alee.managers.language.LM;
 
 import javax.swing.*;
 import java.io.File;
@@ -36,7 +37,7 @@ public class NonHiddenFilter extends AbstractFileFilter
     public static final ImageIcon ICON = new ImageIcon ( DirectoriesFilter.class.getResource ( "icons/nonhidden.png" ) );
 
     @Override
-    public ImageIcon getIcon ()
+    public Icon getIcon ( final RenderingParameters parameters )
     {
         return ICON;
     }
@@ -44,7 +45,7 @@ public class NonHiddenFilter extends AbstractFileFilter
     @Override
     public String getDescription ()
     {
-        return LanguageManager.get ( "weblaf.file.filter.nonhidden" );
+        return LM.get ( "weblaf.file.filter.nonhidden" );
     }
 
     @Override

@@ -17,15 +17,15 @@
 
 package com.alee.extended.panel;
 
+import com.alee.api.jdk.Supplier;
 import com.alee.extended.layout.AccordionLayout;
 import com.alee.laf.panel.WebPanel;
-import com.alee.managers.settings.DefaultValue;
-import com.alee.managers.settings.SettingsManager;
+import com.alee.managers.settings.Configuration;
 import com.alee.managers.settings.SettingsMethods;
 import com.alee.managers.settings.SettingsProcessor;
+import com.alee.managers.settings.UISettingsManager;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
-import com.alee.utils.swing.DataProvider;
 
 import javax.swing.*;
 import java.awt.*;
@@ -38,9 +38,12 @@ import java.util.List;
  *
  * @author Mikle Garin
  */
-
 public class WebAccordion extends WebPanel implements SwingConstants, SettingsMethods
 {
+    /**
+     * todo 1. Separate UI and make use of new styling system
+     */
+
     /**
      * Whether animate transition between states or not.
      */
@@ -57,9 +60,9 @@ public class WebAccordion extends WebPanel implements SwingConstants, SettingsMe
     protected boolean fillSpace = true;
 
     /**
-     * Whether multiply expanded panes are allowed or not.
+     * Whether multiple expanded panes are allowed or not.
      */
-    protected boolean multiplySelectionAllowed = true;
+    protected boolean multipleSelectionAllowed = true;
 
     /**
      * Gap between panes for separated accordion style.
@@ -75,7 +78,7 @@ public class WebAccordion extends WebPanel implements SwingConstants, SettingsMe
      * Accordion collapsible pane state listeners.
      * These listeners required for some of accordion features.
      */
-    protected List<CollapsiblePaneListener> stateListeners = new ArrayList<CollapsiblePaneListener> ();
+    protected transient List<CollapsiblePaneListener> stateListeners = new ArrayList<CollapsiblePaneListener> ();
 
     /**
      * Index of last expanded collapsible pane.
@@ -176,30 +179,30 @@ public class WebAccordion extends WebPanel implements SwingConstants, SettingsMe
     }
 
     /**
-     * Returns whether multiply expanded panes are allowed or not.
+     * Returns whether multiple expanded panes are allowed or not.
      *
-     * @return whether multiply expanded panes are allowed or not
+     * @return {@code true} if multiple expanded panes are allowed, {@code false} otherwise
      */
-    public boolean isMultiplySelectionAllowed ()
+    public boolean isMultipleSelectionAllowed ()
     {
-        return multiplySelectionAllowed;
+        return multipleSelectionAllowed;
     }
 
     /**
-     * Sets whether multiply expanded panes are allowed or not.
+     * Sets whether multiple expanded panes are allowed or not.
      *
-     * @param multiplySelectionAllowed whether multiply expanded panes are allowed or not
+     * @param multipleSelectionAllowed whether multiple expanded panes are allowed or not
      */
-    public void setMultiplySelectionAllowed ( final boolean multiplySelectionAllowed )
+    public void setMultipleSelectionAllowed ( final boolean multipleSelectionAllowed )
     {
-        this.multiplySelectionAllowed = multiplySelectionAllowed;
+        this.multipleSelectionAllowed = multipleSelectionAllowed;
         updateSelections ( -1, true );
     }
 
     /**
      * Updates panes selection states.
      *
-     * @param index    index of the pane that will be left expanded in case multiply expanded panes are not allowed
+     * @param index    index of the pane that will be left expanded in case multiple expanded panes are not allowed
      * @param collapse whether allow to collapse panes or not
      */
     protected void updateSelections ( int index, final boolean collapse )
@@ -207,7 +210,7 @@ public class WebAccordion extends WebPanel implements SwingConstants, SettingsMe
         boolean changed = false;
         if ( collapse )
         {
-            if ( !multiplySelectionAllowed )
+            if ( !multipleSelectionAllowed )
             {
                 for ( int i = 0; i < panes.size (); i++ )
                 {
@@ -346,22 +349,32 @@ public class WebAccordion extends WebPanel implements SwingConstants, SettingsMe
      * @param pane  collapsible pane to add
      * @return added collapsible pane
      */
-    protected WebCollapsiblePane addPane ( final int index, final WebCollapsiblePane pane )
+    public WebCollapsiblePane addPane ( final int index, final WebCollapsiblePane pane )
     {
+        // Title position
+        if ( orientation == HORIZONTAL )
+        {
+            pane.setTitlePanePosition ( getComponentOrientation ().isLeftToRight () ? LEFT : RIGHT );
+        }
+        else
+        {
+            pane.setTitlePanePosition ( TOP );
+        }
+
         // Animation
         pane.setAnimate ( animate );
 
         // Collapsing new pane if needed
-        if ( !multiplySelectionAllowed && isAnySelected () )
+        if ( !multipleSelectionAllowed && isAnySelected () )
         {
             pane.setExpanded ( false, false );
         }
 
         // State change enabler
-        pane.setStateChangeHandler ( new DataProvider<Boolean> ()
+        pane.setStateChangeHandler ( new Supplier<Boolean> ()
         {
             @Override
-            public Boolean provide ()
+            public Boolean get ()
             {
                 // Allow action if we are expanding pane
                 if ( !pane.isExpanded () )
@@ -391,31 +404,31 @@ public class WebAccordion extends WebPanel implements SwingConstants, SettingsMe
         final CollapsiblePaneListener cpl = new CollapsiblePaneAdapter ()
         {
             @Override
-            public void expanding ( final WebCollapsiblePane pane )
+            public void expanding ( final WebCollapsiblePane collapsiblePane )
             {
                 // Update selected panes
-                updateSelections ( panes.indexOf ( pane ), true );
+                updateSelections ( panes.indexOf ( collapsiblePane ), true );
             }
 
             @Override
-            public void collapsing ( final WebCollapsiblePane pane )
+            public void collapsing ( final WebCollapsiblePane collapsiblePane )
             {
                 // This hold additional events from firing when panes collapse due to panes selection mode
-                if ( multiplySelectionAllowed || getSelectionCount () == 0 )
+                if ( multipleSelectionAllowed || getSelectionCount () == 0 )
                 {
                     // Update selected panes
-                    updateSelections ( panes.indexOf ( pane ), false );
+                    updateSelections ( panes.indexOf ( collapsiblePane ), false );
                 }
 
                 // Update last selected
-                lastExpanded = pane;
+                lastExpanded = collapsiblePane;
             }
         };
         pane.addCollapsiblePaneListener ( cpl );
         stateListeners.add ( cpl );
 
         // Adding new pane
-        add ( index, pane );
+        add ( pane, index );
         panes.add ( index, pane );
 
         // Notify about selection change
@@ -439,7 +452,7 @@ public class WebAccordion extends WebPanel implements SwingConstants, SettingsMe
      *
      * @param pane collapsible pane to remove
      */
-    protected void removePane ( final WebCollapsiblePane pane )
+    public void removePane ( final WebCollapsiblePane pane )
     {
         final int index = panes.indexOf ( pane );
         if ( index == -1 )
@@ -473,17 +486,6 @@ public class WebAccordion extends WebPanel implements SwingConstants, SettingsMe
     public List<WebCollapsiblePane> getPanes ()
     {
         return CollectionUtils.copy ( panes );
-    }
-
-    /**
-     * Returns actual list of available collapsible panes.
-     * Be aware that accordion might be corrupted if you modify this list directly.
-     *
-     * @return actual list of available collapsible panes
-     */
-    public List<WebCollapsiblePane> getActualPanesList ()
-    {
-        return panes;
     }
 
     /**
@@ -731,96 +733,32 @@ public class WebAccordion extends WebPanel implements SwingConstants, SettingsMe
     }
 
     @Override
-    public void registerSettings ( final String key )
+    public void registerSettings ( final Configuration configuration )
     {
-        SettingsManager.registerComponent ( this, key );
+        UISettingsManager.registerComponent ( this, configuration );
     }
 
     @Override
-    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass )
+    public void registerSettings ( final SettingsProcessor processor )
     {
-        SettingsManager.registerComponent ( this, key, defaultValueClass );
-    }
-
-    @Override
-    public void registerSettings ( final String key, final Object defaultValue )
-    {
-        SettingsManager.registerComponent ( this, key, defaultValue );
-    }
-
-    @Override
-    public void registerSettings ( final String group, final String key )
-    {
-        SettingsManager.registerComponent ( this, group, key );
-    }
-
-    @Override
-    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass )
-    {
-        SettingsManager.registerComponent ( this, group, key, defaultValueClass );
-    }
-
-    @Override
-    public void registerSettings ( final String group, final String key, final Object defaultValue )
-    {
-        SettingsManager.registerComponent ( this, group, key, defaultValue );
-    }
-
-    @Override
-    public void registerSettings ( final String key, final boolean loadInitialSettings, final boolean applySettingsChanges )
-    {
-        SettingsManager.registerComponent ( this, key, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass,
-                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
-    {
-        SettingsManager.registerComponent ( this, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public void registerSettings ( final String key, final Object defaultValue, final boolean loadInitialSettings,
-                                   final boolean applySettingsChanges )
-    {
-        SettingsManager.registerComponent ( this, key, defaultValue, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass,
-                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
-    {
-        SettingsManager.registerComponent ( this, group, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public void registerSettings ( final String group, final String key, final Object defaultValue, final boolean loadInitialSettings,
-                                   final boolean applySettingsChanges )
-    {
-        SettingsManager.registerComponent ( this, group, key, defaultValue, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public void registerSettings ( final SettingsProcessor settingsProcessor )
-    {
-        SettingsManager.registerComponent ( this, settingsProcessor );
+        UISettingsManager.registerComponent ( this, processor );
     }
 
     @Override
     public void unregisterSettings ()
     {
-        SettingsManager.unregisterComponent ( this );
+        UISettingsManager.unregisterComponent ( this );
     }
 
     @Override
     public void loadSettings ()
     {
-        SettingsManager.loadComponentSettings ( this );
+        UISettingsManager.loadSettings ( this );
     }
 
     @Override
     public void saveSettings ()
     {
-        SettingsManager.saveComponentSettings ( this );
+        UISettingsManager.saveSettings ( this );
     }
 }
