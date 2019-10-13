@@ -17,115 +17,248 @@
 
 package com.alee.laf.text;
 
-import com.alee.painter.Paintable;
-import com.alee.painter.Painter;
-import com.alee.laf.WebLookAndFeel;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.extended.behavior.DocumentChangeBehavior;
+import com.alee.laf.IInputPrompt;
 import com.alee.managers.hotkey.HotkeyData;
-import com.alee.managers.language.LanguageManager;
-import com.alee.managers.language.LanguageMethods;
-import com.alee.managers.language.data.TooltipWay;
-import com.alee.managers.language.updaters.LanguageUpdater;
-import com.alee.managers.log.Log;
-import com.alee.managers.settings.DefaultValue;
-import com.alee.managers.settings.SettingsManager;
+import com.alee.managers.language.*;
+import com.alee.managers.settings.Configuration;
 import com.alee.managers.settings.SettingsMethods;
 import com.alee.managers.settings.SettingsProcessor;
+import com.alee.managers.settings.UISettingsManager;
 import com.alee.managers.style.*;
-import com.alee.managers.style.Skin;
-import com.alee.managers.style.StyleListener;
-import com.alee.managers.style.Skinnable;
 import com.alee.managers.tooltip.ToolTipMethods;
 import com.alee.managers.tooltip.TooltipManager;
+import com.alee.managers.tooltip.TooltipWay;
 import com.alee.managers.tooltip.WebCustomTooltip;
-import com.alee.utils.EventUtils;
+import com.alee.painter.Paintable;
+import com.alee.painter.Painter;
 import com.alee.utils.ReflectUtils;
-import com.alee.utils.SizeUtils;
 import com.alee.utils.SwingUtils;
-import com.alee.utils.general.Pair;
-import com.alee.utils.swing.*;
+import com.alee.utils.swing.MouseButton;
+import com.alee.utils.swing.extensions.*;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
-import java.beans.PropertyChangeListener;
 import java.text.Format;
 import java.util.List;
-import java.util.Map;
 
 /**
+ * {@link JFormattedTextField} extension class.
+ * It contains various useful methods to simplify core component usage.
+ *
+ * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
+ * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
+ *
  * @author Mikle Garin
+ * @see JFormattedTextField
+ * @see WebFormattedTextFieldUI
+ * @see FormattedTextFieldPainter
  */
-
-public class WebFormattedTextField extends JFormattedTextField
-        implements Styleable, Skinnable, Paintable, ShapeProvider, MarginSupport, PaddingSupport, DocumentEventMethods, EventMethods,
-        ToolTipMethods, LanguageMethods, SettingsMethods, FontMethods<WebFormattedTextField>, SizeMethods<WebFormattedTextField>
+public class WebFormattedTextField extends JFormattedTextField implements IInputPrompt, ILeadingComponent, ITrailingComponent, Styleable,
+        Paintable, ShapeMethods, MarginMethods, PaddingMethods, DocumentEventMethods<WebFormattedTextField>, EventMethods, ToolTipMethods,
+        LanguageMethods, LanguageEventMethods, SettingsMethods, FontMethods<WebFormattedTextField>, SizeMethods<WebFormattedTextField>
 {
+    /**
+     * Constructs new formatted text field.
+     */
     public WebFormattedTextField ()
     {
-        super ();
+        this ( StyleId.auto );
     }
 
-    public WebFormattedTextField ( final AbstractFormatterFactory factory )
-    {
-        super ( factory );
-    }
-
-    public WebFormattedTextField ( final AbstractFormatterFactory factory, final Object currentValue )
-    {
-        super ( factory, currentValue );
-    }
-
-    public WebFormattedTextField ( final Format format )
-    {
-        super ( format );
-    }
-
-    public WebFormattedTextField ( final AbstractFormatter formatter )
-    {
-        super ( formatter );
-    }
-
+    /**
+     * Constructs new formatted text field.
+     *
+     * @param value initial value
+     */
     public WebFormattedTextField ( final Object value )
     {
-        super ( value );
+        this ( StyleId.auto, value );
     }
 
+    /**
+     * Constructs new formatted text field.
+     *
+     * @param factory factory used for formatting
+     */
+    public WebFormattedTextField ( final AbstractFormatterFactory factory )
+    {
+        this ( StyleId.auto, factory );
+    }
+
+    /**
+     * Constructs new formatted text field.
+     *
+     * @param factory factory used for formatting
+     * @param value   initial value
+     */
+    public WebFormattedTextField ( final AbstractFormatterFactory factory, final Object value )
+    {
+        this ( StyleId.auto, factory, value );
+    }
+
+    /**
+     * Constructs new formatted text field.
+     *
+     * @param format format used to look up a formatter
+     */
+    public WebFormattedTextField ( final Format format )
+    {
+        this ( StyleId.auto, format );
+    }
+
+    /**
+     * Constructs new formatted text field.
+     *
+     * @param formatter formatter to use for formatting
+     */
+    public WebFormattedTextField ( final AbstractFormatter formatter )
+    {
+        this ( StyleId.auto, formatter );
+    }
+
+    /**
+     * Constructs new formatted text field.
+     *
+     * @param id style ID
+     */
     public WebFormattedTextField ( final StyleId id )
     {
         super ();
         setStyleId ( id );
     }
 
+    /**
+     * Constructs new formatted text field.
+     *
+     * @param id    style ID
+     * @param value initial value
+     */
+    public WebFormattedTextField ( final StyleId id, final Object value )
+    {
+        super ( value );
+        setStyleId ( id );
+    }
+
+    /**
+     * Constructs new formatted text field.
+     *
+     * @param id      style ID
+     * @param factory factory used for formatting
+     */
     public WebFormattedTextField ( final StyleId id, final AbstractFormatterFactory factory )
     {
         super ( factory );
         setStyleId ( id );
     }
 
-    public WebFormattedTextField ( final StyleId id, final AbstractFormatterFactory factory, final Object currentValue )
+    /**
+     * Constructs new formatted text field.
+     *
+     * @param id      style ID
+     * @param factory factory used for formatting
+     * @param value   initial value
+     */
+    public WebFormattedTextField ( final StyleId id, final AbstractFormatterFactory factory, final Object value )
     {
-        super ( factory, currentValue );
+        super ( factory, value );
         setStyleId ( id );
     }
 
+    /**
+     * Constructs new formatted text field.
+     *
+     * @param id     style ID
+     * @param format format used to look up a formatter
+     */
     public WebFormattedTextField ( final StyleId id, final Format format )
     {
         super ( format );
         setStyleId ( id );
     }
 
+    /**
+     * Constructs new formatted text field.
+     *
+     * @param id        style ID
+     * @param formatter formatter to use for formatting
+     */
     public WebFormattedTextField ( final StyleId id, final AbstractFormatter formatter )
     {
         super ( formatter );
         setStyleId ( id );
     }
 
-    public WebFormattedTextField ( final StyleId id, final Object value )
+    /**
+     * Overridden to avoid consuming Enter ans ESC key events if text and value were not changed.
+     * This should allow these hotkeys to be used in other key bindings even if this field is focused.
+     * This fix was taken from JDK-4741926 bug report and it seems that bug is still there in all Java versions.
+     *
+     * @see <a href="https://bugs.openjdk.java.net/browse/JDK-4741926">JDK-4741926</a>
+     */
+    @Override
+    protected boolean processKeyBinding ( final KeyStroke ks, final KeyEvent e, final int condition, final boolean pressed )
     {
-        super ( value );
-        setStyleId ( id );
+        final Object oldValue = getValue ();
+        final String oldText = getText ();
+        boolean b = super.processKeyBinding ( ks, e, condition, pressed );
+        final InputMap map = getInputMap ( condition );
+        if ( map != null )
+        {
+            final Object binding = map.get ( ks );
+            if ( binding != null && ( binding.equals ( "notify-field-accept" ) || binding.equals ( "reset-field-edit" ) ) &&
+                    !( Boolean ) ReflectUtils.callMethodSafely ( this, "isEdited" ) )
+            {
+                boolean isValueChanged = true;
+                if ( oldValue != null )
+                {
+                    if ( oldValue.equals ( getValue () ) )
+                    {
+                        isValueChanged = false;
+                    }
+                }
+                else if ( getValue () == null )
+                {
+                    isValueChanged = false;
+                }
+                if ( !isValueChanged )
+                {
+                    boolean isTextChanged = true;
+                    if ( oldText != null )
+                    {
+                        if ( oldText.equals ( getText () ) )
+                        {
+                            isTextChanged = false;
+                        }
+                    }
+                    else if ( getText () == null )
+                    {
+                        isTextChanged = false;
+                    }
+                    if ( !isTextChanged )
+                    {
+                        b = false;
+                    }
+                }
+            }
+        }
+        return b;
+    }
+
+    /**
+     * Returns whether or not this editor is empty.
+     *
+     * @return {@code true} if this editor is empty, {@code false} otherwise
+     */
+    public boolean isEmpty ()
+    {
+        return SwingUtils.isEmpty ( this );
     }
 
     /**
@@ -136,92 +269,78 @@ public class WebFormattedTextField extends JFormattedTextField
         setText ( "" );
     }
 
-    /**
-     * Returns input prompt text.
-     *
-     * @return input prompt text
-     */
+    @Override
     public String getInputPrompt ()
     {
-        return getWebUI ().getInputPrompt ();
-    }
-
-    /**
-     * Sets input prompt text.
-     *
-     * @param text input prompt text
-     */
-    public void setInputPrompt ( final String text )
-    {
-        getWebUI ().setInputPrompt ( text );
-    }
-
-    /**
-     * Returns field leading component.
-     *
-     * @return field leading component
-     */
-    public JComponent getLeadingComponent ()
-    {
-        return getWebUI ().getLeadingComponent ();
-    }
-
-    /**
-     * Sets field leading component.
-     *
-     * @param leadingComponent field leading component
-     */
-    public void setLeadingComponent ( final JComponent leadingComponent )
-    {
-        getWebUI ().setLeadingComponent ( leadingComponent );
-    }
-
-    /**
-     * Removes field leading component.
-     */
-    public void removeLeadingComponent ()
-    {
-        getWebUI ().removeLeadingComponent ();
-    }
-
-    /**
-     * Returns field trailing component.
-     *
-     * @return field trailing component
-     */
-    public JComponent getTrailingComponent ()
-    {
-        return getWebUI ().getTrailingComponent ();
-    }
-
-    /**
-     * Sets field trailing component.
-     *
-     * @param trailingComponent field trailing component
-     */
-    public void setTrailingComponent ( final JComponent trailingComponent )
-    {
-        getWebUI ().setTrailingComponent ( trailingComponent );
-    }
-
-    /**
-     * Removes field trailing component.
-     */
-    public void removeTrailingComponent ()
-    {
-        getWebUI ().removeTrailingComponent ();
+        return getUI ().getInputPrompt ();
     }
 
     @Override
+    public void setInputPrompt ( final String text )
+    {
+        getUI ().setInputPrompt ( text );
+    }
+
+    @Override
+    public JComponent getLeadingComponent ()
+    {
+        return getUI ().getLeadingComponent ();
+    }
+
+    @Override
+    public JComponent setLeadingComponent ( final JComponent leadingComponent )
+    {
+        return getUI ().setLeadingComponent ( leadingComponent );
+    }
+
+    @Override
+    public JComponent removeLeadingComponent ()
+    {
+        return getUI ().removeLeadingComponent ();
+    }
+
+    @Override
+    public JComponent getTrailingComponent ()
+    {
+        return getUI ().getTrailingComponent ();
+    }
+
+    @Override
+    public JComponent setTrailingComponent ( final JComponent trailingComponent )
+    {
+        return getUI ().setTrailingComponent ( trailingComponent );
+    }
+
+    @Override
+    public JComponent removeTrailingComponent ()
+    {
+        return getUI ().removeTrailingComponent ();
+    }
+
+    @NotNull
+    @Override
+    public StyleId getDefaultStyleId ()
+    {
+        return StyleId.formattedtextfield;
+    }
+
+    @NotNull
+    @Override
     public StyleId getStyleId ()
     {
-        return getWebUI ().getStyleId ();
+        return StyleManager.getStyleId ( this );
     }
 
     @Override
     public StyleId setStyleId ( final StyleId id )
     {
-        return getWebUI ().setStyleId ( id );
+        return StyleManager.setStyleId ( this, id );
+    }
+
+    @Override
+    public StyleId resetStyleId ()
+    {
+        return StyleManager.resetStyleId ( this );
     }
 
     @Override
@@ -243,9 +362,9 @@ public class WebFormattedTextField extends JFormattedTextField
     }
 
     @Override
-    public Skin restoreSkin ()
+    public Skin resetSkin ()
     {
-        return StyleManager.restoreSkin ( this );
+        return StyleManager.resetSkin ( this );
     }
 
     @Override
@@ -261,21 +380,9 @@ public class WebFormattedTextField extends JFormattedTextField
     }
 
     @Override
-    public Map<String, Painter> getCustomPainters ()
-    {
-        return StyleManager.getCustomPainters ( this );
-    }
-
-    @Override
     public Painter getCustomPainter ()
     {
         return StyleManager.getCustomPainter ( this );
-    }
-
-    @Override
-    public Painter getCustomPainter ( final String id )
-    {
-        return StyleManager.getCustomPainter ( this, id );
     }
 
     @Override
@@ -285,240 +392,224 @@ public class WebFormattedTextField extends JFormattedTextField
     }
 
     @Override
-    public Painter setCustomPainter ( final String id, final Painter painter )
+    public boolean resetCustomPainter ()
     {
-        return StyleManager.setCustomPainter ( this, id, painter );
+        return StyleManager.resetCustomPainter ( this );
+    }
+
+    @NotNull
+    @Override
+    public Shape getShape ()
+    {
+        return ShapeMethodsImpl.getShape ( this );
     }
 
     @Override
-    public boolean restoreDefaultPainters ()
+    public boolean isShapeDetectionEnabled ()
     {
-        return StyleManager.restoreDefaultPainters ( this );
+        return ShapeMethodsImpl.isShapeDetectionEnabled ( this );
     }
 
     @Override
-    public Shape provideShape ()
+    public void setShapeDetectionEnabled ( final boolean enabled )
     {
-        return getWebUI ().provideShape ();
+        ShapeMethodsImpl.setShapeDetectionEnabled ( this, enabled );
     }
 
+    @Nullable
     @Override
     public Insets getMargin ()
     {
-        return getWebUI ().getMargin ();
-    }
-
-    /**
-     * Sets new margin.
-     *
-     * @param margin new margin
-     */
-    public void setMargin ( final int margin )
-    {
-        setMargin ( margin, margin, margin, margin );
-    }
-
-    /**
-     * Sets new margin.
-     *
-     * @param top    new top margin
-     * @param left   new left margin
-     * @param bottom new bottom margin
-     * @param right  new right margin
-     */
-    public void setMargin ( final int top, final int left, final int bottom, final int right )
-    {
-        setMargin ( new Insets ( top, left, bottom, right ) );
+        return MarginMethodsImpl.getMargin ( this );
     }
 
     @Override
-    public void setMargin ( final Insets margin )
+    public void setMargin ( final int margin )
     {
-        getWebUI ().setMargin ( margin );
+        MarginMethodsImpl.setMargin ( this, margin );
     }
 
+    @Override
+    public void setMargin ( final int top, final int left, final int bottom, final int right )
+    {
+        MarginMethodsImpl.setMargin ( this, top, left, bottom, right );
+    }
+
+    @Override
+    public void setMargin ( @Nullable final Insets margin )
+    {
+        MarginMethodsImpl.setMargin ( this, margin );
+    }
+
+    @Nullable
     @Override
     public Insets getPadding ()
     {
-        return getWebUI ().getPadding ();
+        return PaddingMethodsImpl.getPadding ( this );
     }
 
-    /**
-     * Sets new padding.
-     *
-     * @param padding new padding
-     */
+    @Override
     public void setPadding ( final int padding )
     {
-        setPadding ( padding, padding, padding, padding );
+        PaddingMethodsImpl.setPadding ( this, padding );
     }
 
-    /**
-     * Sets new padding.
-     *
-     * @param top    new top padding
-     * @param left   new left padding
-     * @param bottom new bottom padding
-     * @param right  new right padding
-     */
+    @Override
     public void setPadding ( final int top, final int left, final int bottom, final int right )
     {
-        setPadding ( new Insets ( top, left, bottom, right ) );
+        PaddingMethodsImpl.setPadding ( this, top, left, bottom, right );
     }
 
     @Override
-    public void setPadding ( final Insets padding )
+    public void setPadding ( @Nullable final Insets padding )
     {
-        getWebUI ().setPadding ( padding );
-    }
-
-    /**
-     * Returns Web-UI applied to this class.
-     *
-     * @return Web-UI applied to this class
-     */
-    private WebFormattedTextFieldUI getWebUI ()
-    {
-        return ( WebFormattedTextFieldUI ) getUI ();
-    }
-
-    /**
-     * Installs a Web-UI into this component.
-     */
-    @Override
-    public void updateUI ()
-    {
-        if ( getUI () == null || !( getUI () instanceof WebFormattedTextFieldUI ) )
-        {
-            try
-            {
-                setUI ( ( WebFormattedTextFieldUI ) ReflectUtils.createInstance ( WebLookAndFeel.formattedTextFieldUI ) );
-            }
-            catch ( final Throwable e )
-            {
-                Log.error ( this, e );
-                setUI ( new WebFormattedTextFieldUI () );
-            }
-        }
-        else
-        {
-            setUI ( getUI () );
-        }
-        invalidate ();
+        PaddingMethodsImpl.setPadding ( this, padding );
     }
 
     @Override
-    public Pair<DocumentChangeListener, PropertyChangeListener> onChange ( final DocumentEventRunnable runnable )
+    public DocumentChangeBehavior<WebFormattedTextField> onChange ( final DocumentEventRunnable<WebFormattedTextField> runnable )
     {
-        return EventUtils.onChange ( this, runnable );
+        return DocumentEventMethodsImpl.onChange ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMousePress ( final MouseEventRunnable runnable )
+    public MouseAdapter onMousePress ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMousePress ( this, runnable );
+        return EventMethodsImpl.onMousePress ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMousePress ( final MouseButton mouseButton, final MouseEventRunnable runnable )
+    public MouseAdapter onMousePress ( @Nullable final MouseButton mouseButton, @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMousePress ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMousePress ( this, mouseButton, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseEnter ( final MouseEventRunnable runnable )
+    public MouseAdapter onMouseEnter ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseEnter ( this, runnable );
+        return EventMethodsImpl.onMouseEnter ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseExit ( final MouseEventRunnable runnable )
+    public MouseAdapter onMouseExit ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseExit ( this, runnable );
+        return EventMethodsImpl.onMouseExit ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseDrag ( final MouseEventRunnable runnable )
+    public MouseAdapter onMouseDrag ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseDrag ( this, runnable );
+        return EventMethodsImpl.onMouseDrag ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseDrag ( final MouseButton mouseButton, final MouseEventRunnable runnable )
+    public MouseAdapter onMouseDrag ( @Nullable final MouseButton mouseButton, @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseDrag ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMouseDrag ( this, mouseButton, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseClick ( final MouseEventRunnable runnable )
+    public MouseAdapter onMouseClick ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseClick ( this, runnable );
+        return EventMethodsImpl.onMouseClick ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseClick ( final MouseButton mouseButton, final MouseEventRunnable runnable )
+    public MouseAdapter onMouseClick ( @Nullable final MouseButton mouseButton, @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseClick ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMouseClick ( this, mouseButton, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onDoubleClick ( final MouseEventRunnable runnable )
+    public MouseAdapter onDoubleClick ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onDoubleClick ( this, runnable );
+        return EventMethodsImpl.onDoubleClick ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMenuTrigger ( final MouseEventRunnable runnable )
+    public MouseAdapter onMenuTrigger ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMenuTrigger ( this, runnable );
+        return EventMethodsImpl.onMenuTrigger ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyType ( final KeyEventRunnable runnable )
+    public KeyAdapter onKeyType ( @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyType ( this, runnable );
+        return EventMethodsImpl.onKeyType ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyType ( final HotkeyData hotkey, final KeyEventRunnable runnable )
+    public KeyAdapter onKeyType ( @Nullable final HotkeyData hotkey, @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyType ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyType ( this, hotkey, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyPress ( final KeyEventRunnable runnable )
+    public KeyAdapter onKeyPress ( @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyPress ( this, runnable );
+        return EventMethodsImpl.onKeyPress ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyPress ( final HotkeyData hotkey, final KeyEventRunnable runnable )
+    public KeyAdapter onKeyPress ( @Nullable final HotkeyData hotkey, @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyPress ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyPress ( this, hotkey, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyRelease ( final KeyEventRunnable runnable )
+    public KeyAdapter onKeyRelease ( @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyRelease ( this, runnable );
+        return EventMethodsImpl.onKeyRelease ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyRelease ( final HotkeyData hotkey, final KeyEventRunnable runnable )
+    public KeyAdapter onKeyRelease ( @Nullable final HotkeyData hotkey, @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyRelease ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyRelease ( this, hotkey, runnable );
     }
 
+    @NotNull
     @Override
-    public FocusAdapter onFocusGain ( final FocusEventRunnable runnable )
+    public FocusAdapter onFocusGain ( @NotNull final FocusEventRunnable runnable )
     {
-        return EventUtils.onFocusGain ( this, runnable );
+        return EventMethodsImpl.onFocusGain ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public FocusAdapter onFocusLoss ( final FocusEventRunnable runnable )
+    public FocusAdapter onFocusLoss ( @NotNull final FocusEventRunnable runnable )
     {
-        return EventUtils.onFocusLoss ( this, runnable );
+        return EventMethodsImpl.onFocusLoss ( this, runnable );
+    }
+
+    @NotNull
+    @Override
+    public MouseAdapter onDragStart ( final int shift, @NotNull final MouseEventRunnable runnable )
+    {
+        return EventMethodsImpl.onDragStart ( this, shift, runnable );
+    }
+
+    @NotNull
+    @Override
+    public MouseAdapter onDragStart ( final int shift, @Nullable final MouseButton mouseButton, @NotNull final MouseEventRunnable runnable )
+    {
+        return EventMethodsImpl.onDragStart ( this, shift, mouseButton, runnable );
     }
 
     @Override
@@ -665,331 +756,400 @@ public class WebFormattedTextField extends JFormattedTextField
         TooltipManager.removeTooltips ( this, tooltips );
     }
 
+    @Nullable
     @Override
-    public void setLanguage ( final String key, final Object... data )
+    public String getLanguage ()
     {
-        LanguageManager.registerComponent ( this, key, data );
+        return UILanguageManager.getComponentKey ( this );
     }
 
     @Override
-    public void updateLanguage ( final Object... data )
+    public void setLanguage ( @NotNull final String key, @Nullable final Object... data )
     {
-        LanguageManager.updateComponent ( this, data );
+        UILanguageManager.registerComponent ( this, key, data );
     }
 
     @Override
-    public void updateLanguage ( final String key, final Object... data )
+    public void updateLanguage ( @Nullable final Object... data )
     {
-        LanguageManager.updateComponent ( this, key, data );
+        UILanguageManager.updateComponent ( this, data );
+    }
+
+    @Override
+    public void updateLanguage ( @NotNull final String key, @Nullable final Object... data )
+    {
+        UILanguageManager.updateComponent ( this, key, data );
     }
 
     @Override
     public void removeLanguage ()
     {
-        LanguageManager.unregisterComponent ( this );
+        UILanguageManager.unregisterComponent ( this );
     }
 
     @Override
     public boolean isLanguageSet ()
     {
-        return LanguageManager.isRegisteredComponent ( this );
+        return UILanguageManager.isRegisteredComponent ( this );
     }
 
     @Override
-    public void setLanguageUpdater ( final LanguageUpdater updater )
+    public void setLanguageUpdater ( @NotNull final LanguageUpdater updater )
     {
-        LanguageManager.registerLanguageUpdater ( this, updater );
+        UILanguageManager.registerLanguageUpdater ( this, updater );
     }
 
     @Override
     public void removeLanguageUpdater ()
     {
-        LanguageManager.unregisterLanguageUpdater ( this );
+        UILanguageManager.unregisterLanguageUpdater ( this );
     }
 
     @Override
-    public void registerSettings ( final String key )
+    public void addLanguageListener ( @NotNull final LanguageListener listener )
     {
-        SettingsManager.registerComponent ( this, key );
+        UILanguageManager.addLanguageListener ( getRootPane (), listener );
     }
 
     @Override
-    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass )
+    public void removeLanguageListener ( @NotNull final LanguageListener listener )
     {
-        SettingsManager.registerComponent ( this, key, defaultValueClass );
+        UILanguageManager.removeLanguageListener ( getRootPane (), listener );
     }
 
     @Override
-    public void registerSettings ( final String key, final Object defaultValue )
+    public void removeLanguageListeners ()
     {
-        SettingsManager.registerComponent ( this, key, defaultValue );
+        UILanguageManager.removeLanguageListeners ( getRootPane () );
     }
 
     @Override
-    public void registerSettings ( final String group, final String key )
+    public void addDictionaryListener ( @NotNull final DictionaryListener listener )
     {
-        SettingsManager.registerComponent ( this, group, key );
+        UILanguageManager.addDictionaryListener ( getRootPane (), listener );
     }
 
     @Override
-    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass )
+    public void removeDictionaryListener ( @NotNull final DictionaryListener listener )
     {
-        SettingsManager.registerComponent ( this, group, key, defaultValueClass );
+        UILanguageManager.removeDictionaryListener ( getRootPane (), listener );
     }
 
     @Override
-    public void registerSettings ( final String group, final String key, final Object defaultValue )
+    public void removeDictionaryListeners ()
     {
-        SettingsManager.registerComponent ( this, group, key, defaultValue );
+        UILanguageManager.removeDictionaryListeners ( getRootPane () );
     }
 
     @Override
-    public void registerSettings ( final String key, final boolean loadInitialSettings, final boolean applySettingsChanges )
+    public void registerSettings ( final Configuration configuration )
     {
-        SettingsManager.registerComponent ( this, key, loadInitialSettings, applySettingsChanges );
+        UISettingsManager.registerComponent ( this, configuration );
     }
 
     @Override
-    public <T extends DefaultValue> void registerSettings ( final String key, final Class<T> defaultValueClass,
-                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
+    public void registerSettings ( final SettingsProcessor processor )
     {
-        SettingsManager.registerComponent ( this, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public void registerSettings ( final String key, final Object defaultValue, final boolean loadInitialSettings,
-                                   final boolean applySettingsChanges )
-    {
-        SettingsManager.registerComponent ( this, key, defaultValue, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public <T extends DefaultValue> void registerSettings ( final String group, final String key, final Class<T> defaultValueClass,
-                                                            final boolean loadInitialSettings, final boolean applySettingsChanges )
-    {
-        SettingsManager.registerComponent ( this, group, key, defaultValueClass, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public void registerSettings ( final String group, final String key, final Object defaultValue, final boolean loadInitialSettings,
-                                   final boolean applySettingsChanges )
-    {
-        SettingsManager.registerComponent ( this, group, key, defaultValue, loadInitialSettings, applySettingsChanges );
-    }
-
-    @Override
-    public void registerSettings ( final SettingsProcessor settingsProcessor )
-    {
-        SettingsManager.registerComponent ( this, settingsProcessor );
+        UISettingsManager.registerComponent ( this, processor );
     }
 
     @Override
     public void unregisterSettings ()
     {
-        SettingsManager.unregisterComponent ( this );
+        UISettingsManager.unregisterComponent ( this );
     }
 
     @Override
     public void loadSettings ()
     {
-        SettingsManager.loadComponentSettings ( this );
+        UISettingsManager.loadSettings ( this );
     }
 
     @Override
     public void saveSettings ()
     {
-        SettingsManager.saveComponentSettings ( this );
+        UISettingsManager.saveSettings ( this );
     }
 
     @Override
     public WebFormattedTextField setPlainFont ()
     {
-        return SwingUtils.setPlainFont ( this );
+        return FontMethodsImpl.setPlainFont ( this );
     }
 
     @Override
     public WebFormattedTextField setPlainFont ( final boolean apply )
     {
-        return SwingUtils.setPlainFont ( this, apply );
+        return FontMethodsImpl.setPlainFont ( this, apply );
     }
 
     @Override
     public boolean isPlainFont ()
     {
-        return SwingUtils.isPlainFont ( this );
+        return FontMethodsImpl.isPlainFont ( this );
     }
 
     @Override
     public WebFormattedTextField setBoldFont ()
     {
-        return SwingUtils.setBoldFont ( this );
+        return FontMethodsImpl.setBoldFont ( this );
     }
 
     @Override
     public WebFormattedTextField setBoldFont ( final boolean apply )
     {
-        return SwingUtils.setBoldFont ( this, apply );
+        return FontMethodsImpl.setBoldFont ( this, apply );
     }
 
     @Override
     public boolean isBoldFont ()
     {
-        return SwingUtils.isBoldFont ( this );
+        return FontMethodsImpl.isBoldFont ( this );
     }
 
     @Override
     public WebFormattedTextField setItalicFont ()
     {
-        return SwingUtils.setItalicFont ( this );
+        return FontMethodsImpl.setItalicFont ( this );
     }
 
     @Override
     public WebFormattedTextField setItalicFont ( final boolean apply )
     {
-        return SwingUtils.setItalicFont ( this, apply );
+        return FontMethodsImpl.setItalicFont ( this, apply );
     }
 
     @Override
     public boolean isItalicFont ()
     {
-        return SwingUtils.isItalicFont ( this );
+        return FontMethodsImpl.isItalicFont ( this );
     }
 
     @Override
     public WebFormattedTextField setFontStyle ( final boolean bold, final boolean italic )
     {
-        return SwingUtils.setFontStyle ( this, bold, italic );
+        return FontMethodsImpl.setFontStyle ( this, bold, italic );
     }
 
     @Override
     public WebFormattedTextField setFontStyle ( final int style )
     {
-        return SwingUtils.setFontStyle ( this, style );
+        return FontMethodsImpl.setFontStyle ( this, style );
     }
 
     @Override
     public WebFormattedTextField setFontSize ( final int fontSize )
     {
-        return SwingUtils.setFontSize ( this, fontSize );
+        return FontMethodsImpl.setFontSize ( this, fontSize );
     }
 
     @Override
     public WebFormattedTextField changeFontSize ( final int change )
     {
-        return SwingUtils.changeFontSize ( this, change );
+        return FontMethodsImpl.changeFontSize ( this, change );
     }
 
     @Override
     public int getFontSize ()
     {
-        return SwingUtils.getFontSize ( this );
+        return FontMethodsImpl.getFontSize ( this );
     }
 
     @Override
     public WebFormattedTextField setFontSizeAndStyle ( final int fontSize, final boolean bold, final boolean italic )
     {
-        return SwingUtils.setFontSizeAndStyle ( this, fontSize, bold, italic );
+        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, bold, italic );
     }
 
     @Override
     public WebFormattedTextField setFontSizeAndStyle ( final int fontSize, final int style )
     {
-        return SwingUtils.setFontSizeAndStyle ( this, fontSize, style );
+        return FontMethodsImpl.setFontSizeAndStyle ( this, fontSize, style );
     }
 
     @Override
     public WebFormattedTextField setFontName ( final String fontName )
     {
-        return SwingUtils.setFontName ( this, fontName );
+        return FontMethodsImpl.setFontName ( this, fontName );
     }
 
     @Override
     public String getFontName ()
     {
-        return SwingUtils.getFontName ( this );
+        return FontMethodsImpl.getFontName ( this );
     }
 
     @Override
     public int getPreferredWidth ()
     {
-        return SizeUtils.getPreferredWidth ( this );
+        return SizeMethodsImpl.getPreferredWidth ( this );
     }
 
+    @NotNull
     @Override
     public WebFormattedTextField setPreferredWidth ( final int preferredWidth )
     {
-        return SizeUtils.setPreferredWidth ( this, preferredWidth );
+        return SizeMethodsImpl.setPreferredWidth ( this, preferredWidth );
     }
 
     @Override
     public int getPreferredHeight ()
     {
-        return SizeUtils.getPreferredHeight ( this );
+        return SizeMethodsImpl.getPreferredHeight ( this );
     }
 
+    @NotNull
     @Override
     public WebFormattedTextField setPreferredHeight ( final int preferredHeight )
     {
-        return SizeUtils.setPreferredHeight ( this, preferredHeight );
+        return SizeMethodsImpl.setPreferredHeight ( this, preferredHeight );
     }
 
+    @NotNull
     @Override
-    public int getMinimumWidth ()
+    public Dimension getPreferredSize ()
     {
-        return SizeUtils.getMinimumWidth ( this );
+        return SizeMethodsImpl.getPreferredSize ( this, super.getPreferredSize () );
     }
 
+    @NotNull
     @Override
-    public WebFormattedTextField setMinimumWidth ( final int minimumWidth )
+    public Dimension getOriginalPreferredSize ()
     {
-        return SizeUtils.setMinimumWidth ( this, minimumWidth );
+        return SizeMethodsImpl.getOriginalPreferredSize ( this, super.getPreferredSize () );
     }
 
+    @NotNull
     @Override
-    public int getMinimumHeight ()
+    public WebFormattedTextField setPreferredSize ( final int width, final int height )
     {
-        return SizeUtils.getMinimumHeight ( this );
-    }
-
-    @Override
-    public WebFormattedTextField setMinimumHeight ( final int minimumHeight )
-    {
-        return SizeUtils.setMinimumHeight ( this, minimumHeight );
+        return SizeMethodsImpl.setPreferredSize ( this, width, height );
     }
 
     @Override
     public int getMaximumWidth ()
     {
-        return SizeUtils.getMaximumWidth ( this );
+        return SizeMethodsImpl.getMaximumWidth ( this );
     }
 
+    @NotNull
     @Override
     public WebFormattedTextField setMaximumWidth ( final int maximumWidth )
     {
-        return SizeUtils.setMaximumWidth ( this, maximumWidth );
+        return SizeMethodsImpl.setMaximumWidth ( this, maximumWidth );
     }
 
     @Override
     public int getMaximumHeight ()
     {
-        return SizeUtils.getMaximumHeight ( this );
+        return SizeMethodsImpl.getMaximumHeight ( this );
     }
 
+    @NotNull
     @Override
     public WebFormattedTextField setMaximumHeight ( final int maximumHeight )
     {
-        return SizeUtils.setMaximumHeight ( this, maximumHeight );
+        return SizeMethodsImpl.setMaximumHeight ( this, maximumHeight );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getMaximumSize ()
+    {
+        return SizeMethodsImpl.getMaximumSize ( this, super.getMaximumSize () );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getOriginalMaximumSize ()
+    {
+        return SizeMethodsImpl.getOriginalMaximumSize ( this, super.getMaximumSize () );
+    }
+
+    @NotNull
+    @Override
+    public WebFormattedTextField setMaximumSize ( final int width, final int height )
+    {
+        return SizeMethodsImpl.setMaximumSize ( this, width, height );
     }
 
     @Override
-    public Dimension getPreferredSize ()
+    public int getMinimumWidth ()
     {
-        return SizeUtils.getPreferredSize ( this, super.getPreferredSize () );
+        return SizeMethodsImpl.getMinimumWidth ( this );
+    }
+
+    @NotNull
+    @Override
+    public WebFormattedTextField setMinimumWidth ( final int minimumWidth )
+    {
+        return SizeMethodsImpl.setMinimumWidth ( this, minimumWidth );
     }
 
     @Override
-    public WebFormattedTextField setPreferredSize ( final int width, final int height )
+    public int getMinimumHeight ()
     {
-        return SizeUtils.setPreferredSize ( this, width, height );
+        return SizeMethodsImpl.getMinimumHeight ( this );
+    }
+
+    @NotNull
+    @Override
+    public WebFormattedTextField setMinimumHeight ( final int minimumHeight )
+    {
+        return SizeMethodsImpl.setMinimumHeight ( this, minimumHeight );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getMinimumSize ()
+    {
+        return SizeMethodsImpl.getMinimumSize ( this, super.getMinimumSize () );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getOriginalMinimumSize ()
+    {
+        return SizeMethodsImpl.getOriginalMinimumSize ( this, super.getMinimumSize () );
+    }
+
+    @NotNull
+    @Override
+    public WebFormattedTextField setMinimumSize ( final int width, final int height )
+    {
+        return SizeMethodsImpl.setMinimumSize ( this, width, height );
+    }
+
+    /**
+     * Returns the look and feel (LaF) object that renders this component.
+     *
+     * @return the {@link WFormattedTextFieldUI} object that renders this component
+     */
+    @Override
+    public WFormattedTextFieldUI getUI ()
+    {
+        return ( WFormattedTextFieldUI ) super.getUI ();
+    }
+
+    /**
+     * Sets the LaF object that renders this component.
+     *
+     * @param ui {@link WFormattedTextFieldUI}
+     */
+    public void setUI ( final WFormattedTextFieldUI ui )
+    {
+        super.setUI ( ui );
+    }
+
+    @Override
+    public void updateUI ()
+    {
+        StyleManager.getDescriptor ( this ).updateUI ( this );
+    }
+
+    @Override
+    public String getUIClassID ()
+    {
+        return StyleManager.getDescriptor ( this ).getUIClassId ();
     }
 }

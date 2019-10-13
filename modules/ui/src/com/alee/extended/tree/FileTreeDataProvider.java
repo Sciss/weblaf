@@ -30,7 +30,6 @@ import java.util.List;
  *
  * @author Mikle Garin
  */
-
 public class FileTreeDataProvider extends AbstractAsyncTreeDataProvider<FileTreeNode>
 {
     /**
@@ -99,15 +98,15 @@ public class FileTreeDataProvider extends AbstractAsyncTreeDataProvider<FileTree
     }
 
     @Override
-    public void loadChildren ( final FileTreeNode parent, final ChildrenListener<FileTreeNode> listener )
+    public void loadChildren ( final FileTreeNode parent, final NodesLoadCallback<FileTreeNode> listener )
     {
         try
         {
-            listener.loadCompleted ( parent.getFile () == null ? getRootChildren () : getFileChildren ( parent ) );
+            listener.completed ( parent.getFile () == null ? getRootChildren () : getFileChildren ( parent ) );
         }
-        catch ( final Throwable cause )
+        catch ( final Exception cause )
         {
-            listener.loadFailed ( cause );
+            listener.failed ( cause );
         }
     }
 
@@ -151,10 +150,10 @@ public class FileTreeDataProvider extends AbstractAsyncTreeDataProvider<FileTree
     }
 
     @Override
-    public Filter<FileTreeNode> getChildrenFilter ( final FileTreeNode node )
+    public Filter<FileTreeNode> getChildrenFilter ( final FileTreeNode parent, final List<FileTreeNode> children )
     {
         // We must not filter out given roots
-        return node.getFile () == null ? null : super.getChildrenFilter ( node );
+        return parent.getFile () != null ? super.getChildrenFilter ( parent, children ) : null;
     }
 
     @Override

@@ -17,6 +17,8 @@
 
 package com.alee.laf.spinner;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.extended.layout.AbstractLayoutManager;
 
 import java.awt.*;
@@ -28,7 +30,6 @@ import java.awt.*;
  *
  * @author Mikle Garin
  */
-
 public class WebSpinnerLayout extends AbstractLayoutManager
 {
     /**
@@ -62,7 +63,7 @@ public class WebSpinnerLayout extends AbstractLayoutManager
     protected Component previousButton = null;
 
     @Override
-    public void addComponent ( final Component component, final Object constraints )
+    public void addComponent ( @NotNull final Component component, @Nullable final Object constraints )
     {
         if ( EDITOR.equals ( constraints ) )
         {
@@ -79,7 +80,7 @@ public class WebSpinnerLayout extends AbstractLayoutManager
     }
 
     @Override
-    public void removeComponent ( final Component component )
+    public void removeComponent ( @NotNull final Component component )
     {
         if ( component == editor )
         {
@@ -96,17 +97,17 @@ public class WebSpinnerLayout extends AbstractLayoutManager
     }
 
     @Override
-    public void layoutContainer ( final Container parent )
+    public void layoutContainer ( @NotNull final Container container )
     {
-        final Insets b = parent.getInsets ();
-        final Dimension s = parent.getSize ();
+        final Insets b = container.getInsets ();
+        final Dimension s = container.getSize ();
         final Dimension next = nextButton != null ? nextButton.getPreferredSize () : new Dimension ( 0, 0 );
         final Dimension prev = previousButton != null ? previousButton.getPreferredSize () : new Dimension ( 0, 0 );
         final int bw = Math.max ( next.width, prev.width );
         final int bah = s.height - b.top - b.bottom;
         final int nh = bah % 2 == 0 ? bah / 2 : ( bah - 1 ) / 2 + 1;
         final int ph = bah % 2 == 0 ? bah / 2 : ( bah - 1 ) / 2;
-        final boolean ltr = parent.getComponentOrientation ().isLeftToRight ();
+        final boolean ltr = container.getComponentOrientation ().isLeftToRight ();
         if ( editor != null )
         {
             editor.setBounds ( b.left + ( ltr ? 0 : bw ), b.top, s.width - b.left - b.right - bw, s.height - b.top - b.bottom );
@@ -121,10 +122,11 @@ public class WebSpinnerLayout extends AbstractLayoutManager
         }
     }
 
+    @NotNull
     @Override
-    public Dimension preferredLayoutSize ( final Container parent )
+    public Dimension preferredLayoutSize ( @NotNull final Container container )
     {
-        final Insets b = parent.getInsets ();
+        final Insets b = container.getInsets ();
         final Dimension ed = editor != null ? editor.getPreferredSize () : new Dimension ( 0, 0 );
         final Dimension next = nextButton != null ? nextButton.getPreferredSize () : new Dimension ( 0, 0 );
         final Dimension prev = previousButton != null ? previousButton.getPreferredSize () : new Dimension ( 0, 0 );

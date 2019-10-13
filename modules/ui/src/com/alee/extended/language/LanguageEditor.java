@@ -17,7 +17,7 @@
 
 package com.alee.extended.language;
 
-import com.alee.extended.window.TestFrame;
+import com.alee.extended.debug.TestFrame;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
@@ -28,7 +28,6 @@ import com.alee.managers.style.StyleId;
 /**
  * @author Mikle Garin
  */
-
 public class LanguageEditor extends WebPanel
 {
     private final DictionariesTree dictionariesTree;
@@ -56,13 +55,7 @@ public class LanguageEditor extends WebPanel
         WebLookAndFeel.install ();
 
         final LanguageEditor languageEditor = new LanguageEditor ();
-
-        for ( final Dictionary d : LanguageManager.getDictionaries () )
-        {
-            languageEditor.loadDictionary ( d );
-        }
-        languageEditor.loadDictionary ( LanguageManager.loadDictionary ( LanguageManager.class, "resources/language.xml" ) );
-
+        languageEditor.loadDictionary ( LanguageManager.getDictionaries () );
         languageEditor.getDictionariesTree ().expandTillRecords ();
         languageEditor.getDictionariesTree ().setRootVisible ( false );
 

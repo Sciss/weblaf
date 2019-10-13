@@ -1,14 +1,23 @@
-<skin>
+<skin xmlns="http://weblookandfeel.com/XmlSkin">
 
     <!-- com.alee.extended.checkbox.WebTristateCheckBox -->
 
     <!-- Tristate checkbox -->
     <style type="tristatecheckbox">
-        <component>
-            <foreground>black</foreground>
-        </component>
         <painter>
-            <selectedForeground>black</selectedForeground>
+            <decorations>
+                <decoration>
+                    <ButtonLayout>
+                        <SimpleButtonIcon constraints="icon" />
+                        <ButtonText constraints="text" color="black" />
+                    </ButtonLayout>
+                </decoration>
+                <decoration states="disabled">
+                    <ButtonLayout>
+                        <ButtonText color="120,120,120" />
+                    </ButtonLayout>
+                </decoration>
+            </decorations>
 
             <!-- Check state painter -->
             <checkStatePainter>
@@ -34,6 +43,7 @@
                     <decoration states="disabled">
                         <WebShadow type="outer" opacity="0" />
                         <LineBorder color="lightGray" />
+                        <ColorBackground color="240,240,240" />
                     </decoration>
                     <decoration states="disabled,checked">
                         <CheckIcon bounds="margin" color="gray" />
@@ -44,6 +54,38 @@
                 </decorations>
             </checkStatePainter>
 
+        </painter>
+    </style>
+
+    <!-- Tristate checkbox supporting styled text -->
+    <style type="tristatecheckbox" id="styled">
+        <painter>
+            <decorations>
+                <decoration>
+                    <ButtonLayout>
+                        <StyledButtonText constraints="text" color="black" />
+                    </ButtonLayout>
+                </decoration>
+                <decoration states="disabled">
+                    <ButtonLayout>
+                        <StyledButtonText color="120,120,120" ignoreStyleColors="true" />
+                    </ButtonLayout>
+                </decoration>
+            </decorations>
+        </painter>
+    </style>
+
+    <!-- Link-like tristate checkbox -->
+    <style type="tristatecheckbox" id="link" extends="styled">
+        <painter>
+            <decorations>
+                <decoration cursor="hand" />
+                <decoration states="enabled,hover">
+                    <ButtonLayout>
+                        <StyledButtonText globalStyle="u" />
+                    </ButtonLayout>
+                </decoration>
+            </decorations>
         </painter>
     </style>
 

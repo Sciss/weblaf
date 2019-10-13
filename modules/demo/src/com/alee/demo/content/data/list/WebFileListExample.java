@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.data.list;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
 import com.alee.extended.list.WebFileList;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.style.StyleId;
@@ -32,35 +33,39 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebFileListExample extends AbstractExample
+public class WebFileListExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "webfilelist";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "filelist";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.extended;
     }
 
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final IconsFileList icons = new IconsFileList ( StyleId.filelistIcons );
-        final TilesFileList tiles = new TilesFileList ( StyleId.filelistTiles );
-        final ScrollableList scrollable = new ScrollableList ( StyleId.filelistIcons );
-        final EditableList editable = new EditableList ( StyleId.filelistTiles );
-        return CollectionUtils.<Preview>asList ( icons, tiles, scrollable, editable );
+        return CollectionUtils.<Preview>asList (
+                new IconsFileList ( StyleId.filelistIcons ),
+                new TilesFileList ( StyleId.filelistTiles ),
+                new ScrollableList ( StyleId.filelistIcons ),
+                new EditableList ( StyleId.filelistTiles )
+        );
     }
 
     /**
@@ -78,8 +83,9 @@ public class WebFileListExample extends AbstractExample
             super ( WebFileListExample.this, "icons", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final File[] files = FileUtils.getUserHome ().listFiles ();
             final File[] model = files.length > 28 ? Arrays.copyOfRange ( files, 0, 28 ) : files;
@@ -103,8 +109,9 @@ public class WebFileListExample extends AbstractExample
             super ( WebFileListExample.this, "tiles", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final File[] files = FileUtils.getUserHome ().listFiles ();
             final File[] model = files.length > 15 ? Arrays.copyOfRange ( files, 0, 15 ) : files;
@@ -128,8 +135,9 @@ public class WebFileListExample extends AbstractExample
             super ( WebFileListExample.this, "scrollable", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebFileList list = new WebFileList ( getStyleId (), FileUtils.getUserHome () );
             return CollectionUtils.asList ( new WebScrollPane ( list ) );
@@ -151,8 +159,9 @@ public class WebFileListExample extends AbstractExample
             super ( WebFileListExample.this, "editable", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebFileList list = new WebFileList ( getStyleId (), FileUtils.getUserHome () );
             list.setEditable ( true );

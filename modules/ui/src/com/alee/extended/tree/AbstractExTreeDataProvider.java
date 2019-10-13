@@ -17,31 +17,42 @@
 
 package com.alee.extended.tree;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.laf.tree.UniqueNode;
+import com.alee.laf.tree.WebTreeModel;
+import com.alee.utils.CollectionUtils;
 import com.alee.utils.compare.Filter;
 
 import java.util.Comparator;
+import java.util.List;
 
 /**
- * Abstract data provider with implemented comparator and filter getters and setters.
+ * Abstract {@link ExTreeDataProvider} that can contain single comparator and filter for child nodes.
  *
+ * @param <N> node type
  * @author Mikle Garin
  */
-
-public abstract class AbstractExTreeDataProvider<E extends UniqueNode> implements ExTreeDataProvider<E>
+public abstract class AbstractExTreeDataProvider<N extends UniqueNode> implements ExTreeDataProvider<N>
 {
     /**
-     * Children comparator.
+     * {@link Comparator} for all child nodes.
+     * It is {@code transient} as it can only be set through code.
+     * Override {@link #getChildrenComparator(UniqueNode, List)} method to provide parent-related {@link Comparator}.
      */
-    protected Comparator<E> comparator = null;
+    @Nullable
+    protected transient Comparator<N> comparator = null;
 
     /**
-     * Children filter.
+     * {@link Filter} for all child nodes.
+     * It is {@code transient} as it can only be set through code.
+     * Override {@link #getChildrenFilter(UniqueNode, List)} method to provide parent-related {@link Filter}.
      */
-    protected Filter<E> filter = null;
+    @Nullable
+    protected transient Filter<N> filter = null;
 
     @Override
-    public Comparator<E> getChildrenComparator ( final E node )
+    public Comparator<N> getChildrenComparator ( @NotNull final N parent, @NotNull final List<N> children )
     {
         return comparator;
     }
@@ -51,13 +62,13 @@ public abstract class AbstractExTreeDataProvider<E extends UniqueNode> implement
      *
      * @param comparator children comparator for all nodes
      */
-    public void setChildrenComparator ( final Comparator<E> comparator )
+    public void setChildrenComparator ( @Nullable final Comparator<N> comparator )
     {
         this.comparator = comparator;
     }
 
     @Override
-    public Filter<E> getChildrenFilter ( final E node )
+    public Filter<N> getChildrenFilter ( @NotNull final N parent, @NotNull final List<N> children )
     {
         return filter;
     }
@@ -67,21 +78,38 @@ public abstract class AbstractExTreeDataProvider<E extends UniqueNode> implement
      *
      * @param filter children filter for all nodes
      */
-    public void setChildrenFilter ( final Filter<E> filter )
+    public void setChildrenFilter ( @Nullable final Filter<N> filter )
     {
         this.filter = filter;
     }
 
     /**
-     * Returns false by default to allow children load requests.
-     * It is recommended to override this behavior if you can easily determine whether node is leaf or not.
+     * Returns plain {@link WebTreeModel} with data from this {@link AbstractExTreeDataProvider} implementation.
      *
-     * @param node node
-     * @return false
+     * @return plain {@link WebTreeModel} with data from this {@link AbstractExTreeDataProvider} implementation
      */
-    @Override
-    public boolean isLeaf ( final E node )
+    @NotNull
+    public WebTreeModel<N> createPlainModel ()
     {
-        return false;
+        final N root = getRoot ();
+        loadPlainChildren ( root );
+        return new WebTreeModel<N> ( root );
+    }
+
+    /**
+     * Loads all child {@link UniqueNode}s for the specified parent {@link UniqueNode} recursively.
+     *
+     * @param parent parent {@link UniqueNode} to load all children for recursively
+     */
+    protected void loadPlainChildren ( @NotNull final N parent )
+    {
+        final List<N> children = getChildren ( parent );
+        final List<N> filtered = CollectionUtils.filter ( children, getChildrenFilter ( parent, children ) );
+        final List<N> sorted = CollectionUtils.sort ( children, getChildrenComparator ( parent, filtered ) );
+        for ( final N child : sorted )
+        {
+            parent.add ( child );
+            loadPlainChildren ( child );
+        }
     }
 }

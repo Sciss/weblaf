@@ -17,7 +17,10 @@
 
 package com.alee.extended.layout;
 
-import javax.swing.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.api.data.Orientation;
+
 import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,92 +31,131 @@ import java.util.Map;
  *
  * @author Mikle Garin
  */
-
-public class GroupLayout extends AbstractLayoutManager implements SwingConstants
+public class GroupLayout extends AbstractLayoutManager
 {
+    /**
+     * All {@link #PREFERRED} {@link Component}s use their preferred width for horizontal layout and preferred height for vertical layout.
+     */
     public static final String PREFERRED = "PREFERRED";
+
+    /**
+     * All remaining space left after {@link Component}s placed under {@link #PREFERRED} constraints is shared equally between
+     * {@link Component}s placed under {@link #FILL} constraints.
+     */
     public static final String FILL = "FILL";
 
-    protected int orientation;
+    /**
+     * Layout orientation.
+     */
+    protected Orientation orientation;
+
+    /**
+     * Gap between {@link Component}s in this layout.
+     */
     protected int gap;
 
-    protected Map<Component, String> constraints = new HashMap<Component, String> ();
+    /**
+     * Saved constraints.
+     */
+    protected final Map<Component, String> constraints;
 
+    /**
+     * Constructs new {@link GroupLayout}.
+     */
     public GroupLayout ()
     {
-        this ( HORIZONTAL );
+        this ( Orientation.horizontal, 0 );
     }
 
-    public GroupLayout ( final int orientation )
+    /**
+     * Constructs new {@link GroupLayout}.
+     *
+     * @param orientation layout orientation
+     */
+    public GroupLayout ( final Orientation orientation )
     {
         this ( orientation, 0 );
     }
 
-    public GroupLayout ( final int orientation, final int gap )
+    /**
+     * Constructs new {@link GroupLayout}.
+     *
+     * @param orientation layout orientation
+     * @param gap         gap between {@link Component}s in this layout
+     */
+    public GroupLayout ( final Orientation orientation, final int gap )
     {
-        super ();
-        setOrientation ( orientation );
-        setGap ( gap );
+        this.orientation = orientation;
+        this.gap = gap;
+        this.constraints = new HashMap<Component, String> ();
     }
 
-    public int getOrientation ()
+    /**
+     * Returns layout orientation.
+     *
+     * @return layout orientation
+     */
+    public Orientation getOrientation ()
     {
         return orientation;
     }
 
-    public void setOrientation ( final int orientation )
+    /**
+     * Sets layout orientation.
+     *
+     * @param orientation layout orientation
+     */
+    public void setOrientation ( final Orientation orientation )
     {
         this.orientation = orientation;
     }
 
+    /**
+     * Returns gap between {@link Component}s in this layout.
+     *
+     * @return gap between {@link Component}s in this layout
+     */
     public int getGap ()
     {
         return gap;
     }
 
+    /**
+     * Sets gap between {@link Component}s in this layout.
+     *
+     * @param gap gap between {@link Component}s in this layout
+     */
     public void setGap ( final int gap )
     {
         this.gap = gap;
     }
 
     @Override
-    public void addComponent ( final Component component, final Object constraints )
+    public void addComponent ( @NotNull final Component component, @Nullable final Object constraints )
     {
         this.constraints.put ( component, ( String ) constraints );
     }
 
     @Override
-    public void removeComponent ( final Component component )
+    public void removeComponent ( @NotNull final Component component )
     {
         this.constraints.remove ( component );
     }
 
     @Override
-    public Dimension preferredLayoutSize ( final Container parent )
-    {
-        return getLayoutSize ( parent, false );
-    }
-
-    @Override
-    public Dimension minimumLayoutSize ( final Container parent )
-    {
-        return getLayoutSize ( parent, true );
-    }
-
-    @Override
-    public void layoutContainer ( final Container parent )
+    public void layoutContainer ( @NotNull final Container container )
     {
         // Gathering component sizes
         int fillCount = 0;
         int preferred = 0;
-        for ( final Component component : parent.getComponents () )
+        for ( final Component component : container.getComponents () )
         {
             final boolean fill = isFill ( component );
             if ( fill )
             {
                 fillCount++;
             }
-            if ( orientation == HORIZONTAL )
+            if ( orientation.isHorizontal () )
             {
                 preferred += fill ? 0 : component.getPreferredSize ().width;
             }
@@ -122,28 +164,29 @@ public class GroupLayout extends AbstractLayoutManager implements SwingConstants
                 preferred += fill ? 0 : component.getPreferredSize ().height;
             }
         }
-        if ( parent.getComponentCount () > 0 )
+        if ( container.getComponentCount () > 0 )
         {
-            preferred += gap * ( parent.getComponentCount () - 1 );
+            preferred += gap * ( container.getComponentCount () - 1 );
         }
 
         // Calculating required sizes
-        final boolean ltr = parent.getComponentOrientation ().isLeftToRight ();
-        final Insets insets = parent.getInsets ();
-        final Dimension size = parent.getSize ();
+        final boolean ltr = container.getComponentOrientation ().isLeftToRight ();
+        final Insets insets = container.getInsets ();
+        final Dimension size = container.getSize ();
         final int width = size.width - insets.left - insets.right;
         final int height = size.height - insets.top - insets.bottom;
-        final int fillSize = orientation == HORIZONTAL ? fillCount > 0 && width > preferred ? ( width - preferred ) / fillCount : 0 :
+        final int fillSize = orientation.isHorizontal () ?
+                fillCount > 0 && width > preferred ? ( width - preferred ) / fillCount : 0 :
                 fillCount > 0 && height > preferred ? ( height - preferred ) / fillCount : 0;
-        int x = ltr || orientation == VERTICAL ? insets.left : size.width - insets.right;
+        int x = ltr || orientation.isVertical () ? insets.left : size.width - insets.right;
         int y = insets.top;
 
         // Placing components
-        for ( final Component component : parent.getComponents () )
+        for ( final Component component : container.getComponents () )
         {
             final Dimension cps = component.getPreferredSize ();
             final boolean fill = isFill ( component );
-            if ( orientation == HORIZONTAL )
+            if ( orientation.isHorizontal () )
             {
                 final int w = fill ? fillSize : cps.width;
                 component.setBounds ( x - ( ltr ? 0 : w ), y, w, height );
@@ -158,15 +201,36 @@ public class GroupLayout extends AbstractLayoutManager implements SwingConstants
         }
     }
 
-    protected Dimension getLayoutSize ( final Container parent, final boolean minimum )
+    @NotNull
+    @Override
+    public Dimension preferredLayoutSize ( @NotNull final Container container )
     {
-        final Insets insets = parent.getInsets ();
+        return getLayoutSize ( container, false );
+    }
+
+    @NotNull
+    @Override
+    public Dimension minimumLayoutSize ( @NotNull final Container container )
+    {
+        return getLayoutSize ( container, true );
+    }
+
+    /**
+     * Returns {@link Container}'s layout size of the requested type.
+     *
+     * @param container {@link Container}
+     * @param minimum   whether or not should return minimum size
+     * @return {@link Container}'s layout size of the requested type
+     */
+    protected Dimension getLayoutSize ( final Container container, final boolean minimum )
+    {
+        final Insets insets = container.getInsets ();
         final Dimension ps = new Dimension ();
-        for ( final Component component : parent.getComponents () )
+        for ( final Component component : container.getComponents () )
         {
             final Dimension cps = minimum ? component.getMinimumSize () : component.getPreferredSize ();
             final boolean ignoreSize = minimum && isFill ( component );
-            if ( orientation == HORIZONTAL )
+            if ( orientation.isHorizontal () )
             {
                 ps.width += ignoreSize ? 1 : cps.width;
                 ps.height = Math.max ( ps.height, cps.height );
@@ -177,15 +241,15 @@ public class GroupLayout extends AbstractLayoutManager implements SwingConstants
                 ps.height += ignoreSize ? 1 : cps.height;
             }
         }
-        if ( parent.getComponentCount () > 0 )
+        if ( container.getComponentCount () > 0 )
         {
-            if ( orientation == HORIZONTAL )
+            if ( orientation.isHorizontal () )
             {
-                ps.width += gap * ( parent.getComponentCount () - 1 );
+                ps.width += gap * ( container.getComponentCount () - 1 );
             }
             else
             {
-                ps.height += gap * ( parent.getComponentCount () - 1 );
+                ps.height += gap * ( container.getComponentCount () - 1 );
             }
         }
         ps.width += insets.left + insets.right;
@@ -193,16 +257,24 @@ public class GroupLayout extends AbstractLayoutManager implements SwingConstants
         return ps;
     }
 
+    /**
+     * Returns whether or not specified {@link Component} uses {@link #FILL} constraint.
+     *
+     * @param component {@link Component}
+     * @return {@code true} if specified {@link Component} uses {@link #FILL} constraint, {@code false} otherwise
+     */
     protected boolean isFill ( final Component component )
     {
+        final boolean fill;
         if ( constraints.containsKey ( component ) )
         {
             final String constraint = constraints.get ( component );
-            return constraint != null && constraint.equals ( FILL );
+            fill = constraint != null && constraint.equals ( FILL );
         }
         else
         {
-            return false;
+            fill = false;
         }
+        return fill;
     }
 }

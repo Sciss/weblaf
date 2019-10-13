@@ -17,44 +17,41 @@
 
 package com.alee.extended.syntax;
 
-import com.alee.laf.WebLookAndFeel;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.laf.scroll.WebScrollBar;
 import com.alee.laf.scroll.WebScrollPaneBar;
 import com.alee.laf.scroll.WebScrollPaneUI;
-import com.alee.managers.language.LanguageContainerMethods;
-import com.alee.managers.language.LanguageManager;
-import com.alee.managers.log.Log;
 import com.alee.managers.style.*;
-import com.alee.managers.style.Skin;
-import com.alee.managers.style.Skinnable;
-import com.alee.managers.style.StyleListener;
 import com.alee.painter.Paintable;
 import com.alee.painter.Painter;
-import com.alee.utils.ReflectUtils;
-import com.alee.utils.SizeUtils;
-import com.alee.utils.swing.SizeMethods;
+import com.alee.utils.swing.extensions.SizeMethods;
+import com.alee.utils.swing.extensions.SizeMethodsImpl;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import java.awt.*;
-import java.util.Map;
 
 /**
- * Special scrollpane exclusively for {@link com.alee.extended.syntax.WebSyntaxArea} component.
+ * {@link RTextScrollPane} extension class.
+ * It contains various useful methods to simplify core component usage.
+ * <p/>
+ * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
+ * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
  *
  * @author Mikle Garin
+ * @see RTextScrollPane
+ * @see WebScrollPaneUI
+ * @see com.alee.laf.scroll.ScrollPanePainter
  */
-
 public class WebSyntaxScrollPane extends RTextScrollPane
-        implements Styleable, Skinnable, Paintable, ShapeProvider, MarginSupport, PaddingSupport, SizeMethods<WebSyntaxScrollPane>,
-        LanguageContainerMethods
+        implements Styleable, Paintable, ShapeMethods, MarginMethods, PaddingMethods, SizeMethods<WebSyntaxScrollPane>
 {
     /**
      * Constructs new empty syntax scrollpane.
      */
     public WebSyntaxScrollPane ()
     {
-        super ();
-        initialize ( StyleId.syntaxareaScroll );
+        this ( StyleId.auto );
     }
 
     /**
@@ -64,8 +61,7 @@ public class WebSyntaxScrollPane extends RTextScrollPane
      */
     public WebSyntaxScrollPane ( final WebSyntaxArea syntaxArea )
     {
-        super ( syntaxArea );
-        initialize ( StyleId.syntaxareaScroll );
+        this ( StyleId.auto, syntaxArea );
     }
 
     /**
@@ -76,8 +72,7 @@ public class WebSyntaxScrollPane extends RTextScrollPane
      */
     public WebSyntaxScrollPane ( final WebSyntaxArea syntaxArea, final boolean lineNumbers )
     {
-        super ( syntaxArea, lineNumbers );
-        initialize ( StyleId.syntaxareaScroll );
+        this ( StyleId.auto, syntaxArea, lineNumbers );
     }
 
     /**
@@ -89,8 +84,7 @@ public class WebSyntaxScrollPane extends RTextScrollPane
      */
     public WebSyntaxScrollPane ( final WebSyntaxArea syntaxArea, final boolean lineNumbers, final Color lineNumberColor )
     {
-        super ( syntaxArea, lineNumbers, lineNumberColor );
-        initialize ( StyleId.syntaxareaScroll );
+        this ( StyleId.auto, syntaxArea, lineNumbers, lineNumberColor );
     }
 
     /**
@@ -100,8 +94,7 @@ public class WebSyntaxScrollPane extends RTextScrollPane
      */
     public WebSyntaxScrollPane ( final StyleId id )
     {
-        super ();
-        initialize ( id );
+        this ( id, null );
     }
 
     /**
@@ -112,8 +105,7 @@ public class WebSyntaxScrollPane extends RTextScrollPane
      */
     public WebSyntaxScrollPane ( final StyleId id, final WebSyntaxArea syntaxArea )
     {
-        super ( syntaxArea );
-        initialize ( id );
+        this ( id, syntaxArea, true );
     }
 
     /**
@@ -125,8 +117,7 @@ public class WebSyntaxScrollPane extends RTextScrollPane
      */
     public WebSyntaxScrollPane ( final StyleId id, final WebSyntaxArea syntaxArea, final boolean lineNumbers )
     {
-        super ( syntaxArea, lineNumbers );
-        initialize ( id );
+        this ( id, syntaxArea, lineNumbers, Color.GRAY );
     }
 
     /**
@@ -140,18 +131,15 @@ public class WebSyntaxScrollPane extends RTextScrollPane
     public WebSyntaxScrollPane ( final StyleId id, final WebSyntaxArea syntaxArea, final boolean lineNumbers, final Color lineNumberColor )
     {
         super ( syntaxArea, lineNumbers, lineNumberColor );
-        initialize ( id );
-    }
-
-    /**
-     * Initializes default scrollpane styling.
-     *
-     * @param id style ID
-     */
-    protected void initialize ( final StyleId id )
-    {
         setStyleId ( id );
         setGutterStyleId ( StyleId.syntaxareaScrollGutter.at ( this ) );
+    }
+
+    @NotNull
+    @Override
+    public StyleId getDefaultStyleId ()
+    {
+        return StyleId.syntaxareaScroll;
     }
 
     @Override
@@ -178,16 +166,23 @@ public class WebSyntaxScrollPane extends RTextScrollPane
         return ( WebScrollPaneBar ) super.getVerticalScrollBar ();
     }
 
+    @NotNull
     @Override
     public StyleId getStyleId ()
     {
-        return getWebUI ().getStyleId ();
+        return StyleManager.getStyleId ( this );
     }
 
     @Override
     public StyleId setStyleId ( final StyleId id )
     {
-        return getWebUI ().setStyleId ( id );
+        return StyleManager.setStyleId ( this, id );
+    }
+
+    @Override
+    public StyleId resetStyleId ()
+    {
+        return StyleManager.resetStyleId ( this );
     }
 
     /**
@@ -219,9 +214,9 @@ public class WebSyntaxScrollPane extends RTextScrollPane
     }
 
     @Override
-    public Skin restoreSkin ()
+    public Skin resetSkin ()
     {
-        return StyleManager.restoreSkin ( this );
+        return StyleManager.resetSkin ( this );
     }
 
     @Override
@@ -237,21 +232,9 @@ public class WebSyntaxScrollPane extends RTextScrollPane
     }
 
     @Override
-    public Map<String, Painter> getCustomPainters ()
-    {
-        return StyleManager.getCustomPainters ( this );
-    }
-
-    @Override
     public Painter getCustomPainter ()
     {
         return StyleManager.getCustomPainter ( this );
-    }
-
-    @Override
-    public Painter getCustomPainter ( final String id )
-    {
-        return StyleManager.getCustomPainter ( this, id );
     }
 
     @Override
@@ -261,226 +244,251 @@ public class WebSyntaxScrollPane extends RTextScrollPane
     }
 
     @Override
-    public Painter setCustomPainter ( final String id, final Painter painter )
+    public boolean resetCustomPainter ()
     {
-        return StyleManager.setCustomPainter ( this, id, painter );
+        return StyleManager.resetCustomPainter ( this );
+    }
+
+    @NotNull
+    @Override
+    public Shape getShape ()
+    {
+        return ShapeMethodsImpl.getShape ( this );
     }
 
     @Override
-    public boolean restoreDefaultPainters ()
+    public boolean isShapeDetectionEnabled ()
     {
-        return StyleManager.restoreDefaultPainters ( this );
+        return ShapeMethodsImpl.isShapeDetectionEnabled ( this );
     }
 
     @Override
-    public Shape provideShape ()
+    public void setShapeDetectionEnabled ( final boolean enabled )
     {
-        return getWebUI ().provideShape ();
+        ShapeMethodsImpl.setShapeDetectionEnabled ( this, enabled );
     }
 
+    @Nullable
     @Override
     public Insets getMargin ()
     {
-        return getWebUI ().getMargin ();
-    }
-
-    /**
-     * Sets new margin.
-     *
-     * @param margin new margin
-     */
-    public void setMargin ( final int margin )
-    {
-        setMargin ( margin, margin, margin, margin );
-    }
-
-    /**
-     * Sets new margin.
-     *
-     * @param top    new top margin
-     * @param left   new left margin
-     * @param bottom new bottom margin
-     * @param right  new right margin
-     */
-    public void setMargin ( final int top, final int left, final int bottom, final int right )
-    {
-        setMargin ( new Insets ( top, left, bottom, right ) );
+        return MarginMethodsImpl.getMargin ( this );
     }
 
     @Override
-    public void setMargin ( final Insets margin )
+    public void setMargin ( final int margin )
     {
-        getWebUI ().setMargin ( margin );
+        MarginMethodsImpl.setMargin ( this, margin );
     }
 
+    @Override
+    public void setMargin ( final int top, final int left, final int bottom, final int right )
+    {
+        MarginMethodsImpl.setMargin ( this, top, left, bottom, right );
+    }
+
+    @Override
+    public void setMargin ( @Nullable final Insets margin )
+    {
+        MarginMethodsImpl.setMargin ( this, margin );
+    }
+
+    @Nullable
     @Override
     public Insets getPadding ()
     {
-        return getWebUI ().getPadding ();
+        return PaddingMethodsImpl.getPadding ( this );
     }
 
-    /**
-     * Sets new padding.
-     *
-     * @param padding new padding
-     */
+    @Override
     public void setPadding ( final int padding )
     {
-        setPadding ( padding, padding, padding, padding );
+        PaddingMethodsImpl.setPadding ( this, padding );
     }
 
-    /**
-     * Sets new padding.
-     *
-     * @param top    new top padding
-     * @param left   new left padding
-     * @param bottom new bottom padding
-     * @param right  new right padding
-     */
+    @Override
     public void setPadding ( final int top, final int left, final int bottom, final int right )
     {
-        setPadding ( new Insets ( top, left, bottom, right ) );
+        PaddingMethodsImpl.setPadding ( this, top, left, bottom, right );
     }
 
     @Override
-    public void setPadding ( final Insets padding )
+    public void setPadding ( @Nullable final Insets padding )
     {
-        getWebUI ().setPadding ( padding );
-    }
-
-    /**
-     * Returns Web-UI applied to this class.
-     *
-     * @return Web-UI applied to this class
-     */
-    private WebScrollPaneUI getWebUI ()
-    {
-        return ( WebScrollPaneUI ) getUI ();
-    }
-
-    /**
-     * Installs a Web-UI into this component.
-     */
-    @Override
-    public void updateUI ()
-    {
-        if ( getUI () == null || !( getUI () instanceof WebScrollPaneUI ) )
-        {
-            try
-            {
-                setUI ( ( WebScrollPaneUI ) ReflectUtils.createInstance ( WebLookAndFeel.scrollPaneUI ) );
-            }
-            catch ( final Throwable e )
-            {
-                Log.error ( this, e );
-                setUI ( new WebScrollPaneUI () );
-            }
-        }
-        else
-        {
-            setUI ( getUI () );
-        }
+        PaddingMethodsImpl.setPadding ( this, padding );
     }
 
     @Override
     public int getPreferredWidth ()
     {
-        return SizeUtils.getPreferredWidth ( this );
+        return SizeMethodsImpl.getPreferredWidth ( this );
     }
 
+    @NotNull
     @Override
     public WebSyntaxScrollPane setPreferredWidth ( final int preferredWidth )
     {
-        return SizeUtils.setPreferredWidth ( this, preferredWidth );
+        return SizeMethodsImpl.setPreferredWidth ( this, preferredWidth );
     }
 
     @Override
     public int getPreferredHeight ()
     {
-        return SizeUtils.getPreferredHeight ( this );
+        return SizeMethodsImpl.getPreferredHeight ( this );
     }
 
+    @NotNull
     @Override
     public WebSyntaxScrollPane setPreferredHeight ( final int preferredHeight )
     {
-        return SizeUtils.setPreferredHeight ( this, preferredHeight );
+        return SizeMethodsImpl.setPreferredHeight ( this, preferredHeight );
     }
 
+    @NotNull
     @Override
-    public int getMinimumWidth ()
+    public Dimension getPreferredSize ()
     {
-        return SizeUtils.getMinimumWidth ( this );
+        return SizeMethodsImpl.getPreferredSize ( this, super.getPreferredSize () );
     }
 
+    @NotNull
     @Override
-    public WebSyntaxScrollPane setMinimumWidth ( final int minimumWidth )
+    public Dimension getOriginalPreferredSize ()
     {
-        return SizeUtils.setMinimumWidth ( this, minimumWidth );
+        return SizeMethodsImpl.getOriginalPreferredSize ( this, super.getPreferredSize () );
     }
 
+    @NotNull
     @Override
-    public int getMinimumHeight ()
+    public WebSyntaxScrollPane setPreferredSize ( final int width, final int height )
     {
-        return SizeUtils.getMinimumHeight ( this );
-    }
-
-    @Override
-    public WebSyntaxScrollPane setMinimumHeight ( final int minimumHeight )
-    {
-        return SizeUtils.setMinimumHeight ( this, minimumHeight );
+        return SizeMethodsImpl.setPreferredSize ( this, width, height );
     }
 
     @Override
     public int getMaximumWidth ()
     {
-        return SizeUtils.getMaximumWidth ( this );
+        return SizeMethodsImpl.getMaximumWidth ( this );
     }
 
+    @NotNull
     @Override
     public WebSyntaxScrollPane setMaximumWidth ( final int maximumWidth )
     {
-        return SizeUtils.setMaximumWidth ( this, maximumWidth );
+        return SizeMethodsImpl.setMaximumWidth ( this, maximumWidth );
     }
 
     @Override
     public int getMaximumHeight ()
     {
-        return SizeUtils.getMaximumHeight ( this );
+        return SizeMethodsImpl.getMaximumHeight ( this );
     }
 
+    @NotNull
     @Override
     public WebSyntaxScrollPane setMaximumHeight ( final int maximumHeight )
     {
-        return SizeUtils.setMaximumHeight ( this, maximumHeight );
+        return SizeMethodsImpl.setMaximumHeight ( this, maximumHeight );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getMaximumSize ()
+    {
+        return SizeMethodsImpl.getMaximumSize ( this, super.getMaximumSize () );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getOriginalMaximumSize ()
+    {
+        return SizeMethodsImpl.getOriginalMaximumSize ( this, super.getMaximumSize () );
+    }
+
+    @NotNull
+    @Override
+    public WebSyntaxScrollPane setMaximumSize ( final int width, final int height )
+    {
+        return SizeMethodsImpl.setMaximumSize ( this, width, height );
     }
 
     @Override
-    public Dimension getPreferredSize ()
+    public int getMinimumWidth ()
     {
-        return SizeUtils.getPreferredSize ( this, super.getPreferredSize () );
+        return SizeMethodsImpl.getMinimumWidth ( this );
+    }
+
+    @NotNull
+    @Override
+    public WebSyntaxScrollPane setMinimumWidth ( final int minimumWidth )
+    {
+        return SizeMethodsImpl.setMinimumWidth ( this, minimumWidth );
     }
 
     @Override
-    public WebSyntaxScrollPane setPreferredSize ( final int width, final int height )
+    public int getMinimumHeight ()
     {
-        return SizeUtils.setPreferredSize ( this, width, height );
+        return SizeMethodsImpl.getMinimumHeight ( this );
+    }
+
+    @NotNull
+    @Override
+    public WebSyntaxScrollPane setMinimumHeight ( final int minimumHeight )
+    {
+        return SizeMethodsImpl.setMinimumHeight ( this, minimumHeight );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getMinimumSize ()
+    {
+        return SizeMethodsImpl.getMinimumSize ( this, super.getMinimumSize () );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getOriginalMinimumSize ()
+    {
+        return SizeMethodsImpl.getOriginalMinimumSize ( this, super.getMinimumSize () );
+    }
+
+    @NotNull
+    @Override
+    public WebSyntaxScrollPane setMinimumSize ( final int width, final int height )
+    {
+        return SizeMethodsImpl.setMinimumSize ( this, width, height );
+    }
+
+    /**
+     * Returns the look and feel (LaF) object that renders this component.
+     *
+     * @return the {@link WebScrollPaneUI} object that renders this component
+     */
+    @Override
+    public WebScrollPaneUI getUI ()
+    {
+        return ( WebScrollPaneUI ) super.getUI ();
+    }
+
+    /**
+     * Sets the LaF object that renders this component.
+     *
+     * @param ui {@link WebScrollPaneUI}
+     */
+    public void setUI ( final WebScrollPaneUI ui )
+    {
+        super.setUI ( ui );
     }
 
     @Override
-    public void setLanguageContainerKey ( final String key )
+    public void updateUI ()
     {
-        LanguageManager.registerLanguageContainer ( this, key );
+        StyleManager.getDescriptor ( this ).updateUI ( this );
     }
 
     @Override
-    public void removeLanguageContainerKey ()
+    public String getUIClassID ()
     {
-        LanguageManager.unregisterLanguageContainer ( this );
-    }
-
-    @Override
-    public String getLanguageContainerKey ()
-    {
-        return LanguageManager.getLanguageContainerKey ( this );
+        return StyleManager.getDescriptor ( this ).getUIClassId ();
     }
 }

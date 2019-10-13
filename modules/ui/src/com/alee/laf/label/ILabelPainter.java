@@ -20,13 +20,15 @@ package com.alee.laf.label;
 import javax.swing.*;
 
 /**
- * Base interface for JLabel component painters.
+ * Base interface for {@link JLabel} component painters.
  *
- * @param <E> component type
- * @param <U> UI type
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Mikle Garin
  */
-
-public interface ILabelPainter<E extends JLabel, U extends WebLabelUI> extends IAbstractLabelPainter<E, U>
+public interface ILabelPainter<C extends JLabel, U extends WLabelUI<C>> extends IAbstractLabelPainter<C, U>
 {
+    /**
+     * This interface doesn't offer any additional methods to implement.
+     */
 }

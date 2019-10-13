@@ -1,4 +1,4 @@
-<skin>
+<skin xmlns="http://weblookandfeel.com/XmlSkin">
 
     <!-- com.alee.extended.date.WebDateField -->
 
@@ -6,7 +6,6 @@
     <style type="datefield">
         <component>
             <opaque>false</opaque>
-            <background>white</background>
         </component>
         <painter>
             <decorations>
@@ -19,16 +18,22 @@
                 <decoration states="focused">
                     <LineBorder color="85,130,190" />
                 </decoration>
+                <decoration states="disabled">
+                    <WebShadow type="outer" opacity="0" />
+                    <LineBorder color="lightGray" />
+                </decoration>
             </decorations>
         </painter>
 
         <!-- Date text field -->
-        <style type="formattedtextfield" id="field" padding="2" extends="undecorated" />
+        <style type="formattedtextfield" id="field" padding="2" extends="transparent" />
 
         <!-- Choose button -->
         <style type="button" id="button" extends="icon-hover">
+            <component>
+                <focusable>false</focusable>
+            </component>
             <painter>
-                <selectedForeground>black</selectedForeground>
                 <decorations>
                     <decoration>
                         <WebShape round="0" sides="0,1,0,0" />
@@ -61,12 +66,25 @@
 
     </style>
 
-    <!-- Date field undecorated -->
-    <style type="datefield" id="undecorated">
+    <!-- Non-opaque date field -->
+    <style type="datefield" id="non-opaque">
+        <component>
+            <opaque>false</opaque>
+        </component>
         <painter>
-            <decorations>
-                <decoration visible="false" />
+            <decorations overwrite="true">
+                <decoration>
+                    <BoundsShape />
+                    <ColorBackground color="white" />
+                </decoration>
             </decorations>
+        </painter>
+    </style>
+
+    <!-- Transparent date field -->
+    <style type="datefield" id="transparent" extends="non-opaque">
+        <painter>
+            <decorations overwrite="true" />
         </painter>
     </style>
 

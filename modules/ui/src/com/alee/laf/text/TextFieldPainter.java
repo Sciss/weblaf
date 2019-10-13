@@ -1,8 +1,6 @@
 package com.alee.laf.text;
 
-import com.alee.laf.text.AbstractTextFieldPainter;
-import com.alee.laf.text.ITextFieldPainter;
-import com.alee.laf.text.WebTextFieldUI;
+import com.alee.api.annotations.Nullable;
 import com.alee.managers.language.LM;
 import com.alee.painter.decoration.IDecoration;
 
@@ -10,11 +8,16 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
+ * Basic painter for {@link JTextField} component.
+ * It is used as {@link WTextFieldUI} default painter.
+ *
+ * @param <C> component type
+ * @param <U> component UI type
+ * @param <D> decoration type
  * @author Alexandr Zernov
  */
-
-public class TextFieldPainter<E extends JTextField, U extends WebTextFieldUI, D extends IDecoration<E, D>>
-        extends AbstractTextFieldPainter<E, U, D> implements ITextFieldPainter<E, U>, SwingConstants
+public class TextFieldPainter<C extends JTextField, U extends WTextFieldUI, D extends IDecoration<C, D>>
+        extends AbstractTextFieldPainter<C, U, D> implements ITextFieldPainter<C, U>, SwingConstants
 {
     @Override
     public String getInputPrompt ()
@@ -22,15 +25,17 @@ public class TextFieldPainter<E extends JTextField, U extends WebTextFieldUI, D 
         return LM.get ( ui.getInputPrompt () );
     }
 
-    @Override
-    public Component getTrailingComponent ()
-    {
-        return ui.getTrailingComponent ();
-    }
-
+    @Nullable
     @Override
     public Component getLeadingComponent ()
     {
         return ui.getLeadingComponent ();
+    }
+
+    @Nullable
+    @Override
+    public Component getTrailingComponent ()
+    {
+        return ui.getTrailingComponent ();
     }
 }

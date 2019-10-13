@@ -17,35 +17,59 @@
 
 package com.alee.extended.inspector;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.extended.behavior.VisibilityBehavior;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.extended.tree.WebTreeFilterField;
 import com.alee.extended.window.PopOverDirection;
 import com.alee.extended.window.WebPopOver;
 import com.alee.laf.WebLookAndFeel;
+import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.panel.WebPanel;
-import com.alee.laf.rootpane.WebDialog;
-import com.alee.laf.rootpane.WebFrame;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.window.WebDialog;
+import com.alee.laf.window.WebFrame;
+import com.alee.managers.hotkey.Hotkey;
+import com.alee.managers.icon.Icons;
 import com.alee.managers.style.StyleId;
+import com.alee.utils.ProprietaryUtils;
 
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 /**
+ * Complex component that provides Swing components structure overview and allows inspecting specific components.
+ * It also has a few methods to display as a separate window on top of any UI element.
+ *
  * @author Mikle Garin
+ * @see InterfaceTree
+ * @see ComponentInspectBehavior
+ * @see ComponentHighlighter
+ * @see #showFrame(Component)
+ * @see #showDialog(Component, Component)
+ * @see #showPopOver(Component, Component)
+ * @see #showPopOver(Component, Component, PopOverDirection)
  */
-
 public class InterfaceInspector extends WebPanel
 {
     /**
-     * Inspected components tree.
+     * {@link InterfaceTree}.
      */
-    private final InterfaceTree tree;
-    private final WebScrollPane scrollPane;
+    @NotNull
+    protected final InterfaceTree tree;
 
     /**
-     * Constructs new empty inspector.
+     * {@link Component} inspect behavior.
+     */
+    @Nullable
+    protected transient ComponentInspectBehavior inspectBehavior;
+
+    /**
+     * Constructs new empty {@link InterfaceInspector}.
      */
     public InterfaceInspector ()
     {
@@ -53,94 +77,160 @@ public class InterfaceInspector extends WebPanel
     }
 
     /**
-     * Constructs new inspector for the specified component and its childrens tree.
+     * Constructs new {@link InterfaceInspector} for the specified {@link Component} and its childrens tree.
      *
-     * @param inspected component to inspect
+     * @param inspected {@link Component} to inspect
      */
-    public InterfaceInspector ( final Component inspected )
+    public InterfaceInspector ( @Nullable final Component inspected )
     {
         this ( StyleId.inspector, inspected );
     }
 
     /**
-     * Constructs new empty inspector.
+     * Constructs new empty {@link InterfaceInspector}.
      *
      * @param id style ID
      */
-    public InterfaceInspector ( final StyleId id )
+    public InterfaceInspector ( @NotNull final StyleId id )
     {
         this ( id, null );
     }
 
     /**
-     * Constructs new inspector for the specified component and its childrens tree.
+     * Constructs new {@link InterfaceInspector} for the specified {@link Component} and its childrens tree.
      *
      * @param id        style ID
-     * @param inspected component to inspect
+     * @param inspected {@link Component} to inspect
      */
-    public InterfaceInspector ( final StyleId id, final Component inspected )
+    public InterfaceInspector ( @NotNull final StyleId id, @Nullable final Component inspected )
     {
         super ( id );
 
-        // Component inspection tree
-        scrollPane = new WebScrollPane ( StyleId.inspectorScroll.at ( InterfaceInspector.this ) );
+        // Tree scroll
+        final WebScrollPane scrollPane = new WebScrollPane ( StyleId.inspectorScroll.at ( InterfaceInspector.this ) );
         scrollPane.setPreferredWidth ( 300 );
+
+        // Interface tree
         tree = new InterfaceTree ( StyleId.inspectorTree.at ( scrollPane ), inspected );
         scrollPane.getViewport ().setView ( tree );
 
         // Filtering field
         final WebTreeFilterField filter = new WebTreeFilterField ( StyleId.inspectorFilter.at ( InterfaceInspector.this ), tree );
 
+        // Component inspect behavior
+        final WebToggleButton inspectToggle = new WebToggleButton ( StyleId.inspectorInspect.at ( filter ), Icons.target );
+        inspectToggle.setRolloverIcon ( Icons.targetHover );
+        inspectToggle.setSelectedIcon ( Icons.targetSelected );
+        inspectToggle.setCursor ( Cursor.getDefaultCursor () );
+        inspectToggle.addHotkey ( Hotkey.CTRL_I );
+        inspectToggle.addActionListener ( new ActionListener ()
+        {
+            @Override
+            public void actionPerformed ( @NotNull final ActionEvent e )
+            {
+                if ( inspectToggle.isSelected () )
+                {
+                    if ( inspectBehavior == null )
+                    {
+                        inspectBehavior = new ComponentInspectBehavior ();
+                    }
+                    if ( !inspectBehavior.isInstalled () )
+                    {
+                        inspectBehavior.install ( inspected, new InspectionListener ()
+                        {
+                            @Override
+                            public void inspected ( @NotNull final Component component )
+                            {
+                                tree.navigate ( component );
+                                inspectToggle.setSelected ( false );
+                                tree.requestFocusInWindow ();
+                            }
+
+                            @Override
+                            public void cancelled ()
+                            {
+                                inspectToggle.setSelected ( false );
+                            }
+                        } );
+                    }
+                }
+                else
+                {
+                    if ( inspectBehavior != null && inspectBehavior.isInstalled () )
+                    {
+                        inspectBehavior.uninstall ();
+                    }
+                }
+            }
+        } );
+        filter.setTrailingComponent ( inspectToggle );
+
         // UI composition
         final WebSeparator separator = new WebSeparator ( StyleId.inspectorSeparator.at ( InterfaceInspector.this ) );
         add ( new GroupPanel ( GroupingType.fillLast, 0, false, filter, separator, scrollPane ) );
 
-        // Expanding tree
-        tree.expandAll ();
+        // Expanding tree root by default
+        tree.expandRoot ();
+
+        // Visibility behavior
+        new VisibilityBehavior<InterfaceInspector> ( this, true )
+        {
+            @Override
+            protected void hidden ( @NotNull final InterfaceInspector inspector )
+            {
+                if ( inspectBehavior != null && inspectBehavior.isInstalled () )
+                {
+                    inspectBehavior.uninstall ();
+                }
+            }
+        }.install ();
     }
 
     /**
-     * Sets inspected component.
+     * Sets inspected {@link Component}.
      *
-     * @param inspected component to inspect
+     * @param inspected {@link Component} to inspect
      */
-    public void setInspected ( final Component inspected )
+    public void setInspected ( @Nullable final Component inspected )
     {
         tree.setRootComponent ( inspected );
     }
 
     /**
-     * Returns separate inspector frame for the specified component.
-     * That frame will be displayed straight away on the screen.
-     *
-     * @param inspected component to inspect
-     * @return separate inspector frame for the specified component
+     * Clears highlighted {@link Component}s.
      */
-    public static WebDialog showDialog ( final Component inspected )
+    public void clearHighlights ()
     {
-        final WebDialog dialog = new WebDialog ( inspected );
-        dialog.setIconImages ( WebLookAndFeel.getImages () );
-        dialog.add ( new InterfaceInspector ( inspected ) );
-        dialog.setModal ( false );
-        dialog.pack ();
-        dialog.setLocationRelativeTo ( inspected );
-        // window.setAttachedTo ( ? );
-        dialog.setVisible ( true );
-        return dialog;
+        tree.clearSelection ();
     }
 
     /**
-     * Returns separate inspector frame for the specified component.
-     * That frame will be displayed straight away on the screen.
+     * Returns separate {@link WebFrame} with inspector for all visible {@link Component}s.
+     * That {@link WebFrame} will be displayed straight away on the screen.
      *
-     * @param inspected component to inspect
-     * @return separate inspector frame for the specified component
+     * @return separate {@link WebFrame} with inspector for all visible {@link Component}s
      */
-    public static WebFrame showFrame ( final Component inspected )
+    @NotNull
+    public static WebFrame showFrame ()
+    {
+        return showFrame ( null );
+    }
+
+    /**
+     * Returns separate {@link WebFrame} with inspector for the specified {@link Component}.
+     * That {@link WebFrame} will be displayed straight away on the screen.
+     *
+     * @param inspected {@link Component} to inspect
+     * @return separate {@link WebFrame} with inspector for the specified {@link Component}
+     */
+    @NotNull
+    public static WebFrame showFrame ( @Nullable final Component inspected )
     {
         final WebFrame frame = new WebFrame ();
         frame.setIconImages ( WebLookAndFeel.getImages () );
         frame.add ( new InterfaceInspector ( inspected ) );
+        ProprietaryUtils.setUtilityWindowType ( frame );
+        frame.setModalExclusionType ( Dialog.ModalExclusionType.APPLICATION_EXCLUDE );
         frame.pack ();
         frame.setLocationRelativeTo ( inspected );
         frame.setVisible ( true );
@@ -148,18 +238,101 @@ public class InterfaceInspector extends WebPanel
     }
 
     /**
-     * Returns separate inspector popover for the specified component.
-     * That popover will be displayed straight away near the inspected component.
+     * Returns separate {@link WebDialog} with inspector for all visible {@link Component}s.
+     * That {@link WebDialog} will be displayed straight away on the screen.
      *
-     * @param inspected component to inspect
-     * @return separate inspector popover for the specified component
+     * @param parent parent {@link Component} for {@link WebDialog}
+     * @return separate {@link WebDialog} with inspector for all visible {@link Component}s
      */
-    public static WebPopOver showPopOver ( final Component inspected )
+    @NotNull
+    public static WebDialog showDialog ( @Nullable final Component parent )
     {
-        final WebPopOver popOver = new WebPopOver ( inspected );
+        return showDialog ( parent, null );
+    }
+
+    /**
+     * Returns separate {@link WebDialog} with inspector for the specified {@link Component}.
+     * That {@link WebDialog} will be displayed straight away on the screen.
+     *
+     * @param parent    parent {@link Component} for {@link WebDialog}
+     * @param inspected {@link Component} to inspect
+     * @return separate {@link WebDialog} with inspector for the specified {@link Component}
+     */
+    @NotNull
+    public static WebDialog showDialog ( @Nullable final Component parent, @Nullable final Component inspected )
+    {
+        final WebDialog dialog = new WebDialog ( parent );
+        dialog.setIconImages ( WebLookAndFeel.getImages () );
+        dialog.add ( new InterfaceInspector ( inspected ) );
+        ProprietaryUtils.setUtilityWindowType ( dialog );
+        dialog.setModalExclusionType ( Dialog.ModalExclusionType.APPLICATION_EXCLUDE );
+        dialog.setModal ( false );
+        dialog.pack ();
+        dialog.setLocationRelativeTo ( inspected );
+        // dialog.setAttachedTo ( ? );
+        dialog.setVisible ( true );
+        return dialog;
+    }
+
+    /**
+     * Returns separate {@link WebPopOver} with inspector for all visible {@link Component}s.
+     * That {@link WebPopOver} will be displayed straight away near the parent {@link Component}.
+     *
+     * @param parent parent {@link Component} for {@link WebPopOver}
+     * @return separate {@link WebPopOver} with inspector for all visible {@link Component}s
+     */
+    @NotNull
+    public static WebPopOver showPopOver ( @Nullable final Component parent )
+    {
+        return showPopOver ( parent, null, PopOverDirection.right );
+    }
+
+    /**
+     * Returns separate {@link WebPopOver} with inspector for all visible {@link Component}s.
+     * That {@link WebPopOver} will be displayed straight away near the parent {@link Component}.
+     *
+     * @param parent    parent {@link Component} for {@link WebPopOver}
+     * @param direction {@link PopOverDirection}
+     * @return separate {@link WebPopOver} with inspector for all visible {@link Component}s
+     */
+    @NotNull
+    public static WebPopOver showPopOver ( @Nullable final Component parent, @NotNull final PopOverDirection direction )
+    {
+        return showPopOver ( parent, null, direction );
+    }
+
+    /**
+     * Returns separate {@link WebPopOver} with inspector for the specified {@link Component}.
+     * That {@link WebPopOver} will be displayed straight away near the parent {@link Component}.
+     *
+     * @param parent    parent {@link Component} for {@link WebPopOver}
+     * @param inspected {@link Component} to inspect
+     * @return separate {@link WebPopOver} with inspector for the specified {@link Component}
+     */
+    @NotNull
+    public static WebPopOver showPopOver ( @Nullable final Component parent, @Nullable final Component inspected )
+    {
+        return showPopOver ( parent, inspected, PopOverDirection.right );
+    }
+
+    /**
+     * Returns separate {@link WebPopOver} with inspector for the specified {@link Component}.
+     * That {@link WebPopOver} will be displayed straight away near the parent {@link Component}.
+     *
+     * @param parent    parent {@link Component} for {@link WebPopOver}
+     * @param inspected {@link Component} to inspect
+     * @param direction {@link PopOverDirection}
+     * @return separate {@link WebPopOver} with inspector for the specified {@link Component}
+     */
+    @NotNull
+    public static WebPopOver showPopOver ( @Nullable final Component parent, @Nullable final Component inspected,
+                                           @NotNull final PopOverDirection direction )
+    {
+        final WebPopOver popOver = new WebPopOver ( parent );
         popOver.setIconImages ( WebLookAndFeel.getImages () );
         popOver.add ( new InterfaceInspector ( StyleId.inspectorPopover, inspected ) );
-        popOver.show ( inspected, PopOverDirection.right );
+        popOver.setModalExclusionType ( Dialog.ModalExclusionType.APPLICATION_EXCLUDE );
+        popOver.show ( parent, direction );
         return popOver;
     }
 }

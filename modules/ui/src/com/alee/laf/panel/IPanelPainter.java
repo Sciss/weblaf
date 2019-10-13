@@ -22,13 +22,15 @@ import com.alee.painter.SpecificPainter;
 import javax.swing.*;
 
 /**
- * Base interface for JPanel component painters.
+ * Base interface for {@link JPanel} component painters.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @author Mikle Garin
  */
-
-public interface IPanelPainter<E extends JPanel, U extends WebPanelUI> extends SpecificPainter<E, U>
+public interface IPanelPainter<C extends JPanel, U extends WPanelUI<C>> extends SpecificPainter<C, U>
 {
+    /**
+     * This interface doesn't offer any additional methods to implement.
+     */
 }

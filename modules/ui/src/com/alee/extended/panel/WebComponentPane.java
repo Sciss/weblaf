@@ -17,6 +17,7 @@
 
 package com.alee.extended.panel;
 
+import com.alee.api.annotations.NotNull;
 import com.alee.extended.layout.ComponentPanelLayout;
 import com.alee.managers.style.StyleId;
 import com.alee.laf.panel.WebPanel;
@@ -35,7 +36,6 @@ import java.util.Map;
 /**
  * @author Mikle Garin
  */
-
 public class WebComponentPane extends WebPanel
 {
     private final List<ComponentReorderListener> listeners = new ArrayList<ComponentReorderListener> ( 1 );
@@ -61,7 +61,7 @@ public class WebComponentPane extends WebPanel
         final HotkeyRunnable prevAction = new HotkeyRunnable ()
         {
             @Override
-            public void run ( final KeyEvent e )
+            public void run ( @NotNull final KeyEvent e )
             {
                 if ( upDownHotkeysAllowed && Hotkey.UP.isTriggered ( e ) || leftRightHotkeysAllowed && Hotkey.LEFT.isTriggered ( e ) )
                 {
@@ -84,7 +84,7 @@ public class WebComponentPane extends WebPanel
         final HotkeyRunnable nextAction = new HotkeyRunnable ()
         {
             @Override
-            public void run ( final KeyEvent e )
+            public void run ( @NotNull final KeyEvent e )
             {
                 if ( upDownHotkeysAllowed && Hotkey.DOWN.isTriggered ( e ) || leftRightHotkeysAllowed && Hotkey.RIGHT.isTriggered ( e ) )
                 {

@@ -17,55 +17,53 @@
 
 package com.alee.painter.decoration.shape;
 
-import com.alee.api.Mergeable;
-import com.alee.utils.MergeUtils;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.clone.CloneBehavior;
+import com.alee.api.clone.RecursiveClone;
+import com.alee.api.merge.Overwriting;
 import com.thoughtworks.xstream.annotations.XStreamConverter;
 
 import java.io.Serializable;
 
 /**
- * Custom shape corners round.
+ * Shape corners round data.
  *
  * @author Mikle Garin
+ * @see RoundConverter
  */
-
 @XStreamConverter ( RoundConverter.class )
-public final class Round implements Serializable, Cloneable, Mergeable<Round>
+public final class Round implements Overwriting, CloneBehavior<Round>, Serializable
 {
     /**
      * Top left corner round.
      */
-    public int topLeft;
+    public final int topLeft;
 
     /**
      * Top right corner round.
      */
-    public int topRight;
+    public final int topRight;
 
     /**
      * Bottom right corner round.
      */
-    public int bottomRight;
+    public final int bottomRight;
 
     /**
      * Bottom left corner round.
      */
-    public int bottomLeft;
+    public final int bottomLeft;
 
     /**
-     * Constructs zero corners round data.
+     * Constructs zero corners round settings.
      */
     public Round ()
     {
-        super ();
-        this.topLeft = 0;
-        this.topRight = 0;
-        this.bottomRight = 0;
-        this.bottomLeft = 0;
+        this ( 0, 0, 0, 0 );
     }
 
     /**
-     * Constructs corners round data with the specified values.
+     * Constructs corners round settings with the specified values.
      *
      * @param topLeft     top left corner round
      * @param topRight    top right corner round
@@ -74,44 +72,34 @@ public final class Round implements Serializable, Cloneable, Mergeable<Round>
      */
     public Round ( final int topLeft, final int topRight, final int bottomRight, final int bottomLeft )
     {
-        super ();
         this.topLeft = topLeft;
         this.topRight = topRight;
         this.bottomRight = bottomRight;
         this.bottomLeft = bottomLeft;
     }
 
+    /**
+     * Always returns {@code true} to avoid any merge operations between {@link Round} instances.
+     *
+     * @return always {@code true} to avoid any merge operations between {@link Round} instances
+     */
+    @Override
+    public boolean isOverwrite ()
+    {
+        return true;
+    }
+
+    @NotNull
+    @Override
+    public Round clone ( @NotNull final RecursiveClone clone, final int depth )
+    {
+        return new Round ( topLeft, topRight, bottomRight, bottomLeft );
+    }
+
+    @NotNull
     @Override
     public String toString ()
     {
         return RoundConverter.roundToString ( this );
-    }
-
-    @Override
-    public Round merge ( final Round merged )
-    {
-        if ( merged.topLeft != -1 )
-        {
-            topLeft = merged.topLeft;
-        }
-        if ( merged.topRight != -1 )
-        {
-            topRight = merged.topRight;
-        }
-        if ( merged.bottomRight != -1 )
-        {
-            bottomRight = merged.bottomRight;
-        }
-        if ( merged.bottomLeft != -1 )
-        {
-            bottomLeft = merged.bottomLeft;
-        }
-        return this;
-    }
-
-    @Override
-    public Round clone ()
-    {
-        return MergeUtils.cloneByFieldsSafely ( this );
     }
 }

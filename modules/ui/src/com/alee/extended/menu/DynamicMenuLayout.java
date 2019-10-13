@@ -17,6 +17,7 @@
 
 package com.alee.extended.menu;
 
+import com.alee.api.annotations.NotNull;
 import com.alee.extended.layout.AbstractLayoutManager;
 import com.alee.utils.GeometryUtils;
 import com.alee.utils.MathUtils;
@@ -30,14 +31,13 @@ import java.awt.*;
  *
  * @author Mikle Garin
  */
-
 public class DynamicMenuLayout extends AbstractLayoutManager
 {
     @Override
-    public void layoutContainer ( final Container parent )
+    public void layoutContainer ( @NotNull final Container container )
     {
-        final WebDynamicMenu menu = ( WebDynamicMenu ) parent;
-        final float displayProgress = MathUtils.sqr ( menu.getDisplayProgress () );
+        final WebDynamicMenu menu = ( WebDynamicMenu ) container;
+        final float displayProgress = MathUtils.sqr ( menu.getVisibilityProgress () );
         final DynamicMenuType type = !menu.isHiding () ? menu.getType () : menu.getHideType ();
 
         if ( type.isRoundMenu () )
@@ -52,7 +52,7 @@ public class DynamicMenuLayout extends AbstractLayoutManager
 
     protected void layoutPlainMenu ( final WebDynamicMenu menu, final float displayProgress, final DynamicMenuType type )
     {
-        final Dimension max = SwingUtils.max ( menu.getComponents () );
+        final Dimension max = SwingUtils.maxPreferredSize ( menu.getComponents () );
         final int itemsCount = menu.getComponentCount ();
 
         switch ( type )
@@ -88,7 +88,7 @@ public class DynamicMenuLayout extends AbstractLayoutManager
 
     protected void layoutRoundMenu ( final WebDynamicMenu menu, final float displayProgress, final DynamicMenuType type )
     {
-        final Dimension max = SwingUtils.max ( menu.getComponents () );
+        final Dimension max = SwingUtils.maxPreferredSize ( menu.getComponents () );
         final Point center = new Point ( menu.getRadius (), menu.getRadius () );
         final int itemSide = Math.max ( max.width, max.height );
 
@@ -227,10 +227,11 @@ public class DynamicMenuLayout extends AbstractLayoutManager
         menuItem.setBounds ( x - ps.width / 2, y - ps.height / 2, ps.width, ps.height );
     }
 
+    @NotNull
     @Override
-    public Dimension preferredLayoutSize ( final Container parent )
+    public Dimension preferredLayoutSize ( @NotNull final Container container )
     {
-        final WebDynamicMenu menu = ( WebDynamicMenu ) parent;
+        final WebDynamicMenu menu = ( WebDynamicMenu ) container;
         switch ( menu.getType () )
         {
             case roll:
@@ -243,7 +244,7 @@ public class DynamicMenuLayout extends AbstractLayoutManager
             }
             case list:
             {
-                final Dimension max = SwingUtils.max ( menu.getComponents () );
+                final Dimension max = SwingUtils.maxPreferredSize ( menu.getComponents () );
                 final int itemsCount = menu.getComponentCount ();
                 return new Dimension ( max.width, max.height * itemsCount );
             }

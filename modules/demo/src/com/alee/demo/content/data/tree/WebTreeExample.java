@@ -17,12 +17,13 @@
 
 package com.alee.demo.content.data.tree;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.demo.api.example.*;
 import com.alee.extended.tree.AbstractTreeTransferHandler;
 import com.alee.laf.scroll.WebScrollPane;
-import com.alee.laf.tree.UniqueNode;
-import com.alee.laf.tree.WebTree;
-import com.alee.laf.tree.WebTreeModel;
+import com.alee.laf.tree.*;
+import com.alee.managers.language.LM;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
@@ -32,34 +33,39 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebTreeExample extends AbstractExample
+public class WebTreeExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "webtree";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "tree";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.extended;
     }
 
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicTree basic = new BasicTree ( StyleId.tree );
-        final EditableTree editable = new EditableTree ( StyleId.tree );
-        final DragAndDropTree drag = new DragAndDropTree ( StyleId.tree );
-        return CollectionUtils.<Preview>asList ( basic, editable, drag );
+        return CollectionUtils.<Preview>asList (
+                new BasicTree ( StyleId.tree ),
+                new EditableTree ( StyleId.tree ),
+                new TreeTooltips ( StyleId.tree ),
+                new DragAndDropTree ( StyleId.tree )
+        );
     }
 
     /**
@@ -77,8 +83,9 @@ public class WebTreeExample extends AbstractExample
             super ( WebTreeExample.this, "basic", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebTree tree = new WebTree ( getStyleId () );
             tree.setVisibleRowCount ( 8 );
@@ -101,12 +108,47 @@ public class WebTreeExample extends AbstractExample
             super ( WebTreeExample.this, "editable", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebTree tree = new WebTree ( getStyleId () );
             tree.setVisibleRowCount ( 8 );
             tree.setEditable ( true );
+            return CollectionUtils.asList ( new WebScrollPane ( tree ).setPreferredWidth ( 200 ) );
+        }
+    }
+
+    /**
+     * Custom tree tooltips preview.
+     */
+    protected class TreeTooltips extends AbstractStylePreview
+    {
+        /**
+         * Constructs new style preview.
+         *
+         * @param styleId preview style ID
+         */
+        public TreeTooltips ( final StyleId styleId )
+        {
+            super ( WebTreeExample.this, "tooltips", FeatureState.updated, styleId );
+        }
+
+        @NotNull
+        @Override
+        protected List<? extends JComponent> createPreviewElements ()
+        {
+            final WebTree tree = new WebTree ( getStyleId () );
+            tree.setVisibleRowCount ( 8 );
+            tree.setToolTipProvider ( new TreeToolTipProvider<UniqueNode> ()
+            {
+                @Override
+                @Nullable
+                protected String getToolTipText ( @NotNull final JTree tree, @NotNull final TreeCellArea<UniqueNode, JTree> area )
+                {
+                    return LM.get ( getPreviewLanguageKey ( "node" ), area.row (), area.getValue ( tree ).getUserObject () );
+                }
+            } );
             return CollectionUtils.asList ( new WebScrollPane ( tree ).setPreferredWidth ( 200 ) );
         }
     }
@@ -126,8 +168,9 @@ public class WebTreeExample extends AbstractExample
             super ( WebTreeExample.this, "dragndrop", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebTree left = new WebTree ( getStyleId () );
             left.setVisibleRowCount ( 8 );
@@ -160,19 +203,26 @@ public class WebTreeExample extends AbstractExample
         return new AbstractTreeTransferHandler<UniqueNode, WebTree<UniqueNode>, WebTreeModel<UniqueNode>> ()
         {
             @Override
-            protected UniqueNode copy ( final WebTree<UniqueNode> tree, final UniqueNode node )
+            public int getSourceActions ( final JComponent c )
+            {
+                return MOVE;
+            }
+
+            @Override
+            protected UniqueNode copy ( final WebTree<UniqueNode> tree, final WebTreeModel<UniqueNode> model, final UniqueNode node )
             {
                 // Custom node and its children copy algorithm
                 final UniqueNode copy = new UniqueNode ( node.getId (), node.getUserObject () );
                 for ( int i = 0; i < node.getChildCount (); i++ )
                 {
-                    copy.add ( copy ( tree, ( UniqueNode ) node.getChildAt ( i ) ) );
+                    copy.add ( copy ( tree, model, ( UniqueNode ) node.getChildAt ( i ) ) );
                 }
                 return copy;
             }
 
             @Override
-            protected boolean canBeDragged ( final WebTree<UniqueNode> tree, final List<UniqueNode> nodes )
+            protected boolean canBeDragged ( final WebTree<UniqueNode> tree, final WebTreeModel<UniqueNode> model,
+                                             final List<UniqueNode> nodes )
             {
                 // Blocking root drag
                 boolean allowed = true;

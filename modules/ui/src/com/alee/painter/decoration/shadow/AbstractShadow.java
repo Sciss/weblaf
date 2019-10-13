@@ -17,8 +17,9 @@
 
 package com.alee.painter.decoration.shadow;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.painter.decoration.IDecoration;
-import com.alee.utils.MergeUtils;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
 import javax.swing.*;
@@ -27,15 +28,20 @@ import java.awt.*;
 /**
  * Abstract shadow providing some general method implementations.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <D> decoration type
  * @param <I> shadow type
  * @author Mikle Garin
  */
-
-public abstract class AbstractShadow<E extends JComponent, D extends IDecoration<E, D>, I extends AbstractShadow<E, D, I>>
-        implements IShadow<E, D, I>
+public abstract class AbstractShadow<C extends JComponent, D extends IDecoration<C, D>, I extends AbstractShadow<C, D, I>>
+        implements IShadow<C, D, I>
 {
+    /**
+     * Whether or not this shadow should overwrite previous one when merged.
+     */
+    @XStreamAsAttribute
+    protected Boolean overwrite;
+
     /**
      * Shadow type.
      */
@@ -60,10 +66,33 @@ public abstract class AbstractShadow<E extends JComponent, D extends IDecoration
     @XStreamAsAttribute
     protected Color color;
 
+    @Nullable
     @Override
     public String getId ()
     {
-        return getType ().toString ();
+        return getType ().name ();
+    }
+
+    @Override
+    public boolean isOverwrite ()
+    {
+        return overwrite != null && overwrite;
+    }
+
+    @Override
+    public void activate ( final C c, final D d )
+    {
+        /**
+         * Do nothing by default.
+         */
+    }
+
+    @Override
+    public void deactivate ( final C c, final D d )
+    {
+        /**
+         * Do nothing by default.
+         */
     }
 
     @Override
@@ -96,29 +125,5 @@ public abstract class AbstractShadow<E extends JComponent, D extends IDecoration
     public Color getColor ()
     {
         return color != null ? color : Color.BLACK;
-    }
-
-    @Override
-    public I merge ( final I shadow )
-    {
-        if ( shadow.opacity != null )
-        {
-            opacity = shadow.opacity;
-        }
-        if ( shadow.width != null )
-        {
-            width = shadow.width;
-        }
-        if ( shadow.color != null )
-        {
-            color = shadow.color;
-        }
-        return ( I ) this;
-    }
-
-    @Override
-    public I clone ()
-    {
-        return ( I ) MergeUtils.cloneByFieldsSafely ( this );
     }
 }

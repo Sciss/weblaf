@@ -5,19 +5,19 @@ import com.alee.painter.SpecificPainter;
 import javax.swing.*;
 
 /**
- * Base interface for JRootPane component painters.
+ * Base interface for {@link JRootPane} component painters.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
+ * @author Mikle Garin
  */
-
-public interface IRootPanePainter<E extends JRootPane, U extends WebRootPaneUI> extends SpecificPainter<E, U>
+public interface IRootPanePainter<C extends JRootPane, U extends WRootPaneUI> extends SpecificPainter<C, U>
 {
     /**
-     * Returns whether or not this painter will provide appropriate window decoration.
+     * Returns whether or not this {@link IRootPanePainter} implementation will provide window decoration.
      *
-     * @return true if this painter will provide appropriate window decoration, false otherwise
+     * @return {@code true} if this {@link IRootPanePainter} implementation will provide window decoration, {@code false} otherwise
      */
     public boolean isDecorated ();
 }

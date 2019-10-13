@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.window;
 
-import com.alee.demo.api.AbstractExampleGroup;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.AbstractExampleGroup;
 import com.alee.utils.CollectionUtils;
 
 import java.util.List;
@@ -25,9 +26,9 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
 public class WindowsGroup extends AbstractExampleGroup
 {
+    @NotNull
     @Override
     public String getId ()
     {
@@ -37,6 +38,13 @@ public class WindowsGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleClasses ()
     {
-        return CollectionUtils.<Class>asList ( JFrameExample.class, JDialogExample.class );
+        return CollectionUtils.<Class>asList (
+                JFrameExample.class,
+                JDialogExample.class,
+                WebPopupExample.class,
+                WebPopOverExample.class,
+                JOptionPaneExample.class,
+                WebNotificationExample.class
+        );
     }
 }

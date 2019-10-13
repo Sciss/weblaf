@@ -17,6 +17,8 @@
 
 package com.alee.extended.layout;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.utils.SwingUtils;
 
 import java.awt.*;
@@ -24,13 +26,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Custom layout that allows multiply layout strategies to be applied to single container.
+ * Custom layout that allows multiple layout strategies to be applied to single container.
  * Be aware that standard Swing layouts aren't developed to be used together so they aren't suitable for this layout.
  * You will need custom layouts which work only with specific components and won't affect the same components.
  *
  * @author Mikle Garin
  */
-
 public class MultiLayout extends AbstractLayoutManager
 {
     /**
@@ -88,53 +89,24 @@ public class MultiLayout extends AbstractLayoutManager
     }
 
     @Override
-    public void addLayoutComponent ( final Component comp, final Object constraints )
+    public void addComponent ( @NotNull final Component component, @Nullable final Object constraints )
     {
         for ( final LayoutManager layoutManager : layoutManagers )
         {
             if ( layoutManager instanceof LayoutManager2 )
             {
-                ( ( LayoutManager2 ) layoutManager ).addLayoutComponent ( comp, constraints );
-            }
-        }
-    }
-
-    @Override
-    public void addLayoutComponent ( final String name, final Component comp )
-    {
-        for ( final LayoutManager layoutManager : layoutManagers )
-        {
-            layoutManager.addLayoutComponent ( name, comp );
-        }
-    }
-
-    @Override
-    public void removeLayoutComponent ( final Component comp )
-    {
-        for ( final LayoutManager layoutManager : layoutManagers )
-        {
-            layoutManager.removeLayoutComponent ( comp );
-        }
-    }
-
-    @Override
-    public void addComponent ( final Component component, final Object constraints )
-    {
-        for ( final LayoutManager layoutManager : layoutManagers )
-        {
-            if ( layoutManager instanceof LayoutManager2 )
-            {
-                ( ( LayoutManager2 ) layoutManager ).addLayoutComponent ( component, constraints );
+                final LayoutManager2 layoutManager2 = ( LayoutManager2 ) layoutManager;
+                layoutManager2.addLayoutComponent ( component, constraints );
             }
             else
             {
-                layoutManager.addLayoutComponent ( constraints == null ? null : constraints.toString (), component );
+                layoutManager.addLayoutComponent ( constraints != null ? constraints.toString () : null, component );
             }
         }
     }
 
     @Override
-    public void removeComponent ( final Component component )
+    public void removeComponent ( @NotNull final Component component )
     {
         for ( final LayoutManager layoutManager : layoutManagers )
         {
@@ -142,60 +114,63 @@ public class MultiLayout extends AbstractLayoutManager
         }
     }
 
+    @NotNull
     @Override
-    public Dimension preferredLayoutSize ( final Container parent )
+    public Dimension preferredLayoutSize ( @NotNull final Container container )
     {
         Dimension ps = new Dimension ( 0, 0 );
         for ( final LayoutManager layoutManager : layoutManagers )
         {
-            ps = SwingUtils.max ( ps, layoutManager.preferredLayoutSize ( parent ) );
+            ps = SwingUtils.max ( ps, layoutManager.preferredLayoutSize ( container ) );
         }
         return ps;
     }
 
+    @NotNull
     @Override
-    public Dimension minimumLayoutSize ( final Container parent )
+    public Dimension minimumLayoutSize ( @NotNull final Container container )
     {
         Dimension ms = new Dimension ( 0, 0 );
         for ( final LayoutManager layoutManager : layoutManagers )
         {
-            ms = SwingUtils.max ( ms, layoutManager.minimumLayoutSize ( parent ) );
+            ms = SwingUtils.max ( ms, layoutManager.minimumLayoutSize ( container ) );
         }
         return ms;
     }
 
+    @NotNull
     @Override
-    public Dimension maximumLayoutSize ( final Container parent )
+    public Dimension maximumLayoutSize ( @NotNull final Container container )
     {
         Dimension ms = new Dimension ( Integer.MAX_VALUE, Integer.MAX_VALUE );
         for ( final LayoutManager layoutManager : layoutManagers )
         {
             if ( layoutManager instanceof LayoutManager2 )
             {
-                ms = SwingUtils.min ( ms, ( ( LayoutManager2 ) layoutManager ).maximumLayoutSize ( parent ) );
+                ms = SwingUtils.min ( ms, ( ( LayoutManager2 ) layoutManager ).maximumLayoutSize ( container ) );
             }
         }
         return ms;
     }
 
     @Override
-    public void invalidateLayout ( final Container parent )
+    public void invalidateLayout ( @NotNull final Container container )
     {
         for ( final LayoutManager layoutManager : layoutManagers )
         {
             if ( layoutManager instanceof LayoutManager2 )
             {
-                ( ( LayoutManager2 ) layoutManager ).invalidateLayout ( parent );
+                ( ( LayoutManager2 ) layoutManager ).invalidateLayout ( container );
             }
         }
     }
 
     @Override
-    public void layoutContainer ( final Container parent )
+    public void layoutContainer ( @NotNull final Container container )
     {
         for ( final LayoutManager layoutManager : layoutManagers )
         {
-            layoutManager.layoutContainer ( parent );
+            layoutManager.layoutContainer ( container );
         }
     }
 }

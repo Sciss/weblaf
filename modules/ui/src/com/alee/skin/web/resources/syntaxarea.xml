@@ -1,6 +1,7 @@
-<skin>
+<skin xmlns="http://weblookandfeel.com/XmlSkin">
 
-    <!-- com.alee.extended.syntax.WebSyntaxArea --><!-- com.alee.extended.syntax.WebSyntaxScrollPane -->
+    <!-- com.alee.extended.syntax.WebSyntaxArea -->
+    <!-- com.alee.extended.syntax.WebSyntaxScrollPane -->
 
     <!-- Area scrollpane -->
     <style type="scrollpane" id="syntaxarea-scroll">
@@ -8,7 +9,7 @@
         <!-- Gutter -->
         <style type="panel" id="gutter">
             <component>
-                <background>white</background>
+                <background>245,245,245</background>
             </component>
         </style>
 

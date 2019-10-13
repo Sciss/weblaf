@@ -1,5 +1,6 @@
 package com.alee.extended.checkbox;
 
+import com.alee.api.annotations.NotNull;
 import com.alee.laf.checkbox.AbstractStateButtonPainter;
 import com.alee.laf.checkbox.CheckState;
 import com.alee.painter.decoration.DecorationState;
@@ -8,20 +9,20 @@ import com.alee.painter.decoration.IDecoration;
 import java.util.List;
 
 /**
- * Basic painter for WebTristateCheckBox component.
- * It is used as WebTristateCheckBoxUI default painter.
+ * Basic painter for {@link WebTristateCheckBox} component.
+ * It is used as {@link WTristateCheckBoxUI} default painter.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @param <D> decoration type
  * @author Alexandr Zernov
  */
-
-public class TristateCheckBoxPainter<E extends WebTristateCheckBox, U extends WebTristateCheckBoxUI, D extends IDecoration<E, D>>
-        extends AbstractStateButtonPainter<E, U, D> implements ITristateCheckBoxPainter<E, U>
+public class TristateCheckBoxPainter<C extends WebTristateCheckBox, U extends WTristateCheckBoxUI<C>, D extends IDecoration<C, D>>
+        extends AbstractStateButtonPainter<C, U, D> implements ITristateCheckBoxPainter<C, U>
 {
+    @NotNull
     @Override
-    protected List<String> getDecorationStates ()
+    public List<String> getDecorationStates ()
     {
         final List<String> states = super.getDecorationStates ();
         if ( component.getState () == CheckState.checked )

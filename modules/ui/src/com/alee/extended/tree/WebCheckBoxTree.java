@@ -17,15 +17,18 @@
 
 package com.alee.extended.tree;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.jdk.Predicate;
 import com.alee.laf.checkbox.CheckState;
+import com.alee.laf.tree.NodesAcceptPolicy;
 import com.alee.laf.tree.WebTree;
+import com.alee.laf.tree.WebTreeModel;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.StateProvider;
 
-import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
@@ -38,31 +41,56 @@ import java.util.*;
 import java.util.List;
 
 /**
- * This WebTree extension class provides additional checkbox tree functionality.
- * Basically this tree puts its own rendered behind the one specified by developer and uses it to render checkboxes.
+ * {@link com.alee.laf.tree.WebTree} extension class.
+ * It dynamically replaces provided cell renderer to provide an additional check box.
+ * This tree uses additional {@link com.alee.extended.tree.TreeCheckingModel} to handle check box states.
+ * Structure of this tree can be provided through the same means as in {@link com.alee.laf.tree.WebTree}.
  *
+ * This component should never be used with a non-Web UIs as it might cause an unexpected behavior.
+ * You could still use that component even if WebLaF is not your application LaF as this component will use Web-UI in any case.
+ *
+ * @param <N> {@link MutableTreeNode} type
  * @author Mikle Garin
+ * @see com.alee.laf.tree.WebTree
+ * @see com.alee.laf.tree.WebTreeUI
+ * @see com.alee.laf.tree.TreePainter
+ * @see com.alee.extended.tree.TreeCheckingModel
  */
-
-public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E>
+public class WebCheckBoxTree<N extends MutableTreeNode> extends WebTree<N>
 {
     /**
-     * todo 1. Create separate "checkboxtree" styleable component with its own skin
+     * todo 1. Create separate "checkboxtree" styleable component with its own skin?
      */
 
     /**
-     * Style settings.
+     * Whether or not nodes checking or unchecking should be performed on child nodes recursively.
      */
     protected Boolean recursiveChecking;
+
+    /**
+     * Gap between checkbox and actual tree renderer.
+     */
     protected Integer checkBoxRendererGap;
+
+    /**
+     * Whether or not checkboxes are visible in the tree.
+     */
     protected Boolean checkBoxVisible;
+
+    /**
+     * Whether or not user can interact with checkboxes to change their check state.
+     */
     protected Boolean checkingEnabled;
+
+    /**
+     * Whether partially checked node should be checked or unchecked on toggle.
+     */
     protected Boolean checkMixedOnToggle;
 
     /**
      * Custom checking model.
      */
-    protected TreeCheckingModel<E> checkingModel;
+    protected TreeCheckingModel<N> checkingModel;
 
     /**
      * Checkbox cell renderer.
@@ -77,12 +105,12 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     /**
      * Checkbox enabled state provider.
      */
-    protected StateProvider<E> enabledStateProvider;
+    protected Predicate<N> enabledStateProvider;
 
     /**
      * Checkbox visibility state provider.
      */
-    protected StateProvider<E> visibleStateProvider;
+    protected Predicate<N> visibleStateProvider;
 
     /**
      * Tree actions handler.
@@ -92,44 +120,44 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     /**
      * Checkbox tree check state change listeners.
      */
-    protected List<CheckStateChangeListener<E>> checkStateChangeListeners = new ArrayList<CheckStateChangeListener<E>> ( 1 );
+    protected List<CheckStateChangeListener<N>> checkStateChangeListeners = new ArrayList<CheckStateChangeListener<N>> ( 1 );
 
     /**
      * Constructs tree with default sample model.
      */
     public WebCheckBoxTree ()
     {
-        super ( StyleId.checkboxtree );
+        this ( StyleId.auto );
     }
 
     /**
      * Constructs tree with model based on specified values.
      *
-     * @param value tree data
+     * @param data tree data
      */
-    public WebCheckBoxTree ( final Object[] value )
+    public WebCheckBoxTree ( final Object[] data )
     {
-        super ( StyleId.checkboxtree, value );
+        this ( StyleId.auto, data );
     }
 
     /**
      * Constructs tree with model based on specified values.
      *
-     * @param value tree data
+     * @param data tree data
      */
-    public WebCheckBoxTree ( final Vector<?> value )
+    public WebCheckBoxTree ( final Vector<?> data )
     {
-        super ( StyleId.checkboxtree, value );
+        this ( StyleId.auto, data );
     }
 
     /**
      * Constructs tree with model based on specified values.
      *
-     * @param value tree data
+     * @param data tree data
      */
-    public WebCheckBoxTree ( final Hashtable<?, ?> value )
+    public WebCheckBoxTree ( final Hashtable<?, ?> data )
     {
-        super ( StyleId.checkboxtree, value );
+        this ( StyleId.auto, data );
     }
 
     /**
@@ -137,20 +165,21 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      *
      * @param root tree root node
      */
-    public WebCheckBoxTree ( final E root )
+    public WebCheckBoxTree ( final N root )
     {
-        super ( StyleId.checkboxtree, root );
+        this ( StyleId.auto, root );
     }
 
     /**
      * Constructs tree with model based on specified root node and which decides whether a node is a leaf node in the specified manner.
      *
      * @param root               tree root node
-     * @param asksAllowsChildren false if any node can have children, true if each node is asked to see if it can have children
+     * @param asksAllowsChildren {@code false} if any node can have children,
+     *                           {@code true} if each node is asked to see if it can have children
      */
-    public WebCheckBoxTree ( final E root, final boolean asksAllowsChildren )
+    public WebCheckBoxTree ( final N root, final boolean asksAllowsChildren )
     {
-        super ( StyleId.checkboxtree, root, asksAllowsChildren );
+        this ( StyleId.auto, root, asksAllowsChildren );
     }
 
     /**
@@ -160,7 +189,7 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      */
     public WebCheckBoxTree ( final TreeModel newModel )
     {
-        super ( StyleId.checkboxtree, newModel );
+        this ( StyleId.auto, newModel );
     }
 
     /**
@@ -170,40 +199,40 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      */
     public WebCheckBoxTree ( final StyleId id )
     {
-        super ( id );
+        this ( id, createDefaultTreeModel () );
     }
 
     /**
      * Constructs tree with model based on specified values.
      *
-     * @param id    style ID
-     * @param value tree data
+     * @param id   style ID
+     * @param data tree data
      */
-    public WebCheckBoxTree ( final StyleId id, final Object[] value )
+    public WebCheckBoxTree ( final StyleId id, final Object[] data )
     {
-        super ( id, value );
+        this ( id, createTreeModel ( data ) );
     }
 
     /**
      * Constructs tree with model based on specified values.
      *
-     * @param id    style ID
-     * @param value tree data
+     * @param id   style ID
+     * @param data tree data
      */
-    public WebCheckBoxTree ( final StyleId id, final Vector<?> value )
+    public WebCheckBoxTree ( final StyleId id, final Vector<?> data )
     {
-        super ( id, value );
+        this ( id, createTreeModel ( data ) );
     }
 
     /**
      * Constructs tree with model based on specified values.
      *
-     * @param id    style ID
-     * @param value tree data
+     * @param id   style ID
+     * @param data tree data
      */
-    public WebCheckBoxTree ( final StyleId id, final Hashtable<?, ?> value )
+    public WebCheckBoxTree ( final StyleId id, final Hashtable<?, ?> data )
     {
-        super ( id, value );
+        this ( id, createTreeModel ( data ) );
     }
 
     /**
@@ -212,9 +241,9 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      * @param id   style ID
      * @param root tree root node
      */
-    public WebCheckBoxTree ( final StyleId id, final E root )
+    public WebCheckBoxTree ( final StyleId id, final N root )
     {
-        super ( id, root );
+        this ( id, new WebTreeModel<N> ( root ) );
     }
 
     /**
@@ -222,11 +251,12 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      *
      * @param id                 style ID
      * @param root               tree root node
-     * @param asksAllowsChildren false if any node can have children, true if each node is asked to see if it can have children
+     * @param asksAllowsChildren {@code false} if any node can have children,
+     *                           {@code true} if each node is asked to see if it can have children
      */
-    public WebCheckBoxTree ( final StyleId id, final E root, final boolean asksAllowsChildren )
+    public WebCheckBoxTree ( final StyleId id, final N root, final boolean asksAllowsChildren )
     {
-        super ( id, root, asksAllowsChildren );
+        this ( id, new WebTreeModel<N> ( root, asksAllowsChildren ) );
     }
 
     /**
@@ -238,18 +268,21 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     public WebCheckBoxTree ( final StyleId id, final TreeModel newModel )
     {
         super ( id, newModel );
-    }
 
-    @Override
-    protected void init ()
-    {
-        // Initializing checking model
-        checkingModel = createDefaultCheckingModel ( this );
+        // Checking model
+        checkingModel = createDefaultCheckingModel ();
 
-        // Initializing actions handler
+        // Actions handler
         handler = new Handler ();
         addMouseListener ( handler );
         addKeyListener ( handler );
+    }
+
+    @NotNull
+    @Override
+    public StyleId getDefaultStyleId ()
+    {
+        return StyleId.checkboxtree;
     }
 
     /**
@@ -279,7 +312,6 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
         if ( checkBoxCellRenderer == null )
         {
             checkBoxCellRenderer = createCheckBoxTreeCellRenderer ();
-            checkBoxCellRenderer.setCheckBoxRendererGap ( getCheckBoxRendererGap () );
         }
         super.setCellRenderer ( checkBoxCellRenderer );
     }
@@ -292,7 +324,6 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     public void setCheckBoxTreeCellRenderer ( final CheckBoxTreeCellRenderer renderer )
     {
         checkBoxCellRenderer = renderer;
-        checkBoxCellRenderer.setCheckBoxRendererGap ( getCheckBoxRendererGap () );
         super.setCellRenderer ( checkBoxCellRenderer );
     }
 
@@ -303,7 +334,7 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      */
     protected WebCheckBoxTreeCellRenderer createCheckBoxTreeCellRenderer ()
     {
-        return new WebCheckBoxTreeCellRenderer ( WebCheckBoxTree.this );
+        return new WebCheckBoxTreeCellRenderer.UIResource<N, WebCheckBoxTree<N>, CheckBoxTreeNodeParameters<N, WebCheckBoxTree<N>>> ();
     }
 
     /**
@@ -332,18 +363,18 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      * @param node tree node to process
      * @return specified tree node check state
      */
-    public CheckState getCheckState ( final E node )
+    public CheckState getCheckState ( final N node )
     {
         return checkingModel != null ? checkingModel.getCheckState ( node ) : CheckState.unchecked;
     }
 
     /**
-     * Returns whether the specified tree nod is unchecked or not.
+     * Returns whether the specified tree node is unchecked or not.
      *
      * @param node tree node to process
-     * @return true if the specified tree nod is unchecked, false otherwise
+     * @return {@code true} if the specified tree node is unchecked, {@code false} otherwise
      */
-    public boolean isUnchecked ( final E node )
+    public boolean isUnchecked ( final N node )
     {
         return checkingModel != null && checkingModel.getCheckState ( node ) == CheckState.unchecked;
     }
@@ -352,9 +383,9 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      * Returns whether the specified tree node is checked or not.
      *
      * @param node tree node to process
-     * @return true if the specified tree node is checked, false otherwise
+     * @return {@code true} if the specified tree node is checked, {@code false} otherwise
      */
-    public boolean isChecked ( final E node )
+    public boolean isChecked ( final N node )
     {
         return checkingModel != null && checkingModel.getCheckState ( node ) == CheckState.checked;
     }
@@ -363,56 +394,23 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      * Returns whether the specified tree node is partially checked or not.
      *
      * @param node tree node to process
-     * @return true if the specified tree node is partially checked, false otherwise
+     * @return {@code true} if the specified tree node is partially checked, {@code false} otherwise
      */
-    public boolean isMixed ( final E node )
+    public boolean isMixed ( final N node )
     {
         return checkingModel != null && checkingModel.getCheckState ( node ) == CheckState.mixed;
     }
 
     /**
-     * Returns optimized list of checked nodes.
+     * Returns list of nodes for the specified state.
      *
-     * @return optimized list of checked nodes
+     * @param state  {@link CheckState} to return nodes for
+     * @param policy {@link NodesAcceptPolicy} that defines a way to filter nodes
+     * @return list of nodes for the specified state
      */
-    public List<E> getCheckedNodes ()
+    public List<N> getNodes ( final CheckState state, final NodesAcceptPolicy policy )
     {
-        return getCheckedNodes ( true );
-    }
-
-    /**
-     * Returns list of checked nodes.
-     *
-     * @param optimize whether should optimize the resulting list by removing checked node children or not
-     * @return list of checked nodes
-     */
-    public List<E> getCheckedNodes ( final boolean optimize )
-    {
-        return checkingModel != null ? checkingModel.getCheckedNodes ( optimize ) : new ArrayList<E> ( 0 );
-    }
-
-    /**
-     * Returns list of nodes in mixed state.
-     *
-     * @return list of nodes in mixed state
-     */
-    public List<E> getMixedNodes ()
-    {
-        return checkingModel != null ? checkingModel.getMixedNodes () : new ArrayList<E> ( 0 );
-    }
-
-    /**
-     * Sets specified nodes state to checked.
-     *
-     * @param nodes   nodes to check
-     * @param checked whether the specified tree nodes should be checked or not
-     */
-    public void setChecked ( final Collection<E> nodes, final boolean checked )
-    {
-        if ( checkingModel != null )
-        {
-            checkingModel.setChecked ( nodes, checked );
-        }
+        return checkingModel != null ? checkingModel.getNodes ( state, policy ) : new ArrayList<N> ();
     }
 
     /**
@@ -421,7 +419,7 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      * @param node    tree node to process
      * @param checked whether the specified tree node is checked or not
      */
-    public void setChecked ( final E node, final boolean checked )
+    public void setChecked ( final N node, final boolean checked )
     {
         if ( checkingModel != null )
         {
@@ -430,11 +428,25 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     }
 
     /**
+     * Sets specified nodes state to checked.
+     *
+     * @param nodes   nodes to check
+     * @param checked whether the specified tree nodes should be checked or not
+     */
+    public void setChecked ( final Collection<N> nodes, final boolean checked )
+    {
+        if ( checkingModel != null )
+        {
+            checkingModel.setChecked ( nodes, checked );
+        }
+    }
+
+    /**
      * Invert tree node check.
      *
      * @param node tree node to process
      */
-    public void invertCheck ( final E node )
+    public void invertCheck ( final N node )
     {
         if ( checkingModel != null )
         {
@@ -447,22 +459,11 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      *
      * @param nodes tree node to process
      */
-    public void invertCheck ( final List<E> nodes )
+    public void invertCheck ( final List<N> nodes )
     {
         if ( checkingModel != null )
         {
             checkingModel.invertCheck ( nodes );
-        }
-    }
-
-    /**
-     * Uncheck all tree nodes.
-     */
-    public void uncheckAll ()
-    {
-        if ( checkingModel != null )
-        {
-            checkingModel.uncheckAll ();
         }
     }
 
@@ -478,11 +479,22 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     }
 
     /**
+     * Uncheck all tree nodes.
+     */
+    public void uncheckAll ()
+    {
+        if ( checkingModel != null )
+        {
+            checkingModel.uncheckAll ();
+        }
+    }
+
+    /**
      * Returns tree checking model.
      *
      * @return tree checking model
      */
-    public TreeCheckingModel<E> getCheckingModel ()
+    public TreeCheckingModel<N> getCheckingModel ()
     {
         return checkingModel;
     }
@@ -492,10 +504,10 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      *
      * @param checkingModel tree checking model
      */
-    public void setCheckingModel ( final TreeCheckingModel<E> checkingModel )
+    public void setCheckingModel ( final TreeCheckingModel<N> checkingModel )
     {
         // Removing check state change listeners from old model
-        for ( final CheckStateChangeListener<E> listener : checkStateChangeListeners )
+        for ( final CheckStateChangeListener<N> listener : checkStateChangeListeners )
         {
             this.checkingModel.removeCheckStateChangeListener ( listener );
         }
@@ -503,10 +515,10 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
         this.checkingModel = checkingModel;
 
         // Updating nodes view due to possible check state changes
-        updateAllVisibleNodes ();
+        updateVisibleNodes ();
 
         // Restoring check state change listeners
-        for ( final CheckStateChangeListener<E> listener : checkStateChangeListeners )
+        for ( final CheckStateChangeListener<N> listener : checkStateChangeListeners )
         {
             checkingModel.addCheckStateChangeListener ( listener );
         }
@@ -515,23 +527,22 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     /**
      * Creates and returns new default checking model for the specified checkbox tree.
      *
-     * @param checkBoxTree checkbox tree to process
      * @return new default checking model for the specified checkbox tree
      */
-    protected TreeCheckingModel<E> createDefaultCheckingModel ( final WebCheckBoxTree<E> checkBoxTree )
+    protected TreeCheckingModel<N> createDefaultCheckingModel ()
     {
-        return new DefaultTreeCheckingModel<E> ( checkBoxTree );
+        return new DefaultTreeCheckingModel<N, WebCheckBoxTree<N>> ( this );
     }
 
     /**
      * Returns whether checkbox for the specified node should be enabled or not.
      *
      * @param node tree node to process
-     * @return true if checkbox for the specified node should be enabled, false otherwise
+     * @return {@code true} if checkbox for the specified node should be enabled, {@code false} otherwise
      */
-    public boolean isCheckBoxEnabled ( final E node )
+    public boolean isCheckBoxEnabled ( final N node )
     {
-        return enabledStateProvider == null || enabledStateProvider.provide ( node );
+        return enabledStateProvider == null || enabledStateProvider.test ( node );
     }
 
     /**
@@ -540,7 +551,7 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      *
      * @param provider enabled state provider
      */
-    public void setCheckBoxEnabledStateProvider ( final StateProvider<E> provider )
+    public void setCheckBoxEnabledStateProvider ( final Predicate<N> provider )
     {
         this.enabledStateProvider = provider;
     }
@@ -549,11 +560,11 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      * Returns whether checkbox for the specified node should be visible or not.
      *
      * @param node tree node to process
-     * @return true if checkbox for the specified node should be visible, false otherwise
+     * @return {@code true} if checkbox for the specified node should be visible, {@code false} otherwise
      */
-    public boolean isCheckBoxVisible ( final E node )
+    public boolean isCheckBoxVisible ( final N node )
     {
-        return visibleStateProvider == null || visibleStateProvider.provide ( node );
+        return visibleStateProvider == null || visibleStateProvider.test ( node );
     }
 
     /**
@@ -562,44 +573,46 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      *
      * @param provider new visibility state provider
      */
-    public void setCheckBoxVisibleStateProvider ( final StateProvider<E> provider )
+    public void setCheckBoxVisibleStateProvider ( final Predicate<N> provider )
     {
         this.visibleStateProvider = provider;
     }
 
     /**
-     * Returns whether checked or unchecked node children should be checked or unchecked recursively or not.
+     * Returns whether or not nodes checking or unchecking should be performed on child nodes recursively.
      *
-     * @return true if checked or unchecked node children should be checked or unchecked recursively, false otherwise
+     * @return {@code true} if nodes checking or unchecking should be performed on child nodes recursively, {@code false} otherwise
      */
     public boolean isRecursiveCheckingEnabled ()
     {
-        return recursiveChecking != null ? recursiveChecking : true;
+        return recursiveChecking == null || recursiveChecking;
     }
 
     /**
-     * Sets whether checked or unchecked node children should be checked or unchecked recursively or not.
+     * Sets whether or not nodes checking or unchecking should be performed on child nodes recursively.
      *
-     * @param recursive whether checked or unchecked node children should be checked or unchecked recursively or not
+     * @param recursive whether or not nodes checking or unchecking should be performed on child nodes recursively
      */
     public void setRecursiveChecking ( final boolean recursive )
     {
-        final boolean modified = recursiveChecking != recursive;
-        recursiveChecking = recursive;
-        if ( modified && checkingModel != null )
+        if ( recursive != isRecursiveCheckingEnabled () )
         {
-            checkingModel.checkingModeChanged ( recursiveChecking );
+            recursiveChecking = recursive;
+            if ( checkingModel != null )
+            {
+                checkingModel.checkingModeChanged ( recursiveChecking );
+            }
         }
     }
 
     /**
      * Returns whether checkboxes are visible in the tree or not.
      *
-     * @return true if checkboxes are visible in the tree, false otherwise
+     * @return {@code true} if checkboxes are visible in the tree, {@code false} otherwise
      */
     public boolean isCheckBoxVisible ()
     {
-        return checkBoxVisible != null ? checkBoxVisible : true;
+        return checkBoxVisible == null || checkBoxVisible;
     }
 
     /**
@@ -610,21 +623,21 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     public void setCheckBoxVisible ( final boolean visible )
     {
         this.checkBoxVisible = visible;
-        updateAllVisibleNodes ();
+        updateVisibleNodes ();
     }
 
     /**
-     * Returns whether user can interact with checkboxes to change their check state or not.
+     * Returns whether or not user can interact with checkboxes to change their check state.
      *
-     * @return true if user can interact with checkboxes to change their check state, false otherwise
+     * @return {@code true} if user can interact with checkboxes to change their check state, {@code false} otherwise
      */
     public boolean isCheckingEnabled ()
     {
-        return checkingEnabled != null ? checkingEnabled : true;
+        return checkingEnabled == null || checkingEnabled;
     }
 
     /**
-     * Sets whether user can interact with checkboxes to change their check state or not.
+     * Sets whether or not user can interact with checkboxes to change their check state.
      *
      * @param enabled whether user can interact with checkboxes to change their check state or not
      */
@@ -637,11 +650,11 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     /**
      * Returns whether partially checked node should be checked or unchecked on toggle.
      *
-     * @return true if partially checked node should be checked on toggle, false if it should be unchecked
+     * @return {@code true} if partially checked node should be checked on toggle, {@code false} if it should be unchecked
      */
     public boolean isCheckMixedOnToggle ()
     {
-        return checkMixedOnToggle != null ? checkMixedOnToggle : true;
+        return checkMixedOnToggle == null || checkMixedOnToggle;
     }
 
     /**
@@ -660,13 +673,14 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      * @param node tree node to process
      * @return checkbox bounds for the specified tree node
      */
-    public Rectangle getCheckBoxBounds ( final E node )
+    public Rectangle getCheckBoxBounds ( final N node )
     {
         return getCheckBoxBounds ( getPathForNode ( node ) );
     }
 
     /**
      * Returns checkbox bounds for the specified tree path.
+     * todo This should also take cell renderer margin/padding into account
      *
      * @param treePath tree path to process
      * @return checkbox bounds for the specified tree path
@@ -675,16 +689,16 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     {
         if ( checkBoxCellRenderer != null )
         {
-            final int checkBoxWidth = checkBoxCellRenderer.getCheckBoxWidth ();
             final Rectangle pathBounds = getPathBounds ( treePath );
+            final Dimension cbSize = checkBoxCellRenderer.getCheckBox ().getPreferredSize ();
             if ( getComponentOrientation ().isLeftToRight () )
             {
-                pathBounds.width = checkBoxWidth;
+                pathBounds.width = cbSize.width;
             }
             else
             {
-                pathBounds.x += pathBounds.width - checkBoxWidth;
-                pathBounds.width = checkBoxWidth;
+                pathBounds.x += pathBounds.width - cbSize.width;
+                pathBounds.width = cbSize.width;
             }
             return pathBounds;
         }
@@ -697,7 +711,7 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     /**
      * Returns whether user can change checkbox states or not.
      *
-     * @return true if user can change checkbox states, false otherwise
+     * @return {@code true} if user can change checkbox states, {@code false} otherwise
      */
     public boolean isCheckingByUserEnabled ()
     {
@@ -709,7 +723,7 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
      *
      * @param listener check state change listener to add
      */
-    public void addCheckStateChangeListener ( final CheckStateChangeListener<E> listener )
+    public void addCheckStateChangeListener ( final CheckStateChangeListener<N> listener )
     {
         checkStateChangeListeners.add ( listener );
         if ( checkingModel != null )
@@ -733,15 +747,15 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
     }
 
     /**
-     * Informs about single or multiply check state changes.
+     * Informs about single or multiple check state changes.
      *
      * @param stateChanges check state changes list
      */
-    public void fireCheckStateChanged ( final List<CheckStateChange<E>> stateChanges )
+    public void fireCheckStateChanged ( final List<CheckStateChange<N>> stateChanges )
     {
-        for ( final CheckStateChangeListener<E> listener : CollectionUtils.copy ( checkStateChangeListeners ) )
+        for ( final CheckStateChangeListener<N> listener : CollectionUtils.copy ( checkStateChangeListeners ) )
         {
-            listener.checkStateChanged ( stateChanges );
+            listener.checkStateChanged ( this, stateChanges );
         }
     }
 
@@ -755,13 +769,13 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
         {
             if ( isCheckingByUserEnabled () && Hotkey.SPACE.isTriggered ( e ) )
             {
-                final List<E> nodes = getSelectedNodes ();
+                final List<N> nodes = getSelectedNodes ();
 
                 // Removing invisible nodes from checking list
-                final Iterator<E> nodesIterator = nodes.iterator ();
+                final Iterator<N> nodesIterator = nodes.iterator ();
                 while ( nodesIterator.hasNext () )
                 {
-                    final E node = nodesIterator.next ();
+                    final N node = nodesIterator.next ();
                     if ( !isCheckBoxVisible ( node ) || !isCheckBoxEnabled ( node ) )
                     {
                         nodesIterator.remove ();
@@ -781,7 +795,7 @@ public class WebCheckBoxTree<E extends DefaultMutableTreeNode> extends WebTree<E
         {
             if ( isCheckingByUserEnabled () && SwingUtils.isLeftMouseButton ( e ) )
             {
-                final E node = getNodeForLocation ( e.getPoint () );
+                final N node = getNodeForLocation ( e.getPoint () );
                 if ( node != null && isCheckBoxVisible ( node ) && isCheckBoxEnabled ( node ) )
                 {
                     final Rectangle checkBoxBounds = getCheckBoxBounds ( node );

@@ -26,7 +26,6 @@ import java.awt.event.ActionListener;
  * @author Mikle Garin
  * @see com.alee.utils.swing.WebTimer
  */
-
 public abstract class TimerActionListener implements ActionListener
 {
     @Override
@@ -41,5 +40,5 @@ public abstract class TimerActionListener implements ActionListener
      * @param e     action event
      * @param timer timer which forced this action
      */
-    public abstract void timerActionPerformed ( final ActionEvent e, final WebTimer timer );
+    public abstract void timerActionPerformed ( ActionEvent e, WebTimer timer );
 }

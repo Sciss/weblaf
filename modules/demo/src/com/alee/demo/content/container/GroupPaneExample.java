@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.container;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.combobox.WebComboBox;
@@ -37,28 +38,31 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class GroupPaneExample extends AbstractExample
+public class GroupPaneExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "grouppane";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.extended;
     }
 
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final MixedGrouping e1 = new MixedGrouping ( FeatureState.release, StyleId.grouppane );
-        final GridGrouping e2 = new GridGrouping ( FeatureState.release, StyleId.grouppane );
-        final ButtonsGrouping e3 = new ButtonsGrouping ( FeatureState.release, StyleId.grouppane );
-        return CollectionUtils.<Preview>asList ( e1, e2, e3 );
+        return CollectionUtils.<Preview>asList (
+                new ButtonsGrouping ( FeatureState.release, StyleId.grouppane ),
+                new MixedGrouping ( FeatureState.release, StyleId.grouppane ),
+                new GridGrouping ( FeatureState.release, StyleId.grouppane )
+        );
     }
 
     /**
@@ -77,8 +81,9 @@ public class GroupPaneExample extends AbstractExample
             super ( GroupPaneExample.this, "mixed", featureState, id );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebButton e1 = new WebButton ( "First" );
             final WebComboBox e2 = new WebComboBox ( new String[]{ "First", "Second", "Third" }, 1 );
@@ -106,8 +111,9 @@ public class GroupPaneExample extends AbstractExample
             super ( GroupPaneExample.this, "grid", featureState, id );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             // First row
             final WebComboBox e1 = new WebComboBox ( new String[]{ "First", "Second", "Third" } );
@@ -115,7 +121,7 @@ public class GroupPaneExample extends AbstractExample
             final WebTextField e3 = new WebTextField ( "Third" );
 
             // Second row
-            final WebPanel e4 = new WebPanel ( StyleId.panelWhite, new WebLabel ( "First", WebLabel.CENTER ) );
+            final WebPanel e4 = new WebPanel ( StyleId.panelDecorated, new WebLabel ( "First", WebLabel.CENTER ) );
             final WebTextField e5 = new WebTextField ( "Second" );
             final WebButton e6 = new WebButton ( "Third" );
 
@@ -146,8 +152,9 @@ public class GroupPaneExample extends AbstractExample
             super ( GroupPaneExample.this, "buttons", featureState, id );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebToggleButton b1 = new WebToggleButton ( "First", true );
             final WebToggleButton b2 = new WebToggleButton ( "Second" );

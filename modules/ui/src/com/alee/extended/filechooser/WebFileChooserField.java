@@ -17,7 +17,7 @@
 
 package com.alee.extended.filechooser;
 
-import com.alee.extended.drag.FileDragAndDropHandler;
+import com.alee.api.annotations.NotNull;
 import com.alee.extended.layout.HorizontalFlowLayout;
 import com.alee.extended.panel.CenterPanel;
 import com.alee.laf.button.WebButton;
@@ -25,6 +25,8 @@ import com.alee.laf.filechooser.WebFileChooser;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
+import com.alee.managers.drag.transfer.FilesTransferHandler;
+import com.alee.managers.icon.Icons;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 import com.alee.utils.FileUtils;
@@ -40,7 +42,6 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
 public class WebFileChooserField extends WebPanel
 {
     /**
@@ -48,10 +49,8 @@ public class WebFileChooserField extends WebPanel
      * todo 2. Optimize chosen elements by replacing scroll with list
      */
 
-    public static final ImageIcon CROSS_ICON = new ImageIcon ( WebFileChooserField.class.getResource ( "icons/cross.png" ) );
-
     /**
-     * Whether multiply files selection allowed or not.
+     * Whether multiple files selection allowed or not.
      */
     protected boolean multiSelectionEnabled = false;
 
@@ -77,22 +76,22 @@ public class WebFileChooserField extends WebPanel
 
     public WebFileChooserField ()
     {
-        this ( StyleId.filechooserfield, null );
+        this ( StyleId.auto, null );
     }
 
     public WebFileChooserField ( final Window parent )
     {
-        this ( StyleId.filechooserfield, parent, true );
+        this ( StyleId.auto, parent, true );
     }
 
     public WebFileChooserField ( final boolean showChooseButton )
     {
-        this ( StyleId.filechooserfield, null, showChooseButton );
+        this ( StyleId.auto, null, showChooseButton );
     }
 
     public WebFileChooserField ( final Window owner, final boolean showChooseButton )
     {
-        this ( StyleId.filechooserfield, owner, showChooseButton );
+        this ( StyleId.auto, owner, showChooseButton );
     }
 
     public WebFileChooserField ( final StyleId id )
@@ -117,7 +116,7 @@ public class WebFileChooserField extends WebPanel
         this.showChooseButton = showChooseButton;
 
         // Files TransferHandler
-        setTransferHandler ( new FileDragAndDropHandler ()
+        setTransferHandler ( new FilesTransferHandler ( false, filesDropEnabled )
         {
             @Override
             public boolean isDropEnabled ()
@@ -137,6 +136,7 @@ public class WebFileChooserField extends WebPanel
         // Files list scroll
         scroll = new WebScrollPane ( StyleId.filechooserfieldContentScroll.at ( this ) )
         {
+            @NotNull
             @Override
             public Dimension getPreferredSize ()
             {
@@ -215,6 +215,13 @@ public class WebFileChooserField extends WebPanel
 
         // Updating layout
         updateContentLayout ();
+    }
+
+    @NotNull
+    @Override
+    public StyleId getDefaultStyleId ()
+    {
+        return StyleId.filechooserfield;
     }
 
     private void updateContentLayout ()
@@ -384,7 +391,7 @@ public class WebFileChooserField extends WebPanel
 
     private List<AbstractFileFilter> getAvailableFilters ()
     {
-        return webFileChooser == null ? null : webFileChooser.getAvailableFilters ();
+        return webFileChooser != null ? webFileChooser.getFileChooserPanel ().getAvailableFilters () : null;
     }
 
     public class FilePlate extends WebPanel
@@ -407,7 +414,7 @@ public class WebFileChooserField extends WebPanel
             if ( showRemoveButton )
             {
                 final StyleId removeId = StyleId.filechooserfieldFileRemoveButton.at ( FilePlate.this );
-                final WebButton remove = new WebButton ( removeId, CROSS_ICON );
+                final WebButton remove = new WebButton ( removeId, Icons.crossSmall );
                 remove.addActionListener ( new ActionListener ()
                 {
                     @Override

@@ -17,70 +17,83 @@
 
 package com.alee.managers.style;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.api.jdk.Objects;
+import com.alee.laf.WebLookAndFeel;
 import com.alee.painter.Painter;
+import com.alee.utils.CollectionUtils;
 
 import javax.swing.*;
+import java.awt.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 /**
- * This object contains style data for single component instance.
- * This is basically all {@link com.alee.managers.style.StyleManager} knows about the component styling.
+ * This object contains runtime style data for single component instance.
+ * This is basically all {@link StyleManager} knows about the component styling.
  *
  * @author Mikle Garin
+ * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
+ * @see StyleManager
  */
-
 public final class StyleData implements PropertyChangeListener
 {
     /**
-     * Component this style data is referencing.
+     * {@link JComponent} this style data is referencing.
      */
+    @NotNull
     private final WeakReference<JComponent> component;
 
     /**
-     * Applied skin.
+     * Applied {@link Skin}.
      */
+    @Nullable
     private Skin skin;
 
     /**
-     * Whether or not skin was pinned.
-     * Pinned skin will not be changed when global skin is changed.
+     * Whether or not {@link Skin} was pinned.
+     * Pinned {@link Skin} will not be changed when global {@link Skin} is changed.
      */
     private boolean pinnedSkin;
 
     /**
-     * Style ID.
+     * Style identifier.
      */
+    @Nullable
     private StyleId styleId;
 
     /**
-     * Custom painters.
+     * Custom {@link Painter}.
      */
-    private Map<String, Painter> painters;
+    @Nullable
+    private Painter customPainter;
 
     /**
-     * Related style children.
+     * Related style children {@link JComponent}s.
      */
+    @Nullable
     private List<WeakReference<JComponent>> children;
 
     /**
-     * Skin change listeners.
+     * {@link Skin} change listeners.
      */
+    @Nullable
     private List<StyleListener> listeners;
 
     /**
-     * Constructs new empty style data object.
+     * Constructs new {@link StyleData}.
      *
-     * @param component component this style data is referencing
+     * @param component {@link JComponent} this style data is referencing
      */
-    public StyleData ( final JComponent component )
+    protected StyleData ( @NotNull final JComponent component )
     {
-        super ();
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
 
         // Saving component weak reference
         this.component = new WeakReference<JComponent> ( component );
@@ -89,32 +102,65 @@ public final class StyleData implements PropertyChangeListener
         this.skin = null;
         this.pinnedSkin = false;
         this.styleId = null;
-        this.painters = null;
+        this.customPainter = null;
         this.children = null;
         this.listeners = null;
+    }
 
-        // Adding style ID listener
+    /**
+     * Installs style listeners and applies default {@link Skin}.
+     */
+    public void install ()
+    {
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Adding style identifier listener
+        final JComponent component = getComponent ();
         component.addPropertyChangeListener ( StyleId.STYLE_PROPERTY, this );
         component.addPropertyChangeListener ( StyleId.PARENT_STYLE_PROPERTY, this );
+
+        // Applying default skin
+        applySkin ( StyleManager.getSkin (), false );
+    }
+
+    /**
+     * Uninstalls style listeners and currently applied {@link Skin}.
+     */
+    public void uninstall ()
+    {
+        // Removing skin
+        removeSkin ();
+
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Adding style identifier listener
+        final JComponent component = getComponent ();
+        component.removePropertyChangeListener ( StyleId.PARENT_STYLE_PROPERTY, this );
+        component.removePropertyChangeListener ( StyleId.STYLE_PROPERTY, this );
     }
 
     @Override
-    public void propertyChange ( final PropertyChangeEvent evt )
+    public void propertyChange ( @NotNull final PropertyChangeEvent evt )
     {
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
         // Retrieving component
-        final JComponent component = StyleData.this.getComponentImpl ();
+        final JComponent component = getComponent ();
         final Object styleId = component.getClientProperty ( StyleId.STYLE_PROPERTY );
         if ( styleId != null )
         {
-            // Applying style ID if it was set explicitly
+            // Applying style identifier if it was set explicitly
             if ( styleId instanceof StyleId )
             {
                 // StyleId specified directly
-                StyleManager.setStyleId ( component, ( StyleId ) styleId );
+                setStyleId ( ( StyleId ) styleId );
             }
             else if ( styleId instanceof String )
             {
-                // String style ID was passed
+                // String style identifier was passed
                 final String id = ( String ) styleId;
 
                 // Trying to retrieve parent
@@ -124,7 +170,7 @@ public final class StyleData implements PropertyChangeListener
                     if ( parent instanceof JComponent )
                     {
                         // Parent provided directly
-                        StyleManager.setStyleId ( component, StyleId.of ( id, ( JComponent ) parent ) );
+                        setStyleId ( StyleId.of ( id, ( JComponent ) parent ) );
                     }
                     else if ( parent instanceof WeakReference )
                     {
@@ -132,66 +178,71 @@ public final class StyleData implements PropertyChangeListener
                         if ( p != null && p instanceof JComponent )
                         {
                             // Parent provided through weak reference
-                            StyleManager.setStyleId ( component, StyleId.of ( id, ( JComponent ) p ) );
+                            setStyleId ( StyleId.of ( id, ( JComponent ) p ) );
                         }
                         else
                         {
                             // Simple direct style
-                            StyleManager.setStyleId ( component, StyleId.of ( id ) );
+                            setStyleId ( StyleId.of ( id ) );
                         }
                     }
                     else
                     {
                         // Simple direct style
-                        StyleManager.setStyleId ( component, StyleId.of ( id ) );
+                        setStyleId ( StyleId.of ( id ) );
                     }
                 }
                 else
                 {
                     // Simple direct style
-                    StyleManager.setStyleId ( component, StyleId.of ( id ) );
+                    setStyleId ( StyleId.of ( id ) );
                 }
             }
         }
         else
         {
-            // Restoring default style ID value
-            StyleManager.restoreStyleId ( component );
+            // Restoring default style identifier value
+            resetStyleId ( false );
         }
     }
 
     /**
-     * Returns component this style data is referencing.
+     * Returns {@link JComponent} this style data is referencing.
+     * Also ensures that {@link JComponent} still exists, otherwise throws a {@link StyleException}.
      *
-     * @return component this style data is referencing
+     * @return {@link JComponent} this style data is referencing
+     * @throws StyleException if {@link JComponent} this style data is referencing doesn't exist anymore
      */
-    public WeakReference<JComponent> getComponent ()
-    {
-        return component;
-    }
-
-    /**
-     * Returns component this style data is referencing.
-     *
-     * @return component this style data is referencing
-     */
-    private JComponent getComponentImpl ()
+    @NotNull
+    protected JComponent getComponent ()
     {
         final JComponent component = this.component.get ();
         if ( component == null )
         {
-            throw new StyleException ( "Component for style ID \"" + styleId.getCompleteId () + "\" has been destroyed" );
+            throw new StyleException ( String.format (
+                    "Component for style identifier '%s' has been destroyed",
+                    getStyleId ().getCompleteId ()
+            ) );
         }
         return component;
     }
 
     /**
-     * Returns currently applied skin.
+     * Returns currently applied {@link Skin}.
+     * Also ensures that {@link Skin} is not {@code null}, otherwise throws a {@link StyleException}.
      *
-     * @return currently applied skin
+     * @return currently applied {@link Skin}
+     * @throws StyleException if {@link Skin} is {@code null}
      */
-    public Skin getSkin ()
+    // todo @NotNull
+    protected Skin getSkin ()
     {
+        // todo Need to make this @NotNull
+        // todo To do this we first need to fix some issues with scroll pane and scroll bar UIs
+        //        if ( skin == null )
+        //        {
+        //            throw new StyleException ( "StyleData haven't been installed yet or default skin was not available" );
+        //        }
         return skin;
     }
 
@@ -201,7 +252,7 @@ public final class StyleData implements PropertyChangeListener
      *
      * @return true if skin was pinned, false otherwise
      */
-    public boolean isPinnedSkin ()
+    protected boolean isPinnedSkin ()
     {
         return pinnedSkin;
     }
@@ -211,109 +262,135 @@ public final class StyleData implements PropertyChangeListener
      *
      * @param pinnedSkin whether or not skin was pinned
      */
-    public void setPinnedSkin ( final boolean pinnedSkin )
+    protected void setPinnedSkin ( final boolean pinnedSkin )
     {
         this.pinnedSkin = pinnedSkin;
     }
 
     /**
-     * Applies new component skin and returns previously applied skin.
+     * Applies new component skin.
+     * Returns previously applied skin if it have been replaced, current skin otherwise.
+     * This method is used in UIs for initial component skin installation.
      *
-     * @param skin            skin to apply
-     * @param applyToChildren whether or not should apply the same skin to style children
-     * @return previously applied skin
+     * @param skin     skin to apply
+     * @param children whether or not should apply the same skin to style children
+     * @return previously applied skin if it have been replaced, current skin otherwise
      */
-    public Skin applySkin ( final Skin skin, final boolean applyToChildren )
+    @Nullable
+    protected Skin applySkin ( @NotNull final Skin skin, final boolean children )
     {
-        // Retrieving component and checking its existance
-        final JComponent component = getComponentImpl ();
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Retrieving component and checking its existence
+        final JComponent component = getComponent ();
 
         // Checking that provided skin is actually different one
-        final boolean newSkin = skin != getSkin ();
-
-        // Saving reference to old skin
         final Skin oldSkin;
-        if ( newSkin )
+        if ( skin != this.skin )
         {
             // Removing old skin
             oldSkin = removeSkin ();
-        }
-        else
-        {
-            // Simply providing current skin
-            oldSkin = getSkin ();
-        }
 
-        // Applying new skin to specified component
-        if ( newSkin && skin != null )
-        {
-            skin.applySkin ( component );
+            // Applying new skin to specified component
             this.skin = skin;
-        }
+            skin.applySkin ( component );
 
-        // Resetting pinned state if skin was changed
-        if ( newSkin )
-        {
+            // Resetting pinned state if skin was changed
+            // If it is needed skin will be pinned again after this method call
             setPinnedSkin ( false );
-        }
 
-        // Applying skin to component's style children
-        if ( skin != null && applyToChildren )
-        {
-            applyChildrenSkin ( skin );
-        }
+            // Applying skin to component's style children
+            if ( children && CollectionUtils.notEmpty ( this.children ) )
+            {
+                for ( final WeakReference<JComponent> reference : this.children )
+                {
+                    final JComponent child = reference.get ();
+                    if ( child != null )
+                    {
+                        StyleManager.setSkin ( child, skin, false );
+                    }
+                }
+            }
 
-        // Informing about skin changes
-        if ( newSkin )
-        {
             // Informing about skin changes
             fireSkinChanged ( component, oldSkin, skin );
 
             // Informing about skin visual update
             fireSkinUpdated ( component, getStyleId () );
         }
+        else
+        {
+            // Simply providing current skin
+            oldSkin = this.skin;
+        }
 
         return oldSkin;
     }
 
     /**
-     * Applies skin to style children.
+     * Applies specified custom skin to the skinnable component and all of its children linked via {@link StyleId}.
+     * Actual linked children information is stored within {@link StyleData} data objects.
+     * Custom skin provided using this method will not be replaced if application skin changes.
      *
-     * @param skin skin to apply
+     * @param skin        skin to be applied
+     * @param recursively whether or not should apply skin to child components
+     * @return previously applied skin
      */
-    private void applyChildrenSkin ( final Skin skin )
+    @Nullable
+    protected Skin applyCustomSkin ( @NotNull final Skin skin, final boolean recursively )
     {
-        if ( children != null )
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Replacing component skin
+        // Style children are also updated through this call
+        // Even though we might encounter style children again in components tree later it will not cause extensive updates
+        final Skin previousSkin = applySkin ( skin, true );
+
+        // Pinning applied skin
+        // This will keep this skin even if global skin is changed
+        setPinnedSkin ( true );
+
+        // Applying new skin to all existing skinnable components
+        // This approach is quite different from style children but works better for large UI updates
+        if ( recursively )
         {
-            for ( final WeakReference<JComponent> reference : children )
+            final JComponent component = getComponent ();
+            for ( int i = 0; i < component.getComponentCount (); i++ )
             {
-                final JComponent child = reference.get ();
-                if ( child != null )
+                final Component child = component.getComponent ( i );
+                if ( child instanceof JComponent )
                 {
-                    StyleManager.setSkin ( child, skin );
+                    StyleManager.setSkin ( ( JComponent ) child, skin, true );
                 }
             }
         }
+
+        return previousSkin;
     }
 
     /**
      * Updates current skin in the skinnable component.
-     * <p>
-     * This method is used only to properly update skin on various changes.
-     * It is not recommended to use it outside of style manager behavior.
+     * This method is used to properly update skin on various changes.
+     *
+     * @param children whether or not should apply the same skin to style children
      */
-    public void updateSkin ()
+    protected void updateSkin ( final boolean children )
     {
-        // Retrieving component and checking its existance
-        final JComponent component = getComponentImpl ();
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Retrieving component and checking its existence
+        final JComponent component = getComponent ();
 
         // Updating component skin
         getSkin ().updateSkin ( component );
 
         // Updating children skins
-        if ( children != null )
+        if ( children && CollectionUtils.notEmpty ( this.children ) )
         {
-            for ( final WeakReference<JComponent> reference : children )
+            for ( final WeakReference<JComponent> reference : this.children )
             {
                 final JComponent child = reference.get ();
                 if ( child != null )
@@ -328,17 +405,52 @@ public final class StyleData implements PropertyChangeListener
     }
 
     /**
+     * Resets skin for the component and all of its children linked via {@link StyleId}.
+     * Actual linked children information is stored within {@link StyleData} data objects.
+     * Resetting component skin will also include it back into the skin update cycle in case global skin will be changed.
+     *
+     * @return skin applied to the component after reset
+     */
+    @Nullable
+    protected Skin resetSkin ()
+    {
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Resetting skin to globally set one if needed
+        final Skin result;
+        final Skin skin = getSkin ();
+        final Skin globalSkin = StyleManager.getSkin ();
+        if ( globalSkin == skin )
+        {
+            applySkin ( globalSkin, true );
+            result = globalSkin;
+        }
+        else
+        {
+            result = skin;
+        }
+        return result;
+    }
+
+    /**
      * Removes skin currently applied to the specified component.
+     * This will uninstall component skin without installing any other on top of previous one and will leave component empty.
      *
      * @return previously applied skin
      */
-    public Skin removeSkin ()
+    @Nullable
+    protected Skin removeSkin ()
     {
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Checking previous skin existence
         final Skin oldSkin = this.skin;
         if ( this.skin != null )
         {
-            // Retrieving component and checking its existance
-            final JComponent component = getComponentImpl ();
+            // Retrieving component and checking its existence
+            final JComponent component = getComponent ();
 
             // Removing skin
             this.skin.removeSkin ( component );
@@ -348,66 +460,179 @@ public final class StyleData implements PropertyChangeListener
     }
 
     /**
-     * Returns currently used style ID.
+     * Returns currently used style identifier.
      *
-     * @return currently used style ID
+     * @return currently used style identifier
      */
-    public StyleId getStyleId ()
+    @NotNull
+    protected StyleId getStyleId ()
     {
-        return styleId;
+        return styleId != null ? styleId : StyleId.getDefault ( getComponent () );
     }
 
     /**
-     * Sets currently used style ID.
+     * Sets currently used style identifier.
      *
-     * @param styleId new style ID
+     * @param id new style identifier
+     * @return previously used style identifier
      */
-    public void setStyleId ( final StyleId styleId )
+    @NotNull
+    protected StyleId setStyleId ( @NotNull final StyleId id )
     {
-        // Retrieving component and checking its existance
-        final JComponent component = getComponentImpl ();
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
 
-        // Saving old style ID reference
-        final StyleId oldStyleId = this.styleId;
+        // Retrieving component and checking its existence
+        final JComponent component = getComponent ();
 
-        // Saving new style ID
-        this.styleId = styleId;
+        // Resolving actual provided style identifier
+        final StyleId styleId = id.getId () != null ? id : StyleId.getDefault ( component );
 
-        // Updating component skin
-        updateSkin ();
+        // Perform operation only if different styles are referenced
+        final StyleId old = getStyleId ();
+        if ( Objects.notEquals ( styleId, old ) )
+        {
+            // Saving old style identifier reference
+            final StyleId oldStyleId = this.styleId;
 
-        // Informing about style change
-        fireStyleChanged ( component, oldStyleId, styleId );
+            // Saving new style identifier
+            this.styleId = styleId;
+
+            // Removing child reference from old parent style data
+            final JComponent oldParent = old.getParent ();
+            if ( oldParent != null )
+            {
+                StyleManager.getData ( oldParent ).removeChild ( component );
+            }
+
+            // Adding child reference into new parent style data
+            final JComponent parent = styleId.getParent ();
+            if ( parent != null )
+            {
+                StyleManager.getData ( parent ).addChild ( component );
+            }
+
+            // Updating component skin
+            if ( parent != null )
+            {
+                final Skin parentSkin = StyleManager.getSkin ( parent );
+                if ( parentSkin != null && parentSkin != getSkin () )
+                {
+                    // Applying style parent skin
+                    applySkin ( parentSkin, false );
+                }
+                else
+                {
+                    // Component style parent skin is the same, simply updating current skin
+                    updateSkin ( true );
+                }
+            }
+            else
+            {
+                // There is no parent, simply updating current skin
+                updateSkin ( true );
+            }
+
+            // Informing about style change
+            fireStyleChanged ( component, oldStyleId, styleId );
+        }
+        return old;
     }
 
     /**
-     * Returns custom painters.
+     * Resets style identifier to default value.
      *
-     * @return custom painters
+     * @param recursively whether or not child styles should also be reset
+     * @return previously used style identifier
      */
-    public Map<String, Painter> getPainters ()
+    @NotNull
+    protected StyleId resetStyleId ( final boolean recursively )
     {
-        return painters;
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Resetting child identifiers first
+        if ( recursively && CollectionUtils.notEmpty ( children ) )
+        {
+            // We have to be careful here since resetting child styles might modify children list
+            // That will actually happen more often than not since default styles are usually not structured
+            for ( final WeakReference<JComponent> reference : CollectionUtils.copy ( children ) )
+            {
+                final JComponent child = reference.get ();
+                if ( child != null )
+                {
+                    StyleManager.resetStyleId ( child );
+                }
+            }
+        }
+
+        // Resetting style identifier
+        return setStyleId ( StyleId.auto );
     }
 
     /**
-     * Sets custom painters.
+     * Returns custom {@link Painter}.
      *
-     * @param painters custom painters
+     * @return custom {@link Painter}
      */
-    public void setPainters ( final Map<String, Painter> painters )
+    @Nullable
+    protected Painter getCustomPainter ()
     {
-        this.painters = painters;
+        return customPainter;
     }
 
     /**
-     * Returns related style children.
+     * Sets custom {@link Painter}.
      *
-     * @return related style children
+     * @param painter new custom {@link Painter}
+     * @return previously used custom {@link Painter}
      */
-    public List<WeakReference<JComponent>> getChildren ()
+    @Nullable
+    protected Painter setCustomPainter ( @NotNull final Painter painter )
     {
-        return children;
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Saving previous custom painter for return
+        final Painter oldPainter = this.customPainter;
+
+        // Updating custom painter
+        this.customPainter = painter;
+
+        // Reapplying skin
+        final JComponent component = getComponent ();
+        getSkin ().applySkin ( component );
+
+        // Informing about skin changes
+        fireSkinUpdated ( component, getStyleId () );
+
+        return oldPainter;
+    }
+
+    /**
+     * Resets custom {@link Painter} to default one.
+     *
+     * @return {@code true} if custom {@link Painter} was successfully resetted, {@code false} otherwise
+     */
+    public boolean resetCustomPainter ()
+    {
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Operation is successful when there is a custom painter to reset
+        final boolean successful = this.customPainter != null;
+
+        // Resetting custom painter
+        this.customPainter = null;
+
+        // Reapplying skin
+        final JComponent component = getComponent ();
+        getSkin ().applySkin ( component );
+
+        // Informing about skin changes
+        fireSkinUpdated ( component, getStyleId () );
+
+        return successful;
     }
 
     /**
@@ -415,8 +640,12 @@ public final class StyleData implements PropertyChangeListener
      *
      * @param child related style child
      */
-    public void addChild ( final JComponent child )
+    protected void addChild ( @NotNull final JComponent child )
     {
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Adding child
         if ( children == null )
         {
             children = new ArrayList<WeakReference<JComponent>> ( 1 );
@@ -429,15 +658,22 @@ public final class StyleData implements PropertyChangeListener
      *
      * @param child related style child
      */
-    public void removeChild ( final JComponent child )
+    protected void removeChild ( @NotNull final JComponent child )
     {
-        final Iterator<WeakReference<JComponent>> iterator = children.iterator ();
-        while ( iterator.hasNext () )
+        // Event Dispatch Thread check
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Removing child
+        if ( children != null )
         {
-            final WeakReference<JComponent> next = iterator.next ();
-            if ( next.get () == child )
+            final Iterator<WeakReference<JComponent>> iterator = children.iterator ();
+            while ( iterator.hasNext () )
             {
-                iterator.remove ();
+                final WeakReference<JComponent> next = iterator.next ();
+                if ( next.get () == child )
+                {
+                    iterator.remove ();
+                }
             }
         }
     }
@@ -447,7 +683,7 @@ public final class StyleData implements PropertyChangeListener
      *
      * @param listener style change listener to add
      */
-    public void addStyleListener ( final StyleListener listener )
+    protected void addStyleListener ( @NotNull final StyleListener listener )
     {
         if ( listeners == null )
         {
@@ -461,7 +697,7 @@ public final class StyleData implements PropertyChangeListener
      *
      * @param listener style change listener to remove
      */
-    public void removeStyleListener ( final StyleListener listener )
+    protected void removeStyleListener ( @NotNull final StyleListener listener )
     {
         if ( listeners != null )
         {
@@ -476,7 +712,8 @@ public final class StyleData implements PropertyChangeListener
      * @param oldSkin   previously used skin
      * @param newSkin   currently used skin
      */
-    private void fireSkinChanged ( final JComponent component, final Skin oldSkin, final Skin newSkin )
+    private void fireSkinChanged ( @NotNull final JComponent component,
+                                   @Nullable final Skin oldSkin, @NotNull final Skin newSkin )
     {
         if ( listeners != null )
         {
@@ -491,10 +728,11 @@ public final class StyleData implements PropertyChangeListener
      * Informs about component style change.
      *
      * @param component  component which style has changed
-     * @param oldStyleId previously used style ID
-     * @param newStyleId currently used style ID
+     * @param oldStyleId previously used style identifier
+     * @param newStyleId currently used style identifier
      */
-    private void fireStyleChanged ( final JComponent component, final StyleId oldStyleId, final StyleId newStyleId )
+    private void fireStyleChanged ( @NotNull final JComponent component,
+                                    @Nullable final StyleId oldStyleId, @NotNull final StyleId newStyleId )
     {
         if ( listeners != null )
         {
@@ -507,12 +745,13 @@ public final class StyleData implements PropertyChangeListener
 
     /**
      * Informs about component skin visual update.
-     * Skin update might occur when component style ID changes or its parent style component style ID changes.
+     * Skin update might occur when component style identifier changes or its parent style component style identifier changes.
      *
      * @param component component which style have been updated
-     * @param styleId   component style ID
+     * @param styleId   component style identifier
      */
-    private void fireSkinUpdated ( final JComponent component, final StyleId styleId )
+    private void fireSkinUpdated ( @NotNull final JComponent component,
+                                   @NotNull final StyleId styleId )
     {
         if ( listeners != null )
         {

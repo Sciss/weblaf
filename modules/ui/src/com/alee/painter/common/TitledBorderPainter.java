@@ -17,6 +17,8 @@
 
 package com.alee.painter.common;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.managers.style.Bounds;
 import com.alee.utils.GraphicsUtils;
 import com.alee.utils.SwingUtils;
 
@@ -30,14 +32,14 @@ import java.util.Map;
 /**
  * Titled border painter.
  *
- * @param <E> component type
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Mikle Garin
  * @see com.alee.painter.common.BorderPainter
  * @see com.alee.painter.AbstractPainter
  * @see com.alee.painter.Painter
  */
-
-public class TitledBorderPainter<E extends JComponent, U extends ComponentUI> extends BorderPainter<E, U> implements SwingConstants
+public class TitledBorderPainter<C extends JComponent, U extends ComponentUI> extends BorderPainter<C, U> implements SwingConstants
 {
     /**
      * todo 1. Left/Right title position
@@ -93,19 +95,19 @@ public class TitledBorderPainter<E extends JComponent, U extends ComponentUI> ex
     /**
      * Runtime variables.
      */
-    protected int w;
-    protected int h;
-    protected int sw;
-    protected boolean emptyTitle;
-    protected FontMetrics fontMetrics;
-    protected int titleAreaHeight;
-    protected int titleWidth;
-    protected int titleX;
-    protected int titleY;
-    protected double borderCenter;
-    protected double borderPosition;
-    protected Shape borderShape;
-    protected boolean doClip;
+    protected transient int w;
+    protected transient int h;
+    protected transient int sw;
+    protected transient boolean emptyTitle;
+    protected transient FontMetrics fontMetrics;
+    protected transient int titleAreaHeight;
+    protected transient int titleWidth;
+    protected transient int titleX;
+    protected transient int titleY;
+    protected transient double borderCenter;
+    protected transient double borderPosition;
+    protected transient Shape borderShape;
+    protected transient boolean doClip;
 
     public TitledBorderPainter ()
     {
@@ -229,10 +231,11 @@ public class TitledBorderPainter<E extends JComponent, U extends ComponentUI> ex
         updateAll ();
     }
 
+    @NotNull
     @Override
-    public Insets getBorders ()
+    protected Insets getBorder ()
     {
-        final Insets m = super.getBorders ();
+        final Insets m = super.getBorder ();
         if ( !isEmptyTitle () )
         {
             switch ( titleSide )
@@ -263,7 +266,7 @@ public class TitledBorderPainter<E extends JComponent, U extends ComponentUI> ex
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
+    public void paint ( @NotNull final Graphics2D g2d, @NotNull final C c, @NotNull final U ui, @NotNull final Bounds bounds )
     {
         // Initializing values
         w = c.getWidth ();
@@ -273,7 +276,7 @@ public class TitledBorderPainter<E extends JComponent, U extends ComponentUI> ex
         fontMetrics = emptyTitle ? null : c.getFontMetrics ( c.getFont () );
         titleWidth = emptyTitle ? 0 : fontMetrics.stringWidth ( titleText );
         titleAreaHeight = getTitleAreaHeight ( c );
-        titleX = getTitleX ( c );
+        titleX = getTitleX ();
         titleY = getTitleY ();
         borderCenter = ( double ) sw / 2;
         borderPosition = getBorderPosition ();
@@ -335,17 +338,17 @@ public class TitledBorderPainter<E extends JComponent, U extends ComponentUI> ex
         }
     }
 
-    protected int getTitleX ( final E c )
+    protected int getTitleX ()
     {
         if ( titleAlignment == LEFT || titleAlignment == LEADING && ltr ||
                 titleAlignment == TRAILING && !ltr )
         {
-            return Math.max ( sw, round ) + titleOffset + titleBorderGap;
+            return Math.max ( sw, getRound () ) + titleOffset + titleBorderGap;
         }
         else if ( titleAlignment == RIGHT || titleAlignment == TRAILING && ltr ||
                 titleAlignment == LEADING && !ltr )
         {
-            return w - Math.max ( sw, round ) - titleOffset - titleBorderGap -
+            return w - Math.max ( sw, getRound () ) - titleOffset - titleBorderGap -
                     titleWidth;
         }
         else
@@ -405,7 +408,7 @@ public class TitledBorderPainter<E extends JComponent, U extends ComponentUI> ex
         }
     }
 
-    protected int getTitleAreaHeight ( final E c )
+    protected int getTitleAreaHeight ( final C c )
     {
         if ( isEmptyTitle () )
         {
@@ -449,9 +452,9 @@ public class TitledBorderPainter<E extends JComponent, U extends ComponentUI> ex
                 break;
             }
         }
-        return round > 0 ?
-                new RoundRectangle2D.Double ( rect.getX (), rect.getY (), rect.getWidth (), rect.getHeight (), round * 2, round * 2 ) :
-                rect;
+        final int round = getRound ();
+        return round <= 0 ? rect :
+                new RoundRectangle2D.Double ( rect.getX (), rect.getY (), rect.getWidth (), rect.getHeight (), round * 2, round * 2 );
     }
 
     protected Shape getBorderClipShape ()
@@ -489,35 +492,43 @@ public class TitledBorderPainter<E extends JComponent, U extends ComponentUI> ex
         return null;
     }
 
+    @NotNull
     @Override
     public Dimension getPreferredSize ()
     {
+        final Dimension ps;
         if ( isEmptyTitle () )
         {
-            return super.getPreferredSize ();
+            ps = super.getPreferredSize ();
         }
         else
         {
             final int titleAreaHeight = getTitleAreaHeight ( component );
             final int titleWidth = component.getFontMetrics ( component.getFont () ).stringWidth ( titleText );
-            final int border = Math.max ( getStrokeWidth (), round );
+            final int border = Math.max ( getStrokeWidth (), getRound () );
             final int title = Math.max ( titleAreaHeight, border );
             switch ( titleSide )
             {
                 case TOP:
                 case BOTTOM:
                 {
-                    return new Dimension ( border * 2 + titleWidth + titleOffset * 2 +
+                    ps = new Dimension ( border * 2 + titleWidth + titleOffset * 2 +
                             titleBorderGap * 2, title + border );
+                    break;
                 }
                 case LEFT:
                 case RIGHT:
                 {
-                    return new Dimension ( title + border, border * 2 + titleWidth + titleOffset * 2 +
+                    ps = new Dimension ( title + border, border * 2 + titleWidth + titleOffset * 2 +
                             titleBorderGap * 2 );
+                    break;
+                }
+                default:
+                {
+                    throw new RuntimeException ( "Unknown title side: " + titleSide );
                 }
             }
-            return null;
         }
+        return ps;
     }
 }

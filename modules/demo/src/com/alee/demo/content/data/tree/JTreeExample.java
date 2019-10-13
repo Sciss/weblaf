@@ -17,7 +17,10 @@
 
 package com.alee.demo.content.data.tree;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
@@ -28,33 +31,44 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JTreeExample extends AbstractExample
+public class JTreeExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "jtree";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "tree";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.swing;
     }
 
+    @NotNull
+    @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Use Trees", "tree" );
+    }
+
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicTree basic = new BasicTree ( StyleId.tree );
-        final EditableTree editable = new EditableTree ( StyleId.tree );
-        return CollectionUtils.<Preview>asList ( basic, editable );
+        return CollectionUtils.<Preview>asList (
+                new BasicTree ( StyleId.tree ),
+                new EditableTree ( StyleId.tree )
+        );
     }
 
     /**
@@ -72,8 +86,9 @@ public class JTreeExample extends AbstractExample
             super ( JTreeExample.this, "basic", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JTree tree = new JTree ();
             tree.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
@@ -97,8 +112,9 @@ public class JTreeExample extends AbstractExample
             super ( JTreeExample.this, "editable", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JTree tree = new JTree ();
             tree.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );

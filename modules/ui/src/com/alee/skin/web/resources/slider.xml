@@ -1,4 +1,4 @@
-<skin>
+<skin xmlns="http://weblookandfeel.com/XmlSkin">
 
     <!-- com.alee.laf.slider.WebSlider -->
 
@@ -6,7 +6,6 @@
     <style type="slider" padding="0,2,0,2">
         <component>
             <opaque>false</opaque>
-            <foreground>0,0,0</foreground>
         </component>
         <painter>
             <trackHeight>9</trackHeight>
@@ -32,6 +31,14 @@
             <rolloverDarkBorderOnly>false</rolloverDarkBorderOnly>
             <animated>true</animated>
         </painter>
+
+        <!-- Default labels -->
+        <style type="label" id="tick">
+            <component>
+                <horizontalAlignment>0</horizontalAlignment>
+            </component>
+        </style>
+
     </style>
 
 </skin>

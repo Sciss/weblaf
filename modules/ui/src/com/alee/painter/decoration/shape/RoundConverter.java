@@ -17,18 +17,19 @@
 
 package com.alee.painter.decoration.shape;
 
-import com.alee.managers.log.Log;
+import com.alee.api.annotations.NotNull;
+import com.alee.utils.xml.XmlException;
 import com.thoughtworks.xstream.converters.basic.AbstractSingleValueConverter;
 
 import java.util.StringTokenizer;
 
 /**
- * Custom {@link com.alee.painter.decoration.shape.Round} object converter.
+ * Custom XStream converter for {@link Round}.
  *
  * @author Mikle Garin
+ * @see Round
  */
-
-public class RoundConverter extends AbstractSingleValueConverter
+public final class RoundConverter extends AbstractSingleValueConverter
 {
     /**
      * Values separator.
@@ -36,34 +37,67 @@ public class RoundConverter extends AbstractSingleValueConverter
     public static final String separator = ",";
 
     @Override
-    public boolean canConvert ( final Class type )
+    public boolean canConvert ( @NotNull final Class type )
     {
         return Round.class.isAssignableFrom ( type );
     }
 
+    @NotNull
     @Override
-    public Object fromString ( final String insets )
-    {
-        return roundFromString ( insets );
-    }
-
-    @Override
-    public String toString ( final Object object )
+    public String toString ( @NotNull final Object object )
     {
         return roundToString ( ( Round ) object );
     }
 
+    @NotNull
+    @Override
+    public Object fromString ( @NotNull final String round )
+    {
+        return roundFromString ( round );
+    }
+
     /**
-     * Returns insets read from string.
+     * Returns {@link Round} converted into string.
      *
-     * @param insets insets string
-     * @return insets read from string
+     * @param round {@link Round} to convert
+     * @return {@link Round} converted into string
      */
-    public static Round roundFromString ( final String insets )
+    @NotNull
+    public static String roundToString ( @NotNull final Round round )
+    {
+        final String string;
+        if ( round.topLeft == round.topRight && round.bottomLeft == round.bottomRight && round.topLeft == round.bottomLeft )
+        {
+            string = Integer.toString ( round.topLeft );
+        }
+        else if ( round.topLeft == round.bottomRight && round.topRight == round.bottomLeft )
+        {
+            string = round.topLeft + separator + round.topRight;
+        }
+        else if ( round.topRight == round.bottomLeft )
+        {
+            string = round.topLeft + separator + round.topRight + separator + round.bottomRight;
+        }
+        else
+        {
+            string = round.topLeft + separator + round.topRight + separator + round.bottomRight + separator + round.bottomLeft;
+        }
+        return string;
+    }
+
+    /**
+     * Returns {@link Round} read from string.
+     *
+     * @param string {@link Round} string
+     * @return {@link Round} read from string
+     */
+    @NotNull
+    public static Round roundFromString ( @NotNull final String string )
     {
         try
         {
-            final StringTokenizer tokenizer = new StringTokenizer ( insets, separator, false );
+            final Round round;
+            final StringTokenizer tokenizer = new StringTokenizer ( string, separator, false );
             if ( tokenizer.hasMoreTokens () )
             {
                 final int topLeft = Integer.parseInt ( tokenizer.nextToken ().trim () );
@@ -76,58 +110,32 @@ public class RoundConverter extends AbstractSingleValueConverter
                         if ( tokenizer.hasMoreTokens () )
                         {
                             final int bottomLeft = Integer.parseInt ( tokenizer.nextToken ().trim () );
-                            return new Round ( topLeft, topRight, bottomRight, bottomLeft );
+                            round = new Round ( topLeft, topRight, bottomRight, bottomLeft );
                         }
                         else
                         {
-                            return new Round ( topLeft, topRight, bottomRight, topRight );
+                            round = new Round ( topLeft, topRight, bottomRight, topRight );
                         }
                     }
                     else
                     {
-                        return new Round ( topLeft, topRight, topLeft, topRight );
+                        round = new Round ( topLeft, topRight, topLeft, topRight );
                     }
                 }
                 else
                 {
-                    return new Round ( topLeft, topLeft, topLeft, topLeft );
+                    round = new Round ( topLeft, topLeft, topLeft, topLeft );
                 }
             }
             else
             {
-                return new Round ();
+                round = new Round ();
             }
+            return round;
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
-            Log.get ().error ( "Unable to parse Round: " + insets, e );
-            return new Round ();
-        }
-    }
-
-    /**
-     * Returns insets converted into string.
-     *
-     * @param round insets to convert
-     * @return insets converted into string
-     */
-    public static String roundToString ( final Round round )
-    {
-        if ( round.topLeft == round.topRight && round.bottomLeft == round.bottomRight && round.topLeft == round.bottomLeft )
-        {
-            return Integer.toString ( round.topLeft );
-        }
-        else if ( round.topLeft == round.bottomRight && round.topRight == round.bottomLeft )
-        {
-            return round.topLeft + separator + round.topRight;
-        }
-        else if ( round.topRight == round.bottomLeft )
-        {
-            return round.topLeft + separator + round.topRight + separator + round.bottomRight;
-        }
-        else
-        {
-            return round.topLeft + separator + round.topRight + separator + round.bottomRight + separator + round.bottomLeft;
+            throw new XmlException ( "Unable to parse Round: " + string, e );
         }
     }
 }

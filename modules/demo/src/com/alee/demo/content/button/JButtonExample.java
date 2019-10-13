@@ -17,9 +17,13 @@
 
 package com.alee.demo.content.button;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.grouping.GroupPane;
+import com.alee.managers.language.UILanguageManager;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
@@ -29,35 +33,46 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JButtonExample extends AbstractExample
+public class JButtonExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "jbutton";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "button";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.swing;
     }
 
+    @NotNull
+    @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Use Buttons", "button" );
+    }
+
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final TextButton e1 = new TextButton ( StyleId.button );
-        final TextButton e2 = new TextButton ( StyleId.buttonHover );
-        final IconButton e3 = new IconButton ( StyleId.buttonIcon );
-        final IconButton e4 = new IconButton ( StyleId.buttonIconHover );
-        return CollectionUtils.<Preview>asList ( e1, e2, e3, e4 );
+        return CollectionUtils.<Preview>asList (
+                new TextButton ( StyleId.button ),
+                new TextButton ( StyleId.buttonHover ),
+                new IconButton ( StyleId.buttonIcon ),
+                new IconButton ( StyleId.buttonIconHover )
+        );
     }
 
     /**
@@ -75,22 +90,31 @@ public class JButtonExample extends AbstractExample
             super ( JButtonExample.this, "text", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final JButton button = new JButton ( "Click me" );
-            button.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            final JButton basic = new JButton ();
+            basic.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            UILanguageManager.registerComponent ( basic, getPreviewLanguagePrefix () + "basic" );
 
-            final JButton first = new JButton ( "First" );
-            first.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            final JButton group1 = new JButton ();
+            group1.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            UILanguageManager.registerComponent ( group1, getPreviewLanguagePrefix () + "group1" );
 
-            final JButton second = new JButton ( "Second" );
-            second.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            final JButton group2 = new JButton ();
+            group2.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            UILanguageManager.registerComponent ( group2, getPreviewLanguagePrefix () + "group2" );
 
-            final JButton icon = new JButton ( "With icon", WebLookAndFeel.getIcon ( 16 ) );
+            final JButton group3 = new JButton ();
+            group3.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            UILanguageManager.registerComponent ( group3, getPreviewLanguagePrefix () + "group3" );
+
+            final JButton icon = new JButton ( WebLookAndFeel.getIcon ( 16 ) );
             icon.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            UILanguageManager.registerComponent ( icon, getPreviewLanguagePrefix () + "icon" );
 
-            return CollectionUtils.asList ( button, new GroupPane ( first, second ), icon );
+            return CollectionUtils.asList ( basic, new GroupPane ( group1, group2, group3 ), icon );
         }
     }
 
@@ -109,19 +133,23 @@ public class JButtonExample extends AbstractExample
             super ( JButtonExample.this, "icon", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final JButton button = new JButton ( WebLookAndFeel.getIcon ( 16 ) );
-            button.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            final JButton basic = new JButton ( WebLookAndFeel.getIcon ( 16 ) );
+            basic.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
 
-            final JButton first = new JButton ( WebLookAndFeel.getIcon ( 16 ) );
-            first.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            final JButton group1 = new JButton ( WebLookAndFeel.getIcon ( 16 ) );
+            group1.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
 
-            final JButton second = new JButton ( WebLookAndFeel.getIcon ( 16 ) );
-            second.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+            final JButton group2 = new JButton ( WebLookAndFeel.getIcon ( 16 ) );
+            group2.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
 
-            return CollectionUtils.asList ( button, new GroupPane ( first, second ) );
+            final JButton group3 = new JButton ( WebLookAndFeel.getIcon ( 16 ) );
+            group3.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
+
+            return CollectionUtils.asList ( basic, new GroupPane ( group1, group2, group3 ) );
         }
     }
 }

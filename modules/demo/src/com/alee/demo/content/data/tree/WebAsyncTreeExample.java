@@ -17,61 +17,64 @@
 
 package com.alee.demo.content.data.tree;
 
-/**
- * @author Mikle Garin
- */
-
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.WebLafWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
+import com.alee.demo.content.SampleData;
+import com.alee.demo.content.data.tree.model.SampleNode;
+import com.alee.demo.content.data.tree.model.SampleObjectType;
+import com.alee.demo.content.data.tree.model.SampleTreeCellEditor;
 import com.alee.extended.tree.*;
-import com.alee.extended.tree.sample.SampleNode;
-import com.alee.extended.tree.sample.SampleNodeType;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
-import com.alee.utils.MathUtils;
-import com.alee.utils.ThreadUtils;
 
 import javax.swing.*;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * @author Mikle Garin
  */
-
-public class WebAsyncTreeExample extends AbstractExample
+public class WebAsyncTreeExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
-        return "webasynctree";
+        return "asynctree";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "tree";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.extended;
     }
 
+    @NotNull
     @Override
-    public String getWikiArticleName ()
+    public WikiPage getWikiPage ()
     {
-        return "How to use WebAsyncTree";
+        return new WebLafWikiPage ( "How to use WebAsyncTree" );
     }
 
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicTree basic = new BasicTree ( StyleId.tree );
-        final EditableTree editable = new EditableTree ( StyleId.tree );
-        final DragAndDropTree drag = new DragAndDropTree ( StyleId.tree );
-        return CollectionUtils.<Preview>asList ( basic, editable, drag );
+        return CollectionUtils.<Preview>asList (
+                new BasicTree ( StyleId.asynctree ),
+                new EditableTree ( StyleId.asynctree ),
+                new DragAndDropTree ( StyleId.asynctree )
+        );
     }
 
     /**
@@ -89,10 +92,12 @@ public class WebAsyncTreeExample extends AbstractExample
             super ( WebAsyncTreeExample.this, "basic", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final WebAsyncTree tree = new WebAsyncTree ( getStyleId (), createDataProvider () );
+            final AsyncTreeDataProvider<SampleNode> dataProvider = SampleData.createDelayingAsyncDataProvider ();
+            final WebAsyncTree tree = new WebAsyncTree ( getStyleId (), dataProvider );
             tree.setVisibleRowCount ( 8 );
             return CollectionUtils.asList ( new WebScrollPane ( tree ).setPreferredWidth ( 200 ) );
         }
@@ -113,12 +118,13 @@ public class WebAsyncTreeExample extends AbstractExample
             super ( WebAsyncTreeExample.this, "editable", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final WebAsyncTree tree = new WebAsyncTree ( getStyleId (), createDataProvider () );
+            final AsyncTreeDataProvider<SampleNode> dataProvider = SampleData.createDelayingAsyncDataProvider ();
+            final WebAsyncTree tree = new WebAsyncTree ( getStyleId (), dataProvider, new SampleTreeCellEditor () );
             tree.setVisibleRowCount ( 8 );
-            tree.setEditable ( true );
             return CollectionUtils.asList ( new WebScrollPane ( tree ).setPreferredWidth ( 200 ) );
         }
     }
@@ -138,23 +144,24 @@ public class WebAsyncTreeExample extends AbstractExample
             super ( WebAsyncTreeExample.this, "dragndrop", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final WebAsyncTree left = new WebAsyncTree ( getStyleId (), createDataProvider () );
+            final AsyncTreeDataProvider<SampleNode> leftDataProvider = SampleData.createDelayingAsyncDataProvider ();
+            final WebAsyncTree left = new WebAsyncTree ( getStyleId (), leftDataProvider, new SampleTreeCellEditor () );
             left.setVisibleRowCount ( 8 );
-            left.setEditable ( true );
-            left.setTransferHandler ( createTransferHandler () );
             left.setDragEnabled ( true );
             left.setDropMode ( DropMode.ON_OR_INSERT );
+            left.setTransferHandler ( createTransferHandler () );
             final WebScrollPane leftScroll = new WebScrollPane ( left ).setPreferredWidth ( 200 );
 
-            final WebAsyncTree right = new WebAsyncTree ( getStyleId (), createDataProvider () );
+            final AsyncTreeDataProvider<SampleNode> rightDataProvider = SampleData.createDelayingAsyncDataProvider ();
+            final WebAsyncTree right = new WebAsyncTree ( getStyleId (), rightDataProvider, new SampleTreeCellEditor () );
             right.setVisibleRowCount ( 8 );
-            right.setEditable ( true );
-            right.setTransferHandler ( createTransferHandler () );
             right.setDragEnabled ( true );
             right.setDropMode ( DropMode.ON_OR_INSERT );
+            right.setTransferHandler ( createTransferHandler () );
             final WebScrollPane rightScroll = new WebScrollPane ( right ).setPreferredWidth ( 200 );
 
             return CollectionUtils.asList ( leftScroll, rightScroll );
@@ -162,130 +169,63 @@ public class WebAsyncTreeExample extends AbstractExample
     }
 
     /**
-     * Returns sample tree data provider.
-     * It will provide all tree data we need instead of the model.
-     *
-     * @return sample tree data provider
-     */
-    protected static AsyncTreeDataProvider<SampleNode> createDataProvider ()
-    {
-        return new AbstractAsyncTreeDataProvider<SampleNode> ()
-        {
-            @Override
-            public SampleNode getRoot ()
-            {
-                return new SampleNode ( SampleNodeType.root, "Root" );
-            }
-
-            @Override
-            public void loadChildren ( final SampleNode parent, final ChildrenListener<SampleNode> listener )
-            {
-                // Creating virtual loading time
-                // This method is executed outside of EDT so it won't cause any issues
-                if ( parent.getType () != SampleNodeType.root )
-                {
-                    ThreadUtils.sleepSafely ( MathUtils.random ( 100, 2000 ) );
-                }
-
-                // Loading children
-                if ( parent.getTitle ().toLowerCase ( Locale.ROOT ).contains ( "fail" ) )
-                {
-                    listener.loadFailed ( new RuntimeException ( "Sample exception cause" ) );
-                }
-                else
-                {
-                    switch ( parent.getType () )
-                    {
-                        case root:
-                        {
-                            listener.loadCompleted ( createFolders () );
-                            break;
-                        }
-                        case folder:
-                        {
-                            listener.loadCompleted ( createLeafs () );
-                            break;
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public boolean isLeaf ( final SampleNode node )
-            {
-                return node.getType ().equals ( SampleNodeType.leaf );
-            }
-
-            /**
-             * Returns folder sample elements.
-             *
-             * @return folder sample elements
-             */
-            protected List<SampleNode> createFolders ()
-            {
-                final SampleNode folder1 = new SampleNode ( SampleNodeType.folder, "Folder 1" );
-                final SampleNode folder2 = new SampleNode ( SampleNodeType.folder, "Folder 2" );
-                final SampleNode folder3 = new SampleNode ( SampleNodeType.folder, "Folder 3" );
-                final SampleNode failFolder = new SampleNode ( SampleNodeType.folder, "Fail folder" );
-                return CollectionUtils.asList ( folder1, folder2, folder3, failFolder );
-            }
-
-            /**
-             * Returns leaf sample elements.
-             *
-             * @return leaf sample elements
-             */
-            protected List<SampleNode> createLeafs ()
-            {
-                final SampleNode leaf1 = new SampleNode ( SampleNodeType.leaf, "Leaf 1" );
-                final SampleNode leaf2 = new SampleNode ( SampleNodeType.leaf, "Leaf 2" );
-                final SampleNode leaf3 = new SampleNode ( SampleNodeType.leaf, "Leaf 3" );
-                return CollectionUtils.asList ( leaf1, leaf2, leaf3 );
-            }
-        };
-    }
-
-    /**
      * Returns sample tree transfer handler.
-     * It will provide base functionality of Drag & Drop for our sample tree.
+     * It will provide base functionality of DnD for our sample tree.
      *
      * @return sample extended tree transfer handler
      */
-    protected static AsyncTreeTransferHandler<SampleNode, WebAsyncTree<SampleNode>> createTransferHandler ()
+    protected static AsyncTreeTransferHandler<SampleNode, WebAsyncTree<SampleNode>, AsyncTreeModel<SampleNode>> createTransferHandler ()
     {
-        return new AsyncTreeTransferHandler<SampleNode, WebAsyncTree<SampleNode>> ()
+        return new AsyncTreeTransferHandler<SampleNode, WebAsyncTree<SampleNode>, AsyncTreeModel<SampleNode>> ()
         {
+            /**
+             * Forcing this {@link TransferHandler} to move nodes.
+             */
             @Override
-            protected List<TreeDropHandler<SampleNode, WebAsyncTree<SampleNode>>> createDropHandlers ()
+            public int getSourceActions ( final JComponent c )
             {
-                return CollectionUtils.<TreeDropHandler<SampleNode, WebAsyncTree<SampleNode>>>asList (
-                        new NodesDropHandler<SampleNode, WebAsyncTree<SampleNode>> ()
-                        {
-                            @Override
-                            protected boolean canBeDropped ( final WebAsyncTree<SampleNode> tree, final List<SampleNode> nodes,
-                                                             final SampleNode dropLocation, final int dropIndex )
-                            {
-                                return dropLocation.getType () != SampleNodeType.leaf;
-                            }
-                        } );
+                return MOVE;
             }
 
+            /**
+             * Blocks drop on {@link SampleObjectType#leaf} nodes.
+             */
             @Override
-            protected SampleNode copy ( final WebAsyncTree<SampleNode> tree, final SampleNode node )
+            protected List<? extends TreeDropHandler> createDropHandlers ()
             {
-                // We do not need to copy children as {@link com.alee.extended.tree.AsyncTreeDataProvider} will do that instead
-                // We only need to provide a copy of the specified node here
+                return CollectionUtils.asList ( new NodesDropHandler<SampleNode, WebAsyncTree<SampleNode>, AsyncTreeModel<SampleNode>> ()
+                {
+                    @Override
+                    protected boolean canDrop ( final TransferSupport support, final WebAsyncTree<SampleNode> tree,
+                                                final AsyncTreeModel<SampleNode> model, final SampleNode destination, final int dropIndex,
+                                                final List<SampleNode> nodes )
+                    {
+                        return destination.getUserObject ().getType () != SampleObjectType.leaf;
+                    }
+                } );
+            }
+
+            /**
+             * We do not need to copy children as {@link AsyncTreeDataProvider} will do that instead.
+             * We only need to provide a copy of the specified node here.
+             */
+            @Override
+            protected SampleNode copy ( final WebAsyncTree<SampleNode> tree, final AsyncTreeModel<SampleNode> model, final SampleNode node )
+            {
                 return node.clone ();
             }
 
+            /**
+             * Blocks root element drag.
+             */
             @Override
-            protected boolean canBeDragged ( final WebAsyncTree<SampleNode> tree, final List<SampleNode> nodes )
+            protected boolean canBeDragged ( final WebAsyncTree<SampleNode> tree, final AsyncTreeModel<SampleNode> model,
+                                             final List<SampleNode> nodes )
             {
-                // Blocking root drag
                 boolean allowed = true;
                 for ( final SampleNode node : nodes )
                 {
-                    if ( node.getType () == SampleNodeType.root )
+                    if ( node.getUserObject ().getType () == SampleObjectType.root )
                     {
                         allowed = false;
                         break;

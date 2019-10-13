@@ -17,29 +17,35 @@
 
 package com.alee.managers.tooltip;
 
-import com.alee.managers.language.data.TooltipWay;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.utils.swing.WebTimer;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 /**
  * Abstract WebLaF tooltip provider which defines base methods used across all components.
  *
+ * @param <V> value type
+ * @param <C> component type
+ * @param <A> component area type
  * @author Mikle Garin
  */
-
-public abstract class AbstractToolTipProvider<T extends JComponent> implements ToolTipProvider<T>
+public abstract class AbstractToolTipProvider<V, C extends JComponent, A extends ComponentArea<V, C>> implements ToolTipProvider<V, C, A>
 {
     /**
-     * Last displayed tooltip.
+     * Last displayed {@link WebCustomTooltip}.
      */
+    @Nullable
     private WebCustomTooltip tooltip;
 
     /**
-     * Delayed tooltip display timer.
+     * {@link WebTimer} used to display delayed tooltip display.
      */
+    @Nullable
     private WebTimer delayTimer;
 
     @Override
@@ -48,45 +54,34 @@ public abstract class AbstractToolTipProvider<T extends JComponent> implements T
         return TooltipManager.getDefaultDelay ();
     }
 
+    @Nullable
     @Override
-    public WebCustomTooltip getToolTip ( final T component, final Object value, final int index, final int column,
-                                         final boolean isSelected )
+    public Rectangle getSourceBounds ( @NotNull final C component, @NotNull final A area )
     {
-        final String text = getToolTipText ( component, value, index, column, isSelected );
-        final TooltipWay direction = getDirection ( component, value, index, column, isSelected );
-        return new WebCustomTooltip ( component, text, direction );
+        final Rectangle bounds = area.getBounds ( component );
+        return bounds != null ? bounds.intersection ( component.getVisibleRect () ) : null;
     }
 
-    /**
-     * Returns custom tooltip direction based on cell value.
-     *
-     * @param component  component to provide tooltip for
-     * @param value      cell value
-     * @param index      cell index
-     * @param column     cell column index
-     * @param isSelected whether the cell is selected or not
-     * @return custom tooltip direction based on cell value
-     */
-    public TooltipWay getDirection ( final T component, final Object value, final int index, final int column, final boolean isSelected )
+    @Nullable
+    @Override
+    public WebCustomTooltip getToolTip ( @NotNull final C component, @NotNull final A area )
     {
-        return TooltipWay.trailing;
+        final WebCustomTooltip tooltip;
+        final String text = getToolTipText ( component, area );
+        if ( text != null )
+        {
+            final TooltipWay direction = getDirection ( component, area );
+            tooltip = new WebCustomTooltip ( component, text, direction );
+        }
+        else
+        {
+            tooltip = null;
+        }
+        return tooltip;
     }
 
-    /**
-     * Returns custom cell tooltip text based on cell value.
-     *
-     * @param component  component to provide tooltip for
-     * @param value      cell value
-     * @param index      cell index
-     * @param column     cell column index
-     * @param isSelected whether the cell is selected or not
-     * @return custom cell tooltip text based on cell value
-     */
-    public abstract String getToolTipText ( final T component, final Object value, final int index, final int column,
-                                            final boolean isSelected );
-
     @Override
-    public void hoverCellChanged ( final T component, final int oldIndex, final int oldColumn, final int newIndex, final int newColumn )
+    public void hoverAreaChanged ( @NotNull final C component, @Nullable final A oldArea, @Nullable final A newArea )
     {
         // Close previously displayed tooltip
         if ( delayTimer != null )
@@ -99,12 +94,12 @@ public abstract class AbstractToolTipProvider<T extends JComponent> implements T
         }
 
         // Display or delay new tooltip if needed
-        if ( newIndex != -1 && newColumn != -1 )
+        if ( newArea != null )
         {
             final long delay = getDelay ();
             if ( delay <= 0 )
             {
-                showTooltip ( component, newIndex, newColumn );
+                showTooltip ( component, newArea );
             }
             else
             {
@@ -113,7 +108,7 @@ public abstract class AbstractToolTipProvider<T extends JComponent> implements T
                     @Override
                     public void actionPerformed ( final ActionEvent e )
                     {
-                        showTooltip ( component, newIndex, newColumn );
+                        showTooltip ( component, newArea );
                     }
                 } );
             }
@@ -121,45 +116,74 @@ public abstract class AbstractToolTipProvider<T extends JComponent> implements T
     }
 
     /**
-     * Displays custom tooltip for the specified component cell.
+     * Displays custom tooltip for the specified {@link ComponentArea}.
      *
-     * @param component component to display tooltip for
-     * @param index     cell index
-     * @param column    cell column index
+     * @param component {@link JComponent} to display tooltip for
+     * @param area      {@link ComponentArea}
      */
-    protected void showTooltip ( final T component, final int index, final int column )
+    protected void showTooltip ( @NotNull final C component, @NotNull final A area )
     {
-        // Retrieving information about cell
-        final Object value = getValue ( component, index, column );
-        final boolean selected = isSelected ( component, index, column );
-
-        // Retrieving tooltip component
-        tooltip = getToolTip ( component, value, index, column, selected );
-
-        // Updating tooltip bounds
-        tooltip.setRelativeToBounds ( getSourceBounds ( component, value, index, column, selected ) );
-
-        // Displaying one-time tooltip
-        TooltipManager.showOneTimeTooltip ( tooltip );
+        if ( isAvailable ( component, area ) )
+        {
+            final Rectangle sourceBounds = getSourceBounds ( component, area );
+            if ( sourceBounds != null )
+            {
+                final WebCustomTooltip toolTip = getToolTip ( component, area );
+                if ( toolTip != null )
+                {
+                    tooltip = toolTip;
+                    tooltip.setRelativeToBounds ( sourceBounds );
+                    TooltipManager.showOneTimeTooltip ( tooltip );
+                }
+            }
+        }
     }
 
     /**
-     * Returns component cell value under the specified index and column.
+     * Returns whether or not this {@link ComponentArea} is still available.
      *
-     * @param component component to retrieve cell value for
-     * @param index     cell index
-     * @param column    cell column index
-     * @return component cell value under the specified index and column
+     * @param component {@link JComponent}
+     * @param area      {@link ComponentArea}
+     * @return {@code true} if this {@link ComponentArea} is still available, {@code false} otherwise
      */
-    protected abstract Object getValue ( final T component, final int index, final int column );
+    protected boolean isAvailable ( @NotNull final C component, @NotNull final A area )
+    {
+        return area.isAvailable ( component );
+    }
 
     /**
-     * Returns whether or not component cell is selected.
+     * Returns value for the specified {@link ComponentArea}.
      *
-     * @param component component to retrieve cell selection state for
-     * @param index     cell index
-     * @param column    cell column index
-     * @return true if component cell is selected, false otherwise
+     * @param component {@link JComponent} to retrieve value from
+     * @param area      {@link ComponentArea}
+     * @return value for the specified {@link ComponentArea}
      */
-    protected abstract boolean isSelected ( final T component, final int index, final int column );
+    @Nullable
+    protected V getValue ( @NotNull final C component, @NotNull final A area )
+    {
+        return area.getValue ( component );
+    }
+
+    /**
+     * Returns tooltip direction based on value and {@link ComponentArea}.
+     *
+     * @param component {@link JComponent} to provide tooltip direction for
+     * @param area      {@link ComponentArea}
+     * @return tooltip direction based on value and {@link ComponentArea}
+     */
+    @NotNull
+    protected TooltipWay getDirection ( @NotNull final C component, @NotNull final A area )
+    {
+        return TooltipWay.trailing;
+    }
+
+    /**
+     * Returns tooltip text for the specified value and {@link ComponentArea}.
+     *
+     * @param component {@link JComponent} to provide tooltip for
+     * @param area      {@link ComponentArea}
+     * @return tooltip text for the specified value and {@link ComponentArea}
+     */
+    @Nullable
+    protected abstract String getToolTipText ( @NotNull C component, @NotNull A area );
 }

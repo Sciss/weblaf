@@ -20,14 +20,16 @@ package com.alee.managers.notification;
 import com.alee.extended.image.WebImage;
 import com.alee.extended.layout.HorizontalFlowLayout;
 import com.alee.extended.panel.AlignPanel;
+import com.alee.extended.window.PopupAdapter;
+import com.alee.extended.window.WebPopup;
+import com.alee.extended.window.WebPopupWindow;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
-import com.alee.managers.popup.PopupAdapter;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 import com.alee.utils.SwingUtils;
-import com.alee.extended.window.WebPopup;
+import com.alee.utils.collection.ImmutableList;
 import com.alee.utils.swing.WebTimer;
 
 import javax.swing.*;
@@ -37,20 +39,19 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
  * Custom popup used to display notifications in separate windows.
  *
+ * @param <T> {@link WebNotification} type
  * @author Mikle Garin
  * @see com.alee.managers.notification.NotificationManager
  * @see com.alee.managers.notification.NotificationIcon
  * @see com.alee.managers.notification.NotificationOption
  * @see com.alee.extended.window.WebPopup
  */
-
-public class WebNotification extends WebPopup
+public class WebNotification<T extends WebNotification<T>> extends WebPopup<T>
 {
     /**
      * Notification popup listeners.
@@ -130,14 +131,7 @@ public class WebNotification extends WebPopup
     public WebNotification ( final StyleId styleId )
     {
         super ( styleId );
-        initializeNotificationPopup ();
-    }
 
-    /**
-     * Initializes various notification popup settings.
-     */
-    protected void initializeNotificationPopup ()
-    {
         setAlwaysOnTop ( true );
         setCloseOnOuterAction ( false );
         setLayout ( new BorderLayout ( 15, 5 ) );
@@ -266,7 +260,7 @@ public class WebNotification extends WebPopup
      */
     protected void updateIcon ()
     {
-        iconImage.setIcon ( icon );
+        iconImage.setImage ( icon );
         if ( icon != null )
         {
             if ( !contains ( westPanel ) )
@@ -357,7 +351,7 @@ public class WebNotification extends WebPopup
      */
     public void setOptions ( final NotificationOption... options )
     {
-        setOptions ( Arrays.asList ( options ) );
+        setOptions ( CollectionUtils.asList ( options ) );
     }
 
     /**
@@ -377,7 +371,7 @@ public class WebNotification extends WebPopup
     protected void updateOptionButtons ()
     {
         optionsPanel.removeAll ();
-        if ( !CollectionUtils.isEmpty ( options ) )
+        if ( CollectionUtils.notEmpty ( options ) )
         {
             for ( final NotificationOption option : options )
             {
@@ -398,7 +392,7 @@ public class WebNotification extends WebPopup
             }
             if ( equalizeButtonWidths )
             {
-                final List<String> properties = Arrays.asList ( AbstractButton.TEXT_CHANGED_PROPERTY );
+                final List<String> properties = new ImmutableList<String> ( AbstractButton.TEXT_CHANGED_PROPERTY );
                 SwingUtils.equalizeComponentsWidth ( properties, optionsPanel.getComponents () );
             }
             if ( !contains ( southPanel ) )
@@ -519,7 +513,7 @@ public class WebNotification extends WebPopup
     }
 
     @Override
-    public JWindow pack ()
+    public WebPopupWindow pack ()
     {
         if ( window != null )
         {

@@ -6,17 +6,18 @@ import com.alee.painter.Painter;
 import javax.swing.*;
 
 /**
- * Simple SliderPainter adapter class.
- * It is used to install simple non-specific painters into WebSliderUI.
+ * Simple {@link SliderPainter} adapter class.
+ * It is used to install simple non-specific painters into {@link WebSliderUI}.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Alexandr Zernov
  */
-
-public final class AdaptiveSliderPainter<E extends JSlider, U extends WebSliderUI> extends AdaptivePainter<E, U>
-        implements ISliderPainter<E, U>
+public final class AdaptiveSliderPainter<C extends JSlider, U extends WebSliderUI> extends AdaptivePainter<C, U>
+        implements ISliderPainter<C, U>
 {
     /**
-     * Constructs new AdaptiveSliderPainter for the specified painter.
+     * Constructs new {@link AdaptiveSliderPainter} for the specified painter.
      *
      * @param painter painter to adapt
      */

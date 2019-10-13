@@ -7,17 +7,18 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Simple CheckBoxPainter adapter class.
- * It is used to install simple non-specific painters into WebCheckBoxUI.
+ * Simple {@link CheckBoxPainter} adapter class.
+ * It is used to install simple non-specific painters into {@link WCheckBoxUI}.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Alexandr Zernov
  */
-
-public final class AdaptiveCheckBoxPainter<E extends JCheckBox, U extends WebCheckBoxUI> extends AdaptivePainter<E, U>
-        implements ICheckBoxPainter<E, U>
+public final class AdaptiveCheckBoxPainter<C extends JCheckBox, U extends WCheckBoxUI<C>>
+        extends AdaptivePainter<C, U> implements ICheckBoxPainter<C, U>
 {
     /**
-     * Constructs new AdaptiveCheckBoxPainter for the specified painter.
+     * Constructs new {@link AdaptiveCheckBoxPainter} for the specified painter.
      *
      * @param painter painter to adapt
      */
@@ -27,7 +28,7 @@ public final class AdaptiveCheckBoxPainter<E extends JCheckBox, U extends WebChe
     }
 
     @Override
-    public Rectangle getIconRect ()
+    public Rectangle getIconBounds ()
     {
         return null;
     }

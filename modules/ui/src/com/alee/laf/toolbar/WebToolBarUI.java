@@ -17,28 +17,39 @@
 
 package com.alee.laf.toolbar;
 
-import com.alee.laf.rootpane.WebDialog;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.api.jdk.Consumer;
+import com.alee.api.jdk.Objects;
+import com.alee.laf.WebLookAndFeel;
+import com.alee.laf.window.WebDialog;
 import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
+import com.alee.utils.CoreSwingUtils;
 import com.alee.utils.ProprietaryUtils;
-import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
 import javax.swing.plaf.basic.BasicToolBarUI;
 import java.awt.*;
 import java.awt.event.WindowListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 
 /**
+ * Custom UI for {@link JToolBar} component.
+ *
  * @author Mikle Garin
  * @author Alexandr Zernov
  */
-
-public class WebToolBarUI extends BasicToolBarUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebToolBarUI extends BasicToolBarUI implements ShapeSupport, MarginSupport, PaddingSupport
 {
+    /**
+     * todo 1. Restore toolbar element focus upon floating mode enter/exit
+     */
+
     /**
      * Component painter.
      */
@@ -46,29 +57,17 @@ public class WebToolBarUI extends BasicToolBarUI implements Styleable, ShapeProv
     protected IToolBarPainter painter;
 
     /**
-     * Runtime variables.
-     */
-    protected Insets margin = null;
-    protected Insets padding = null;
-
-    /**
-     * Returns an instance of the WebButtonUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebToolBarUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebButtonUI
+     * @return instance of the {@link WebToolBarUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebToolBarUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
     public void installUI ( final JComponent c )
     {
@@ -79,11 +78,6 @@ public class WebToolBarUI extends BasicToolBarUI implements Styleable, ShapeProv
         StyleManager.installSkin ( toolBar );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
     public void uninstallUI ( final JComponent c )
     {
@@ -93,53 +87,106 @@ public class WebToolBarUI extends BasicToolBarUI implements Styleable, ShapeProv
         // Uninstalling UI
         super.uninstallUI ( c );
 
-        // Swing doesn't cleanup this value in some versions
-        // So we will give a hand here and simply nullify it
+        // Swing doesn't cleanup this value so we do instead
         toolBar = null;
     }
 
+    /**
+     * Overridden to skip unnecessary operations.
+     */
     @Override
-    public StyleId getStyleId ()
+    protected PropertyChangeListener createPropertyListener ()
     {
-        return StyleManager.getStyleId ( toolBar );
+        return new PropertyChangeListener ()
+        {
+            @Override
+            public void propertyChange ( final PropertyChangeEvent evt )
+            {
+                propertyChanged ( evt.getPropertyName (), evt.getOldValue (), evt.getNewValue () );
+            }
+        };
     }
 
-    @Override
-    public StyleId setStyleId ( final StyleId id )
+    /**
+     * Informs about {@link #toolBar} property changes.
+     *
+     * @param property modified property
+     * @param oldValue old property value
+     * @param newValue new property value
+     */
+    protected void propertyChanged ( final String property, final Object oldValue, final Object newValue )
     {
-        return StyleManager.setStyleId ( toolBar, id );
+        if ( Objects.equals ( property, WebLookAndFeel.ORIENTATION_PROPERTY ) )
+        {
+            /**
+             * Search for {@link JSeparator} components and change their
+             * orientation to match the toolbar and flip it's orientation.
+             */
+            final int orientation = ( Integer ) newValue;
+            for ( final Component component : toolBar.getComponents () )
+            {
+                if ( component instanceof JToolBar.Separator )
+                {
+                    final JToolBar.Separator separator = ( JToolBar.Separator ) component;
+
+                    // Flipping separator orientation
+                    separator.setOrientation ( orientation == JToolBar.HORIZONTAL ? JSeparator.VERTICAL : JSeparator.HORIZONTAL );
+
+                    // Flipping separator size
+                    final Dimension size = separator.getSeparatorSize ();
+                    if ( size != null && size.width != size.height )
+                    {
+                        final Dimension newSize = new Dimension ( size.height, size.width );
+                        separator.setSeparatorSize ( newSize );
+                    }
+                }
+            }
+        }
     }
 
+    @NotNull
     @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( toolBar, painter );
     }
 
     @Override
-    public Insets getMargin ()
+    public boolean isShapeDetectionEnabled ()
     {
-        return margin;
+        return PainterSupport.isShapeDetectionEnabled ( toolBar, painter );
     }
 
     @Override
-    public void setMargin ( final Insets margin )
+    public void setShapeDetectionEnabled ( final boolean enabled )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setShapeDetectionEnabled ( toolBar, painter, enabled );
     }
 
+    @Nullable
+    @Override
+    public Insets getMargin ()
+    {
+        return PainterSupport.getMargin ( toolBar );
+    }
+
+    @Override
+    public void setMargin ( @Nullable final Insets margin )
+    {
+        PainterSupport.setMargin ( toolBar, margin );
+    }
+
+    @Nullable
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( toolBar );
     }
 
     @Override
-    public void setPadding ( final Insets padding )
+    public void setPadding ( @Nullable final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( toolBar, padding );
     }
 
     /**
@@ -149,7 +196,7 @@ public class WebToolBarUI extends BasicToolBarUI implements Styleable, ShapeProv
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -160,10 +207,10 @@ public class WebToolBarUI extends BasicToolBarUI implements Styleable, ShapeProv
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( toolBar, new DataRunnable<IToolBarPainter> ()
+        PainterSupport.setPainter ( toolBar, this, new Consumer<IToolBarPainter> ()
         {
             @Override
-            public void run ( final IToolBarPainter newPainter )
+            public void accept ( final IToolBarPainter newPainter )
             {
                 WebToolBarUI.this.painter = newPainter;
             }
@@ -171,11 +218,29 @@ public class WebToolBarUI extends BasicToolBarUI implements Styleable, ShapeProv
     }
 
     @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
+    }
+
+    @Override
+    public int getBaseline ( final JComponent c, final int width, final int height )
+    {
+        return PainterSupport.getBaseline ( c, this, painter, width, height );
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
+    {
+        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+    }
+
+    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 
@@ -190,7 +255,7 @@ public class WebToolBarUI extends BasicToolBarUI implements Styleable, ShapeProv
     protected RootPaneContainer createFloatingWindow ( final JToolBar toolbar )
     {
         final JDialog dialog;
-        final Window window = SwingUtils.getWindowAncestor ( toolbar );
+        final Window window = CoreSwingUtils.getWindowAncestor ( toolbar );
         if ( window instanceof Frame )
         {
             dialog = new ToolBarDialog ( ( Frame ) window, toolbar.getName () );

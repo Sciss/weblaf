@@ -17,14 +17,22 @@
 
 package com.alee.managers.popup;
 
+import com.alee.api.jdk.Supplier;
+import com.alee.extended.window.Popup;
+import com.alee.extended.window.PopupListener;
+import com.alee.extended.window.PopupMethods;
+import com.alee.extended.window.PopupMethodsImpl;
 import com.alee.laf.panel.WebPanel;
 import com.alee.managers.focus.DefaultFocusTracker;
 import com.alee.managers.focus.FocusManager;
 import com.alee.managers.style.StyleId;
-import com.alee.utils.CollectionUtils;
+import com.alee.utils.CoreSwingUtils;
 import com.alee.utils.GraphicsUtils;
 import com.alee.utils.SwingUtils;
-import com.alee.utils.swing.*;
+import com.alee.utils.swing.AncestorAdapter;
+import com.alee.utils.swing.NoOpMouseListener;
+import com.alee.utils.swing.FadeStateType;
+import com.alee.utils.swing.WebTimer;
 
 import javax.swing.*;
 import javax.swing.event.AncestorEvent;
@@ -44,11 +52,8 @@ import java.util.List;
  * @see com.alee.managers.popup.PopupManager
  * @see com.alee.managers.popup.PopupLayer
  */
-
-public class WebInnerPopup extends WebPanel
+public class WebInnerPopup extends WebPanel implements Popup, PopupMethods
 {
-    protected List<PopupListener> popupListeners = new ArrayList<PopupListener> ( 2 );
-
     // Popup constants
     protected static final int fadeFps = 24;
     protected static final long fadeTime = 400;
@@ -93,7 +98,7 @@ public class WebInnerPopup extends WebPanel
         setFocusCycleRoot ( true );
 
         // Listeners to block events passing to underlying components
-        EmptyMouseAdapter.install ( this );
+        NoOpMouseListener.install ( this );
 
         // Fade in-out timer
         fadeTimer = new WebTimer ( "WebPopup.fade", 1000 / fadeFps );
@@ -175,14 +180,8 @@ public class WebInnerPopup extends WebPanel
         } );
 
         // Focus tracking
-        focusTracker = new DefaultFocusTracker ( true )
+        focusTracker = new DefaultFocusTracker ( this, true )
         {
-            @Override
-            public boolean isTrackingEnabled ()
-            {
-                return WebInnerPopup.this.isShowing ();
-            }
-
             @Override
             public void focusChanged ( final boolean focused )
             {
@@ -200,7 +199,7 @@ public class WebInnerPopup extends WebPanel
      */
     protected void focusChanged ( final boolean focused )
     {
-        // todo Replace with MultiFocusTracker (for multiply components)
+        // todo Replace with MultiFocusTracker (for multiple components)
         if ( WebInnerPopup.this.isShowing () && !focused && !isChildFocused () && closeOnFocusLoss )
         {
             hidePopup ();
@@ -327,14 +326,14 @@ public class WebInnerPopup extends WebPanel
 
     public void showAsPopupMenu ( final Component component )
     {
-        showPopup ( component, new DataProvider<Rectangle> ()
+        showPopup ( component, new Supplier<Rectangle> ()
         {
             @Override
-            public Rectangle provide ()
+            public Rectangle get ()
             {
                 // Determining component position inside window
-                final Rectangle cb = SwingUtils.getBoundsInWindow ( component );
-                final Dimension rps = SwingUtils.getRootPane ( component ).getSize ();
+                final Rectangle cb = CoreSwingUtils.getBoundsInWindow ( component );
+                final Dimension rps = CoreSwingUtils.getRootPane ( component ).getSize ();
                 final Dimension ps = WebInnerPopup.this.getPreferredSize ();
                 //        Painter bp = getPainter ();
                 //        Insets bm = bp != null ? bp.getMargin ( this ) : new Insets ( 0, 0, 0, 0 );
@@ -393,10 +392,10 @@ public class WebInnerPopup extends WebPanel
 
     public void showPopup ( final Component component, final int x, final int y )
     {
-        showPopup ( component, new DataProvider<Rectangle> ()
+        showPopup ( component, new Supplier<Rectangle> ()
         {
             @Override
-            public Rectangle provide ()
+            public Rectangle get ()
             {
                 final Dimension ps = WebInnerPopup.this.getPreferredSize ();
                 return new Rectangle ( x, y, ps.width, ps.height );
@@ -404,11 +403,11 @@ public class WebInnerPopup extends WebPanel
         } );
     }
 
-    public void showPopup ( final Component component, final DataProvider<Rectangle> boundsProvider )
+    public void showPopup ( final Component component, final Supplier<Rectangle> boundsSupplier )
     {
-        updatePopupBounds ( component, boundsProvider.provide () );
+        updatePopupBounds ( component, boundsSupplier.get () );
         PopupManager.showPopup ( component, this, requestFocusOnShow );
-        updateLocationListeners ( component, boundsProvider );
+        updateLocationListeners ( component, boundsSupplier );
     }
 
     protected void updatePopupBounds ( final Component component, final Rectangle bounds )
@@ -421,7 +420,7 @@ public class WebInnerPopup extends WebPanel
         // Updating popup bounds with component-relative values
         if ( component.isShowing () )
         {
-            final Rectangle cb = SwingUtils.getBoundsInWindow ( component );
+            final Rectangle cb = CoreSwingUtils.getBoundsInWindow ( component );
             setBounds ( cb.x + x, cb.y + y, width, height );
             revalidate ();
             repaint ();
@@ -448,7 +447,7 @@ public class WebInnerPopup extends WebPanel
         }
     }
 
-    protected void updateLocationListeners ( final Component component, final DataProvider<Rectangle> boundsProvider )
+    protected void updateLocationListeners ( final Component component, final Supplier<Rectangle> boundsSupplier )
     {
         clearLocationListeners ();
 
@@ -459,13 +458,13 @@ public class WebInnerPopup extends WebPanel
             @Override
             public void componentResized ( final ComponentEvent e )
             {
-                updatePopupBounds ( component, boundsProvider.provide () );
+                updatePopupBounds ( component, boundsSupplier.get () );
             }
 
             @Override
             public void componentMoved ( final ComponentEvent e )
             {
-                updatePopupBounds ( component, boundsProvider.provide () );
+                updatePopupBounds ( component, boundsSupplier.get () );
             }
         };
         lastComponent.addComponentListener ( lastComponentListener );
@@ -477,7 +476,7 @@ public class WebInnerPopup extends WebPanel
                 @Override
                 public void ancestorMoved ( final AncestorEvent event )
                 {
-                    updatePopupBounds ( component, boundsProvider.provide () );
+                    updatePopupBounds ( component, boundsSupplier.get () );
                 }
             };
             ( ( JComponent ) lastComponent ).addAncestorListener ( lastAncestorListener );
@@ -569,50 +568,88 @@ public class WebInnerPopup extends WebPanel
     @Override
     public boolean contains ( final int x, final int y )
     {
-        return fadeStateType != FadeStateType.fadeOut && provideShape ().contains ( x, y );
+        return fadeStateType != FadeStateType.fadeOut && getShape ().contains ( x, y );
     }
 
     /**
      * Popup listeners
      */
 
+    @Override
     public void addPopupListener ( final PopupListener listener )
     {
-        popupListeners.add ( listener );
+        listenerList.add ( PopupListener.class, listener );
     }
 
+    @Override
     public void removePopupListener ( final PopupListener listener )
     {
-        popupListeners.remove ( listener );
+        listenerList.remove ( PopupListener.class, listener );
     }
 
+    @Override
+    public PopupListener beforePopupOpen ( final Runnable action )
+    {
+        return PopupMethodsImpl.beforePopupOpen ( this, action );
+    }
+
+    @Override
+    public PopupListener onPopupOpen ( final Runnable action )
+    {
+        return PopupMethodsImpl.onPopupOpen ( this, action );
+    }
+
+    @Override
+    public PopupListener beforePopupClose ( final Runnable action )
+    {
+        return PopupMethodsImpl.beforePopupClose ( this, action );
+    }
+
+    @Override
+    public PopupListener onPopupClose ( final Runnable action )
+    {
+        return PopupMethodsImpl.onPopupClose ( this, action );
+    }
+
+    /**
+     * Notifies listeners that popup will now be opened.
+     */
     public void firePopupWillBeOpened ()
     {
-        for ( final PopupListener listener : CollectionUtils.copy ( popupListeners ) )
+        for ( final PopupListener listener : listenerList.getListeners ( PopupListener.class ) )
         {
             listener.popupWillBeOpened ();
         }
     }
 
+    /**
+     * Notifies listeners that popup was opened.
+     */
     public void firePopupOpened ()
     {
-        for ( final PopupListener listener : CollectionUtils.copy ( popupListeners ) )
+        for ( final PopupListener listener : listenerList.getListeners ( PopupListener.class ) )
         {
             listener.popupOpened ();
         }
     }
 
+    /**
+     * Notifies listeners that popup will now be closed.
+     */
     public void firePopupWillBeClosed ()
     {
-        for ( final PopupListener listener : CollectionUtils.copy ( popupListeners ) )
+        for ( final PopupListener listener : listenerList.getListeners ( PopupListener.class ) )
         {
             listener.popupWillBeClosed ();
         }
     }
 
+    /**
+     * Notifies listeners that popup was closed.
+     */
     public void firePopupClosed ()
     {
-        for ( final PopupListener listener : CollectionUtils.copy ( popupListeners ) )
+        for ( final PopupListener listener : listenerList.getListeners ( PopupListener.class ) )
         {
             listener.popupClosed ();
         }

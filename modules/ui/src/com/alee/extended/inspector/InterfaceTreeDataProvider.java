@@ -17,27 +17,34 @@
 
 package com.alee.extended.inspector;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.extended.tree.AbstractExTreeDataProvider;
+import com.alee.utils.compare.Filter;
 
+import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Data provider implementation for {@link InterfaceTree}.
+ *
  * @author Mikle Garin
  */
-
-public class InterfaceTreeDataProvider extends AbstractExTreeDataProvider<InterfaceTreeNode>
+public class InterfaceTreeDataProvider extends AbstractExTreeDataProvider<InterfaceTreeNode> implements Filter<Component>
 {
     /**
      * Interface components tree.
      */
-    private final InterfaceTree tree;
+    @NotNull
+    protected final InterfaceTree tree;
 
     /**
      * Interface root component.
      */
-    private final Component inspected;
+    @Nullable
+    protected final Component inspected;
 
     /**
      * Constructs interface tree data provider for the specified interface root component.
@@ -45,34 +52,64 @@ public class InterfaceTreeDataProvider extends AbstractExTreeDataProvider<Interf
      * @param tree      interface tree
      * @param inspected interface root component
      */
-    public InterfaceTreeDataProvider ( final InterfaceTree tree, final Component inspected )
+    public InterfaceTreeDataProvider ( @NotNull final InterfaceTree tree, @Nullable final Component inspected )
     {
-        super ();
         this.tree = tree;
         this.inspected = inspected;
+        setChildrenComparator ( new InterfaceTreeNodeComparator () );
     }
 
+    @NotNull
     @Override
     public InterfaceTreeNode getRoot ()
     {
         return new InterfaceTreeNode ( tree, inspected );
     }
 
+    @NotNull
     @Override
-    public List<InterfaceTreeNode> getChildren ( final InterfaceTreeNode node )
+    public List<InterfaceTreeNode> getChildren ( @NotNull final InterfaceTreeNode parent )
     {
-        final Container component = ( Container ) node.getComponent ();
-        final List<InterfaceTreeNode> nodes = new ArrayList<InterfaceTreeNode> ( component.getComponentCount () );
-        for ( int i = 0; i < component.getComponentCount (); i++ )
+        final List<InterfaceTreeNode> nodes;
+        final Component component = parent.getUserObject ();
+        if ( component == null )
         {
-            nodes.add ( new InterfaceTreeNode ( tree, component.getComponent ( i ) ) );
+            final Window[] windows = Window.getWindows ();
+            nodes = new ArrayList<InterfaceTreeNode> ( windows.length );
+            for ( final Window window : windows )
+            {
+                if ( window.isShowing () )
+                {
+                    nodes.add ( new InterfaceTreeNode ( tree, window ) );
+                }
+            }
+        }
+        else
+        {
+            if ( component instanceof Container && !( component instanceof CellRendererPane ) )
+            {
+                final Container container = ( Container ) component;
+                nodes = new ArrayList<InterfaceTreeNode> ( container.getComponentCount () );
+                for ( int i = 0; i < container.getComponentCount (); i++ )
+                {
+                    final Component child = container.getComponent ( i );
+                    if ( accept ( child ) )
+                    {
+                        nodes.add ( new InterfaceTreeNode ( tree, child ) );
+                    }
+                }
+            }
+            else
+            {
+                nodes = new ArrayList<InterfaceTreeNode> ( 0 );
+            }
         }
         return nodes;
     }
 
     @Override
-    public boolean isLeaf ( final InterfaceTreeNode node )
+    public boolean accept ( @Nullable final Component component )
     {
-        return !( node.getComponent () instanceof Container ) || ( ( Container ) node.getComponent () ).getComponentCount () == 0;
+        return !( component instanceof ComponentHighlighter );
     }
 }

@@ -17,18 +17,19 @@
 
 package com.alee.laf.menu;
 
+import com.alee.painter.SpecificPainter;
+
 import javax.swing.*;
 import java.awt.*;
 
 /**
- * Base interface for JPopupMenu component painters.
+ * Base interface for {@link JPopupMenu} component painters.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @author Mikle Garin
  */
-
-public interface IPopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> extends IPopupPainter<E, U>
+public interface IPopupMenuPainter<C extends JPopupMenu, U extends WPopupMenuUI> extends SpecificPainter<C, U>
 {
     /**
      * Prepares popup menu to be displayed.
@@ -41,7 +42,7 @@ public interface IPopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuU
      * @param y         screen y location actual popup is to be shown at
      * @return modified popup display location
      */
-    public Point preparePopupMenu ( E popupMenu, Component invoker, int x, int y );
+    public Point preparePopupMenu ( C popupMenu, Component invoker, int x, int y );
 
     /**
      * Configures created popup to be displayed.
@@ -53,5 +54,5 @@ public interface IPopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuU
      * @param y         screen y location actual popup is to be shown at
      * @param popup     popup to be configured
      */
-    public void configurePopup ( E popupMenu, Component invoker, int x, int y, Popup popup );
+    public void configurePopup ( C popupMenu, Component invoker, int x, int y, Popup popup );
 }

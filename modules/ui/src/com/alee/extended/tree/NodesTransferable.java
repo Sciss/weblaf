@@ -18,7 +18,7 @@
 package com.alee.extended.tree;
 
 import com.alee.laf.tree.UniqueNode;
-import com.alee.managers.log.Log;
+import org.slf4j.LoggerFactory;
 
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -32,7 +32,6 @@ import java.util.List;
  * @param <N> nodes type
  * @author Mikle Garin
  */
-
 public class NodesTransferable<N extends UniqueNode> implements Transferable, Serializable
 {
     /**
@@ -48,7 +47,7 @@ public class NodesTransferable<N extends UniqueNode> implements Transferable, Se
         }
         catch ( final ClassNotFoundException e )
         {
-            Log.error ( NodesTransferable.class, e );
+            LoggerFactory.getLogger ( NodesTransferable.class ).error ( e.toString (), e );
         }
     }
 

@@ -17,30 +17,44 @@
 
 package com.alee.laf.tree;
 
-import com.alee.api.ColorSupport;
-import com.alee.api.IconSupport;
-import com.alee.api.TitleSupport;
+import com.alee.api.annotations.Nullable;
+import com.alee.api.jdk.Objects;
+import com.alee.api.ui.*;
 import com.alee.extended.label.WebStyledLabel;
+import com.alee.laf.WebLookAndFeel;
+import com.alee.managers.icon.Icons;
+import com.alee.managers.style.ChildStyleId;
 import com.alee.managers.style.StyleId;
+import com.alee.painter.decoration.AbstractDecorationPainter;
+import com.alee.painter.decoration.DecorationState;
+import com.alee.painter.decoration.DecorationUtils;
+import com.alee.painter.decoration.Stateful;
 import com.alee.utils.ImageUtils;
 import com.alee.utils.TextUtils;
 
 import javax.swing.*;
+import javax.swing.plaf.TreeUI;
+import javax.swing.plaf.basic.BasicHTML;
 import javax.swing.tree.TreeCellRenderer;
+import javax.swing.tree.TreeNode;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Custom default tree cell renderer for WebLookAndFeel.
+ * Default {@link TreeCellRenderer} implementation based on {@link WebStyledLabel}.
+ * Unlike {@link javax.swing.tree.DefaultTreeCellRenderer} it has generics for node and tree types.
+ * It also contains multiple methods for convenient renderer customization that can be overridden.
+ * And since it is based on {@link WebStyledLabel} it retains all of its extra features.
  *
+ * @param <N> {@link TreeNode} type
+ * @param <C> {@link JTree} type
+ * @param <P> {@link TreeNodeParameters} type
  * @author Mikle Garin
  */
-
-public class WebTreeCellRenderer extends WebStyledLabel implements TreeCellRenderer
+public class WebTreeCellRenderer<N extends TreeNode, C extends JTree, P extends TreeNodeParameters<N, C>>
+        extends WebStyledLabel implements TreeCellRenderer, Stateful
 {
-    /**
-     * todo 1. Implement Stateful to provide
-     */
-
     /**
      * Renderer ID prefix.
      */
@@ -49,311 +63,458 @@ public class WebTreeCellRenderer extends WebStyledLabel implements TreeCellRende
     /**
      * Renderer unique ID used to cache tree icons.
      */
-    protected String id;
+    protected final String id;
 
     /**
-     * Icon used to show non-leaf nodes that are expanded.
+     * Additional renderer decoration states.
      */
-    protected ImageIcon rootIcon = WebTreeUI.ROOT_ICON;
+    protected final List<String> states;
 
     /**
-     * Icon used to show non-leaf nodes that are expanded.
-     */
-    protected ImageIcon openIcon = WebTreeUI.OPEN_ICON;
-
-    /**
-     * Icon used to show non-leaf nodes that aren't expanded.
-     */
-    protected ImageIcon closedIcon = WebTreeUI.CLOSED_ICON;
-
-    /**
-     * Icon used to show leaf nodes.
-     */
-    protected ImageIcon leafIcon = WebTreeUI.LEAF_ICON;
-
-    /**
-     * Constructs default tree cell renderer.
+     * Constructs new {@link WebTreeCellRenderer}.
      */
     public WebTreeCellRenderer ()
     {
         super ();
-        setId ();
         setName ( "Tree.cellRenderer" );
+        id = TextUtils.generateId ( ID_PREFIX );
+        states = new ArrayList<String> ( 5 );
     }
 
-    /**
-     * Setup unique renderer ID.
-     */
-    private void setId ()
+    @Nullable
+    @Override
+    public List<String> getStates ()
     {
-        this.id = TextUtils.generateId ( ID_PREFIX );
+        return states;
     }
 
     /**
-     * Returns tree cell renderer component.
+     * Updates custom renderer states based on render cycle settings.
      *
-     * @param tree       tree
-     * @param value      cell value
-     * @param isSelected whether cell is selected or not
-     * @param expanded   whether cell is expanded or not
-     * @param leaf       whether cell is leaf or not
-     * @param row        cell row number
-     * @param hasFocus   whether cell has focus or not
-     * @return cell renderer component
+     * @param parameters {@link TreeNodeParameters}
+     */
+    protected void updateStates ( final P parameters )
+    {
+        // Resetting states
+        states.clear ();
+
+        // Selection state
+        states.add ( parameters.isSelected () ? DecorationState.selected : DecorationState.unselected );
+
+        // Expansion state
+        states.add ( parameters.isExpanded () ? DecorationState.expanded : DecorationState.collapsed );
+
+        // Focus state
+        if ( parameters.isFocused () )
+        {
+            states.add ( DecorationState.focused );
+        }
+
+        // Leaf state
+        if ( parameters.isLeaf () )
+        {
+            states.add ( DecorationState.leaf );
+        }
+
+        // Hover state
+        final TreeUI ui = parameters.tree ().getUI ();
+        if ( ui instanceof WTreeUI )
+        {
+            if ( ( ( WTreeUI ) ui ).getHoverRow () == parameters.row () )
+            {
+                states.add ( DecorationState.hover );
+            }
+        }
+
+        // Extra states provided by node
+        states.addAll ( DecorationUtils.getExtraStates ( parameters.node () ) );
+    }
+
+    /**
+     * Updates renderer component style identifier.
+     *
+     * @param parameters {@link TreeNodeParameters}
+     */
+    protected void updateStyleId ( final P parameters )
+    {
+        StyleId id = null;
+        if ( parameters.node () instanceof ChildStyleIdBridge )
+        {
+            final ChildStyleIdBridge childStyleIdBridge = ( ChildStyleIdBridge ) parameters.node ();
+            final ChildStyleId childStyleId = childStyleIdBridge.getChildStyleId ( parameters );
+            if ( childStyleId != null )
+            {
+                id = childStyleId.at ( parameters.tree () );
+            }
+        }
+        else if ( parameters.node () instanceof StyleIdBridge )
+        {
+            final StyleIdBridge styleIdBridge = ( StyleIdBridge ) parameters.node ();
+            final StyleId styleId = styleIdBridge.getStyleId ( parameters );
+            if ( styleId != null )
+            {
+                id = styleId;
+            }
+        }
+        if ( id == null )
+        {
+            id = StyleId.treeCellRenderer.at ( parameters.tree () );
+        }
+        setStyleId ( id );
+    }
+
+    /**
+     * Updating renderer based on the provided settings.
+     *
+     * @param parameters {@link TreeNodeParameters}
+     */
+    protected void updateView ( final P parameters )
+    {
+        setEnabled ( enabledForValue ( parameters ) );
+        setComponentOrientation ( orientationForValue ( parameters ) );
+        setFont ( fontForValue ( parameters ) );
+        setForeground ( foregroundForValue ( parameters ) );
+        setIcon ( iconForValue ( parameters ) );
+        setText ( textForValue ( parameters ) );
+    }
+
+    /**
+     * Returns whether or not renderer for the specified {@link TreeNode} should be enabled.
+     *
+     * @param parameters {@link TreeNodeParameters}
+     * @return {@code true} if renderer for the specified {@link TreeNode} should be enabled, {@code false} otherwise
+     */
+    protected boolean enabledForValue ( final P parameters )
+    {
+        return parameters.tree ().isEnabled ();
+    }
+
+    /**
+     * Returns renderer {@link ComponentOrientation} for the specified {@link TreeNode}.
+     *
+     * @param parameters {@link TreeNodeParameters}
+     * @return renderer {@link ComponentOrientation} for the specified {@link TreeNode}
+     */
+    protected ComponentOrientation orientationForValue ( final P parameters )
+    {
+        return parameters.tree ().getComponentOrientation ();
+    }
+
+    /**
+     * Returns renderer {@link Font} for the specified {@link TreeNode}.
+     *
+     * @param parameters {@link TreeNodeParameters}
+     * @return renderer {@link Font} for the specified {@link TreeNode}
+     */
+    protected Font fontForValue ( final P parameters )
+    {
+        return parameters.tree ().getFont ();
+    }
+
+    /**
+     * Returns renderer foreground color for the specified {@link TreeNode}.
+     *
+     * @param parameters {@link TreeNodeParameters}
+     * @return renderer foreground color for the specified {@link TreeNode}
+     */
+    protected Color foregroundForValue ( final P parameters )
+    {
+        final Color foreground;
+        if ( parameters.node () instanceof ForegroundBridge )
+        {
+            final ForegroundBridge foregroundBridge = ( ForegroundBridge ) parameters.node ();
+            final Color fg = foregroundBridge.getForeground ( parameters );
+            if ( fg != null )
+            {
+                foreground = fg;
+            }
+            else
+            {
+                foreground = parameters.tree ().getForeground ();
+            }
+        }
+        else
+        {
+            foreground = parameters.tree ().getForeground ();
+        }
+        return foreground;
+    }
+
+    /**
+     * Returns renderer icon for the specified {@link TreeNode}.
+     *
+     * @param parameters {@link TreeNodeParameters}
+     * @return renderer icon for the specified {@link TreeNode}
+     */
+    protected Icon iconForValue ( final P parameters )
+    {
+        final Icon icon;
+        final String disabledCacheKey;
+        final boolean enabled = enabledForValue ( parameters );
+        if ( parameters.node () instanceof IconBridge )
+        {
+            final IconBridge iconBridge = ( IconBridge ) parameters.node ();
+            icon = iconBridge.getIcon ( parameters );
+            if ( !enabled )
+            {
+                final String id = parameters.node () instanceof UniqueNode ? ( ( UniqueNode ) parameters.node () ).getId () :
+                        Integer.toString ( parameters.node ().hashCode () );
+                disabledCacheKey = "WebTreeCellRenderer." + this.id + "." + id;
+            }
+            else
+            {
+                disabledCacheKey = null;
+            }
+        }
+        else
+        {
+            final boolean root = parameters.tree ().getModel ().getRoot () == parameters.node ();
+            final String state = parameters.isExpanded () ? "open" : "closed";
+            if ( root )
+            {
+                icon = parameters.isExpanded () ? Icons.rootOpen : Icons.root;
+                disabledCacheKey = !enabled ? "root." + state : null;
+            }
+            else if ( !parameters.isLeaf () )
+            {
+                icon = parameters.isExpanded () ? Icons.folderOpen : Icons.folder;
+                disabledCacheKey = !enabled ? "folder." + state : null;
+            }
+            else
+            {
+                icon = Icons.leaf;
+                disabledCacheKey = !enabled ? "leaf." + state : null;
+            }
+        }
+        return icon == null || enabled ? icon : ImageUtils.getDisabledCopy ( disabledCacheKey, icon );
+    }
+
+    /**
+     * Returns renderer text for the specified {@link TreeNode}.
+     *
+     * @param parameters {@link TreeNodeParameters}
+     * @return renderer text for the specified {@link TreeNode}
+     */
+    protected String textForValue ( final P parameters )
+    {
+        final String text;
+        if ( parameters.node () instanceof TextBridge )
+        {
+            final TextBridge textBridge = ( TextBridge ) parameters.node ();
+            text = textBridge.getText ( parameters );
+        }
+        else
+        {
+            text = parameters.tree ().convertValueToText ( parameters.node (), parameters.isSelected (),
+                    parameters.isExpanded (), parameters.isLeaf (), parameters.row (), parameters.isFocused () );
+        }
+        return text;
+    }
+
+    /**
+     * Returns renderer component for the specified {@link TreeNode}.
+     * Even though {@link TreeCellRenderer} mentions that it is responsible for rendering DnD drop location - this renderer is not.
+     * DnD is handled differently in WebLaF and there are separate tools that do better job at handling DnD operation and its view.
+     *
+     * @param tree       {@link JTree}
+     * @param node       {@link TreeNode}
+     * @param isSelected whether or not {@link TreeNode} is selected
+     * @param expanded   whether or not {@link TreeNode} is expanded
+     * @param leaf       whether or not {@link TreeNode} is leaf
+     * @param row        {@link TreeNode} row number
+     * @param hasFocus   whether or not {@link TreeNode} has focus
+     * @return renderer component for the specified {@link TreeNode}
      */
     @Override
-    public WebStyledLabel getTreeCellRendererComponent ( final JTree tree, final Object value, final boolean isSelected,
-                                                         final boolean expanded, final boolean leaf, final int row, final boolean hasFocus )
+    public Component getTreeCellRendererComponent ( final JTree tree, final Object node, final boolean isSelected,
+                                                    final boolean expanded, final boolean leaf, final int row, final boolean hasFocus )
     {
-        final boolean enabled = tree.isEnabled ();
+        // Forming rendering parameters
+        final P parameters = getRenderingParameters ( ( C ) tree, ( N ) node, isSelected, expanded, leaf, row, hasFocus );
 
-        // Updating custom style ID
-        setStyleId ( StyleId.treeCellRenderer.at ( tree ) );
+        // Updating custom states
+        updateStates ( parameters );
 
-        // Visual settings
-        setEnabled ( enabled );
-        setFont ( tree.getFont () );
-        setComponentOrientation ( tree.getComponentOrientation () );
+        // Updating style ID
+        updateStyleId ( parameters );
 
-        // Foreground
-        if ( value instanceof ColorSupport )
-        {
-            final Color color = ( ( ColorSupport ) value ).getColor ();
-            setForeground ( color != null ? color : tree.getForeground () );
-        }
-        else
-        {
-            setForeground ( tree.getForeground () );
-        }
+        // Updating renderer view
+        updateView ( parameters );
 
-        // Icon
-        if ( value instanceof IconSupport )
-        {
-            final Icon icon = ( ( IconSupport ) value ).getIcon ();
-            if ( enabled )
-            {
-                setIcon ( icon );
-            }
-            else
-            {
-                final String id = value instanceof UniqueNode ? ( ( UniqueNode ) value ).getId () : "" + value.hashCode ();
-                setIcon ( ImageUtils.getDisabledCopy ( getIconTypeKey ( id ), icon ) );
-            }
-        }
-        else
-        {
-            final ImageIcon icon = leaf ? leafIcon : tree.getModel ().getRoot () == value ? rootIcon : expanded ? openIcon : closedIcon;
-            if ( enabled )
-            {
-                setIcon ( icon );
-            }
-            else
-            {
-                final String type = leaf ? "leaf" : tree.getModel ().getRoot () == value ? "root" : expanded ? "open" : "closed";
-                setIcon ( ImageUtils.getDisabledCopy ( getIconTypeKey ( type ), icon ) );
-            }
-        }
-
-        // Text
-        if ( value instanceof TitleSupport )
-        {
-            setText ( ( ( TitleSupport ) value ).getTitle () );
-        }
-        else
-        {
-            setText ( tree.convertValueToText ( value, isSelected, expanded, leaf, row, hasFocus ) );
-        }
+        // Updating decoration states for this render cycle
+        DecorationUtils.fireStatesChanged ( this );
 
         return this;
     }
 
     /**
-     * Returns icon type key for this cell renderer.
+     * Returns {@link TreeNodeParameters}.
      *
-     * @param type icon type
-     * @return icon type key for this cell renderer
+     * @param tree       {@link JTree}
+     * @param node       {@link TreeNode}
+     * @param isSelected whether or not {@link TreeNode} is selected
+     * @param expanded   whether or not {@link TreeNode} is expanded
+     * @param leaf       whether or not {@link TreeNode} is leaf
+     * @param row        {@link TreeNode} row number
+     * @param hasFocus   whether or not {@link TreeNode} has focus
+     * @return {@link TreeNodeParameters}
      */
-    private String getIconTypeKey ( final String type )
+    protected P getRenderingParameters ( final C tree, final N node, final boolean isSelected,
+                                         final boolean expanded, final boolean leaf, final int row, final boolean hasFocus )
     {
-        return "WebTreeCellRenderer." + id + "." + type;
-    }
-
-    /**
-     * Returns the icon used to present root node.
-     *
-     * @return icon used to present root node
-     */
-    public Icon getRootIcon ()
-    {
-        return rootIcon;
-    }
-
-    /**
-     * Sets the icon used to present root node.
-     *
-     * @param rootIcon icon used to present root node
-     */
-    public void setRootIcon ( final Icon rootIcon )
-    {
-        this.rootIcon = rootIcon != null ? ImageUtils.getImageIcon ( rootIcon ) : null;
-        ImageUtils.clearDisabledCopyCache ( getIconTypeKey ( "root" ) );
-    }
-
-    /**
-     * Returns the icon used to represent non-leaf nodes that are expanded.
-     *
-     * @return icon used to represent non-leaf nodes that are expanded.
-     */
-    public Icon getOpenIcon ()
-    {
-        return openIcon;
-    }
-
-    /**
-     * Sets the icon used to represent non-leaf nodes that are expanded.
-     *
-     * @param openIcon icon used to represent non-leaf nodes that are expanded
-     */
-    public void setOpenIcon ( final Icon openIcon )
-    {
-        this.openIcon = openIcon != null ? ImageUtils.getImageIcon ( openIcon ) : null;
-        ImageUtils.clearDisabledCopyCache ( getIconTypeKey ( "open" ) );
-    }
-
-    /**
-     * Returns the icon used to represent non-leaf nodes that are not expanded.
-     *
-     * @return icon used to represent non-leaf nodes that are not expanded
-     */
-    public Icon getClosedIcon ()
-    {
-        return closedIcon;
-    }
-
-    /**
-     * Sets the icon used to represent non-leaf nodes that are not expanded.
-     *
-     * @param closedIcon icon used to represent non-leaf nodes that are not expanded
-     */
-    public void setClosedIcon ( final Icon closedIcon )
-    {
-        this.closedIcon = closedIcon != null ? ImageUtils.getImageIcon ( closedIcon ) : null;
-        ImageUtils.clearDisabledCopyCache ( getIconTypeKey ( "closed" ) );
-    }
-
-    /**
-     * Returns the icon used to represent leaf nodes.
-     *
-     * @return the icon used to represent leaf nodes
-     */
-    public Icon getLeafIcon ()
-    {
-        return leafIcon;
-    }
-
-    /**
-     * Sets the icon used to represent leaf nodes.
-     *
-     * @param leafIcon icon used to represent leaf nodes
-     */
-    public void setLeafIcon ( final Icon leafIcon )
-    {
-        this.leafIcon = leafIcon != null ? ImageUtils.getImageIcon ( leafIcon ) : null;
-        ImageUtils.clearDisabledCopyCache ( getIconTypeKey ( "leaf" ) );
+        return ( P ) new TreeNodeParameters<N, C> ( tree, node, row, leaf, isSelected, expanded, hasFocus );
     }
 
     @Override
-    public void validate ()
+    public final void validate ()
     {
-        // Overridden for performance reasons
+        /**
+         * Overridden for performance reasons.
+         */
     }
 
     @Override
-    public void invalidate ()
+    public final void invalidate ()
     {
-        // Overridden for performance reasons
+        /**
+         * Overridden for performance reasons.
+         */
     }
 
     @Override
-    public void revalidate ()
+    public final void revalidate ()
     {
-        // Overridden for performance reasons
+        /**
+         * Overridden for performance reasons.
+         */
     }
 
     @Override
-    public void repaint ( final long tm, final int x, final int y, final int width, final int height )
+    public final void repaint ( final long tm, final int x, final int y, final int width, final int height )
     {
-        // Overridden for performance reasons
+        /**
+         * Overridden for performance reasons.
+         */
     }
 
     @Override
-    public void repaint ( final Rectangle r )
+    public final void repaint ( final Rectangle r )
     {
-        // Overridden for performance reasons
+        /**
+         * Overridden for performance reasons.
+         */
     }
 
     @Override
-    public void repaint ()
+    public final void repaint ()
     {
-        // Overridden for performance reasons
+        /**
+         * Overridden for performance reasons.
+         */
     }
 
-    @Override
-    protected void firePropertyChange ( final String pn, final Object oldValue, final Object newValue )
+    /**
+     * Checks whether or not specified property change should actually be fired.
+     * All property fire methods are overridden and made final for performance reasons.
+     *
+     * @param propertyName changed property name
+     * @param oldValue     old property value
+     * @param newValue     new property value
+     */
+    protected void checkPropertyChange ( final String propertyName, final Object oldValue, final Object newValue )
     {
-        // Overridden for performance reasons
-        if ( pn.equals ( "text" ) || ( ( pn.equals ( "font" ) || pn.equals ( "foreground" ) ) && oldValue != newValue &&
-                getClientProperty ( javax.swing.plaf.basic.BasicHTML.propertyKey ) != null ) )
+        if ( Objects.equals ( propertyName, StyleId.STYLE_PROPERTY, StyleId.PARENT_STYLE_PROPERTY,
+                AbstractDecorationPainter.DECORATION_STATES_PROPERTY, WebStyledLabel.STYLE_RANGES_PROPERTY,
+                WebLookAndFeel.TEXT_PROPERTY, WebLookAndFeel.BORDER_PROPERTY, WebLookAndFeel.MODEL_PROPERTY ) )
         {
-            super.firePropertyChange ( pn, oldValue, newValue );
+            allowPropertyChange ( propertyName, oldValue, newValue );
+        }
+        else if ( Objects.equals ( propertyName, WebLookAndFeel.FONT_PROPERTY, WebLookAndFeel.FOREGROUND_PROPERTY ) &&
+                oldValue != newValue && getClientProperty ( BasicHTML.propertyKey ) != null )
+        {
+            allowPropertyChange ( propertyName, oldValue, newValue );
         }
     }
 
-    @Override
-    public void firePropertyChange ( final String propertyName, final byte oldValue, final byte newValue )
+    /**
+     * Allows property change event to be fired.
+     *
+     * @param propertyName changed property name
+     * @param oldValue     old property value
+     * @param newValue     new property value
+     */
+    protected void allowPropertyChange ( final String propertyName, final Object oldValue, final Object newValue )
     {
-        // Overridden for performance reasons
+        super.firePropertyChange ( propertyName, oldValue, newValue );
     }
 
     @Override
-    public void firePropertyChange ( final String propertyName, final char oldValue, final char newValue )
+    protected final void firePropertyChange ( final String propertyName, final Object oldValue, final Object newValue )
     {
-        // Overridden for performance reasons
+        checkPropertyChange ( propertyName, oldValue, newValue );
     }
 
     @Override
-    public void firePropertyChange ( final String propertyName, final short oldValue, final short newValue )
+    public final void firePropertyChange ( final String propertyName, final byte oldValue, final byte newValue )
     {
-        // Overridden for performance reasons
+        checkPropertyChange ( propertyName, oldValue, newValue );
     }
 
     @Override
-    public void firePropertyChange ( final String propertyName, final int oldValue, final int newValue )
+    public final void firePropertyChange ( final String propertyName, final char oldValue, final char newValue )
     {
-        // Overridden for performance reasons
+        checkPropertyChange ( propertyName, oldValue, newValue );
     }
 
     @Override
-    public void firePropertyChange ( final String propertyName, final long oldValue, final long newValue )
+    public final void firePropertyChange ( final String propertyName, final short oldValue, final short newValue )
     {
-        // Overridden for performance reasons
+        checkPropertyChange ( propertyName, oldValue, newValue );
     }
 
     @Override
-    public void firePropertyChange ( final String propertyName, final float oldValue, final float newValue )
+    public final void firePropertyChange ( final String propertyName, final int oldValue, final int newValue )
     {
-        // Overridden for performance reasons
+        checkPropertyChange ( propertyName, oldValue, newValue );
     }
 
     @Override
-    public void firePropertyChange ( final String propertyName, final double oldValue, final double newValue )
+    public final void firePropertyChange ( final String propertyName, final long oldValue, final long newValue )
     {
-        // Overridden for performance reasons
+        checkPropertyChange ( propertyName, oldValue, newValue );
     }
 
     @Override
-    public void firePropertyChange ( final String propertyName, final boolean oldValue, final boolean newValue )
+    public final void firePropertyChange ( final String propertyName, final float oldValue, final float newValue )
     {
-        // Overridden for performance reasons
+        checkPropertyChange ( propertyName, oldValue, newValue );
+    }
+
+    @Override
+    public final void firePropertyChange ( final String propertyName, final double oldValue, final double newValue )
+    {
+        checkPropertyChange ( propertyName, oldValue, newValue );
+    }
+
+    @Override
+    public final void firePropertyChange ( final String propertyName, final boolean oldValue, final boolean newValue )
+    {
+        checkPropertyChange ( propertyName, oldValue, newValue );
+    }
+
+    /**
+     * A subclass of {@link WebTreeCellRenderer} that implements {@link javax.swing.plaf.UIResource}.
+     * It is used to determine renderer provided by the UI class to properly uninstall it on UI uninstall.
+     *
+     * @param <N> {@link TreeNode} type
+     * @param <C> {@link JTree} type
+     * @param <P> {@link TreeNodeParameters} type
+     */
+    public static final class UIResource<N extends TreeNode, C extends JTree, P extends TreeNodeParameters<N, C>>
+            extends WebTreeCellRenderer<N, C, P> implements javax.swing.plaf.UIResource
+    {
+        /**
+         * Implementation is used completely from {@link WebTreeCellRenderer}.
+         */
     }
 }

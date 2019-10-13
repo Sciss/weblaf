@@ -17,19 +17,21 @@
 
 package com.alee.utils;
 
-import com.alee.global.GlobalConstants;
-import com.alee.global.StyleConstants;
-import com.alee.managers.language.LanguageManager;
-import com.alee.managers.log.Log;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.managers.language.LM;
 import com.alee.managers.proxy.ProxyManager;
 import com.alee.utils.compare.Filter;
+import com.alee.utils.file.FileComparator;
 import com.alee.utils.file.FileDescription;
 import com.alee.utils.file.FileDownloadListener;
 import com.alee.utils.file.SystemFileListener;
 import com.alee.utils.filefilter.AbstractFileFilter;
+import com.alee.utils.filefilter.AllFilesFilter;
 import com.alee.utils.filefilter.IOFileFilterAdapter;
 import com.alee.utils.filefilter.SwingFileFilterAdapter;
 import com.alee.utils.swing.WebTimer;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
@@ -38,9 +40,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
 import java.math.BigInteger;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.channels.FileChannel;
+import java.security.CodeSource;
 import java.security.MessageDigest;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -63,6 +68,11 @@ public final class FileUtils
      */
 
     /**
+     * Image cache keys separator.
+     */
+    private static final String CACHE_KEYS_SEPARATOR = "|";
+
+    /**
      * Number of bytes in 1 kilobyte.
      */
     public static final long KB = 1024;
@@ -78,14 +88,14 @@ public final class FileUtils
     public static final long GB = 1024 * MB;
 
     /**
-     * Number of bytes in 1 petabyte.
+     * Number of bytes in 1 terabyte.
      */
-    public static final long PB = 1024 * GB;
+    public static final long TB = 1024 * GB;
 
     /**
-     * Icons.
+     * Number of bytes in 1 petabyte.
      */
-    private static final ImageIcon COMPUTER_ICON = new ImageIcon ( FileUtils.class.getResource ( "icons/computer.png" ) );
+    public static final long PB = 1024 * TB;
 
     /**
      * Cached file system view.
@@ -115,9 +125,8 @@ public final class FileUtils
     /**
      * All illegal file name characters.
      */
-    private static final char[] ILLEGAL_CHARACTERS =
-            { '/', '\n', '\r', '\t', '\0', '\f', '\"', '`', '!', '?', '*', '\\', '<', '>', '|', ':', ';', '.', ',', '%', '$', '@', '#', '^',
-                    '{', '}', '[', ']', ']' };
+    private static final char[] ILLEGAL_CHARACTERS = { '/', '\n', '\r', '\t', '\0', '\f', '\"', '`', '!', '?', '*', '\\', '<', '>', '|',
+            ':', ';', '.', ',', '%', '$', '@', '#', '^', '{', '}', '[', ']', ']' };
 
     /**
      * Cache for "isDrive" method result.
@@ -195,6 +204,63 @@ public final class FileUtils
     private static final int FILE_TRACKING_DELAY = 5000;
 
     /**
+     * File comparator.
+     */
+    public static final FileComparator FILE_COMPARATOR = new FileComparator ();
+
+    /**
+     * Private constructor to avoid instantiation.
+     */
+    private FileUtils ()
+    {
+        throw new UtilityException ( "Utility classes are not meant to be instantiated" );
+    }
+
+    /**
+     * Returns JAR location URL for the specified class.
+     *
+     * @param jarClass any class from that JAR
+     * @return JAR location URL
+     */
+    @Nullable
+    public static URL getJarLocationURL ( @NotNull final Class jarClass )
+    {
+        final CodeSource src = jarClass.getProtectionDomain ().getCodeSource ();
+        return src != null ? src.getLocation () : null;
+    }
+
+    /**
+     * Returns JAR location File for the specified class.
+     *
+     * @param jarClass any class from that JAR
+     * @return JAR location File
+     */
+    @Nullable
+    public static File getJarLocationFile ( @NotNull final Class jarClass )
+    {
+        File file = null;
+        try
+        {
+            final CodeSource src = jarClass.getProtectionDomain ().getCodeSource ();
+            if ( src != null )
+            {
+                final URL jarUrl = src.getLocation ();
+                final URI uri = jarUrl.toURI ();
+                final String scheme = uri.getScheme ();
+                if ( scheme != null && scheme.equalsIgnoreCase ( "file" ) )
+                {
+                    file = new File ( uri );
+                }
+            }
+        }
+        catch ( final URISyntaxException e )
+        {
+            LoggerFactory.getLogger ( FileUtils.class ).error ( e.toString (), e );
+        }
+        return file;
+    }
+
+    /**
      * Clears all caches for specified files.
      *
      * @param files files to process
@@ -260,7 +326,7 @@ public final class FileUtils
         while ( file != null )
         {
             path.add ( 0, file );
-            file = file.getParentFile ();
+            file = getParent ( file );
         }
         return path;
     }
@@ -285,7 +351,8 @@ public final class FileUtils
      */
     public static boolean isNameEditable ( final File file )
     {
-        return file.getParentFile () != null && file.canWrite () && file.getParentFile ().canWrite ();
+        final File parent = getParent ( file );
+        return parent != null && parent.canWrite () && file.canWrite ();
     }
 
     /**
@@ -334,9 +401,9 @@ public final class FileUtils
         {
             return file.setExecutable ( true, false );
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
-            Log.error ( FileUtils.class, e );
+            LoggerFactory.getLogger ( FileUtils.class ).error ( e.toString (), e );
             return false;
         }
     }
@@ -454,10 +521,33 @@ public final class FileUtils
     }
 
     /**
-     * Returns MD5 for specified file.
+     * Returns MD5 for specified {@link String} data.
+     *
+     * @param data file to process
+     * @return MD5 for specified {@link String} data
+     */
+    public static String computeMD5 ( final String data )
+    {
+        return computeMD5 ( data, MD5_BUFFER_LENGTH );
+    }
+
+    /**
+     * Returns MD5 for specified {@link String} data and uses a buffer of the specified length.
+     *
+     * @param data         file to process
+     * @param bufferLength buffer length
+     * @return MD5 for specified {@link String} data
+     */
+    public static String computeMD5 ( final String data, final int bufferLength )
+    {
+        return computeMD5 ( new ByteArrayInputStream ( data.getBytes () ), bufferLength );
+    }
+
+    /**
+     * Returns MD5 for specified {@link File} content.
      *
      * @param file file to process
-     * @return MD5
+     * @return MD5 for specified {@link File} content
      */
     public static String computeMD5 ( final File file )
     {
@@ -465,11 +555,11 @@ public final class FileUtils
     }
 
     /**
-     * Returns MD5 for specified file and using a buffer of specified length.
+     * Returns MD5 for specified {@link File} content and uses a buffer of the specified length.
      *
      * @param file         file to process
      * @param bufferLength buffer length
-     * @return MD5
+     * @return MD5 for specified {@link File} content
      */
     public static String computeMD5 ( final File file, final int bufferLength )
     {
@@ -484,10 +574,10 @@ public final class FileUtils
     }
 
     /**
-     * Returns MD5 using the specified data stream.
+     * Returns MD5 for the data provided by {@link InputStream}.
      *
      * @param is data stream to process
-     * @return MD5
+     * @return MD5 for the data provided by {@link InputStream}
      */
     public static String computeMD5 ( final InputStream is )
     {
@@ -495,11 +585,11 @@ public final class FileUtils
     }
 
     /**
-     * Returns MD5 using the specified data stream and a buffer of specified length.
+     * Returns MD5 for the data provided by {@link InputStream} and uses a buffer of the specified length.
      *
      * @param is           data stream to process
      * @param bufferLength buffer length
-     * @return MD5
+     * @return MD5 for the data provided by {@link InputStream}
      */
     public static String computeMD5 ( final InputStream is, final int bufferLength )
     {
@@ -517,7 +607,7 @@ public final class FileUtils
             final BigInteger bigInt = new BigInteger ( 1, md5sum );
             return bigInt.toString ( 16 );
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
             return null;
         }
@@ -527,7 +617,7 @@ public final class FileUtils
             {
                 bis.close ();
             }
-            catch ( final Throwable e )
+            catch ( final Exception ignored )
             {
                 //
             }
@@ -577,6 +667,47 @@ public final class FileUtils
             home += File.separator;
         }
         return home;
+    }
+
+    /**
+     * Returns desktop directory if one can be found.
+     *
+     * @return desktop directory if one can be found
+     */
+    public static File getDesktop ()
+    {
+        // Trying file system roots
+        final File[] roots = FileSystemView.getFileSystemView ().getRoots ();
+        if ( roots.length > 0 )
+        {
+            for ( final File root : roots )
+            {
+                if ( root.getName ().toLowerCase ( Locale.ROOT ).contains ( "desktop" ) )
+                {
+                    return root;
+                }
+            }
+        }
+
+        // Trying common known locations
+        final File desktop = new File ( getUserHome (), "Desktop" );
+        if ( desktop.exists () )
+        {
+            return desktop;
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns desktop directory path if one can be found.
+     *
+     * @return desktop directory path if one can be found
+     */
+    public static String getDesktopPath ()
+    {
+        final File desktop = getDesktop ();
+        return desktop != null ? desktop.getAbsolutePath () : null;
     }
 
     /**
@@ -748,6 +879,30 @@ public final class FileUtils
     }
 
     /**
+     * Returns parent {@link File}.
+     * Unlike {@link File#getParentFile()} it doesn't fail on cases when native parent is {@code null}.
+     * Whenever native parent is {@code null} this method will fallback to {@link File#getParent()} path usage.
+     *
+     * @param file {@link File} to return parent {@link File} for
+     * @return parent {@link File}
+     */
+    public static File getParent ( final File file )
+    {
+        final File parent;
+        final File nativeParent = file.getParentFile ();
+        if ( nativeParent != null )
+        {
+            parent = nativeParent;
+        }
+        else
+        {
+            final String parentPath = file.getParent ();
+            parent = parentPath != null ? new File ( parentPath ) : null;
+        }
+        return parent;
+    }
+
+    /**
      * Returns top not-null parent for the specified file.
      * If file has no parents at all simply returns null.
      *
@@ -756,17 +911,15 @@ public final class FileUtils
      */
     public static File getTopParent ( File file )
     {
+        File result = null;
         file = file.getAbsoluteFile ();
-        File parent = file.getParentFile ();
-        if ( parent == null )
+        File parent = getParent ( file );
+        while ( parent != null )
         {
-            return null;
+            result = parent;
+            parent = getParent ( parent );
         }
-        while ( parent.getParentFile () != null )
-        {
-            parent = parent.getParentFile ();
-        }
-        return parent;
+        return result;
     }
 
     /**
@@ -795,14 +948,14 @@ public final class FileUtils
             return false;
         }
         child = child.getAbsoluteFile ();
-        File cp = child.getParentFile ();
+        File cp = getParent ( child );
         while ( cp != null )
         {
             if ( cp.equals ( parent ) )
             {
                 return true;
             }
-            cp = cp.getParentFile ();
+            cp = getParent ( cp );
         }
         return false;
     }
@@ -813,7 +966,8 @@ public final class FileUtils
      * @param file file to process
      * @return file name without extension
      */
-    public static String getFileNamePart ( final File file )
+    @NotNull
+    public static String getFileNamePart ( @Nullable final File file )
     {
         return file != null ? getFileNamePart ( file.getName () ) : "";
     }
@@ -824,17 +978,21 @@ public final class FileUtils
      * @param name file name to trim
      * @return file name without extension
      */
-    public static String getFileNamePart ( final String name )
+    @NotNull
+    public static String getFileNamePart ( @Nullable final String name )
     {
+        final String namePart;
         if ( !TextUtils.isEmpty ( name ) )
         {
-            final int i = name.lastIndexOf ( "." );
-            return i == -1 ? name : name.substring ( 0, i );
+            final int first = name.indexOf ( "." );
+            final int last = name.lastIndexOf ( "." );
+            namePart = last == -1 || first == 0 && first == last ? name : name.substring ( 0, last );
         }
         else
         {
-            return "";
+            namePart = "";
         }
+        return namePart;
     }
 
     /**
@@ -844,7 +1002,8 @@ public final class FileUtils
      * @param withDot whether return the extension with dot, or not
      * @return file extension
      */
-    public static String getFileExtPart ( final File file, final boolean withDot )
+    @NotNull
+    public static String getFileExtPart ( @Nullable final File file, final boolean withDot )
     {
         return file != null ? getFileExtPart ( file.getName (), withDot ) : "";
     }
@@ -856,17 +1015,20 @@ public final class FileUtils
      * @param withDot whether return the extension with dot, or not
      * @return file extension
      */
-    public static String getFileExtPart ( final String name, final boolean withDot )
+    @NotNull
+    public static String getFileExtPart ( @Nullable final String name, final boolean withDot )
     {
+        final String ext;
         if ( !TextUtils.isEmpty ( name ) )
         {
             final int i = name.lastIndexOf ( "." );
-            return i == -1 ? "" : withDot ? name.substring ( i ) : name.substring ( i + 1 );
+            ext = i == -1 ? "" : withDot ? name.substring ( i ) : name.substring ( i + 1 );
         }
         else
         {
-            return "";
+            ext = "";
         }
+        return ext;
     }
 
     /**
@@ -875,7 +1037,8 @@ public final class FileUtils
      * @param name file name to shorten
      * @return shortened file name
      */
-    public static String getShortFileName ( final String name )
+    @NotNull
+    public static String getShortFileName ( @Nullable final String name )
     {
         return getShortFileName ( name, 30 );
     }
@@ -888,25 +1051,19 @@ public final class FileUtils
      * @param length maximum allowed file name length
      * @return shortened file name
      */
-    public static String getShortFileName ( final String name, final int length )
+    @NotNull
+    public static String getShortFileName ( @Nullable final String name, final int length )
     {
-        if ( length < 2 )
-        {
-            return name;
-        }
-        else
+        String shortName = name != null ? name : "";
+        if ( length >= 2 )
         {
             final String newName = getFileNamePart ( name );
             if ( newName.length () > length )
             {
-                // 2 symbols taken by dots
-                return newName.substring ( 0, length - 2 ) + "..." + getFileExtPart ( name, false );
-            }
-            else
-            {
-                return name;
+                shortName = newName.substring ( 0, length - 2 ) + "..." + getFileExtPart ( name, false );
             }
         }
+        return shortName;
     }
 
     /**
@@ -919,7 +1076,7 @@ public final class FileUtils
     {
         if ( files != null )
         {
-            Collections.sort ( files, GlobalConstants.FILE_COMPARATOR );
+            Collections.sort ( files, FILE_COMPARATOR );
         }
         return files;
     }
@@ -934,7 +1091,7 @@ public final class FileUtils
     {
         if ( files != null )
         {
-            Arrays.sort ( files, GlobalConstants.FILE_COMPARATOR );
+            Arrays.sort ( files, FILE_COMPARATOR );
         }
         return files;
     }
@@ -1003,7 +1160,7 @@ public final class FileUtils
                 index = Integer.parseInt ( nameStart.substring ( ob + 1, cb ) );
                 index++;
             }
-            catch ( final Throwable e )
+            catch ( final Exception ignored )
             {
                 //
             }
@@ -1145,8 +1302,7 @@ public final class FileUtils
         }
         else
         {
-            return new IOFileFilterAdapter ( fileFilter, GlobalConstants.ALL_FILES_FILTER.getIcon (),
-                    LanguageManager.get ( "weblaf.file.filter.custom" ) );
+            return new IOFileFilterAdapter ( fileFilter, AllFilesFilter.ICON, LM.get ( "weblaf.file.filter.custom" ) );
         }
     }
 
@@ -1164,7 +1320,7 @@ public final class FileUtils
         }
         else
         {
-            return new SwingFileFilterAdapter ( fileFilter, GlobalConstants.ALL_FILES_FILTER.getIcon () );
+            return new SwingFileFilterAdapter ( fileFilter, AllFilesFilter.ICON );
         }
     }
 
@@ -1188,6 +1344,26 @@ public final class FileUtils
      * @return filtered files list
      */
     public static List<File> filterFiles ( final Collection<File> files, final AbstractFileFilter fileFilter )
+    {
+        final List<File> filteredFiles = new ArrayList<File> ( files.size () );
+        for ( final File file : files )
+        {
+            if ( fileFilter.accept ( file ) )
+            {
+                filteredFiles.add ( file );
+            }
+        }
+        return filteredFiles;
+    }
+
+    /**
+     * Returns filtered files list.
+     *
+     * @param files      files collection to filter
+     * @param fileFilter file filter
+     * @return filtered files list
+     */
+    public static List<File> filterFiles ( final Collection<File> files, final Filter<File> fileFilter )
     {
         final List<File> filteredFiles = new ArrayList<File> ( files.size () );
         for ( final File file : files )
@@ -1246,7 +1422,7 @@ public final class FileUtils
      */
     public static String getDisplayFileSize ( final File file, final int digits )
     {
-        // todo Cache this value
+        // todo Cache file length value
         return getFileSizeString ( file.length (), digits );
     }
 
@@ -1270,39 +1446,31 @@ public final class FileUtils
      */
     public static String getFileSizeString ( final long size, final int digits )
     {
-        final DecimalFormat df = new DecimalFormat ( digits > 0 ? "#." + getDigits ( digits ) : "#" );
+        final DecimalFormat df = new DecimalFormat ( digits > 0 ? "#." + TextUtils.createString ( "#", digits ) : "#" );
         if ( size < KB )
         {
-            return df.format ( size ) + " " + LanguageManager.get ( "weblaf.file.size.b" );
+            return df.format ( size ) + " " + LM.get ( "weblaf.file.size.b" );
         }
         else if ( size >= KB && size < MB )
         {
-            return df.format ( ( float ) size / KB ) + " " + LanguageManager.get ( "weblaf.file.size.kb" );
+            return df.format ( ( float ) size / KB ) + " " + LM.get ( "weblaf.file.size.kb" );
         }
         else if ( size >= MB && size < GB )
         {
-            return df.format ( ( float ) size / MB ) + " " + LanguageManager.get ( "weblaf.file.size.mb" );
+            return df.format ( ( float ) size / MB ) + " " + LM.get ( "weblaf.file.size.mb" );
+        }
+        else if ( size >= GB && size < TB )
+        {
+            return df.format ( ( float ) size / GB ) + " " + LM.get ( "weblaf.file.size.gb" );
+        }
+        else if ( size >= TB && size < PB )
+        {
+            return df.format ( ( float ) size / TB ) + " " + LM.get ( "weblaf.file.size.tb" );
         }
         else
         {
-            return df.format ( ( float ) size / GB ) + " " + LanguageManager.get ( "weblaf.file.size.gb" );
+            return df.format ( ( float ) size / PB ) + " " + LM.get ( "weblaf.file.size.pb" );
         }
-    }
-
-    /**
-     * Returns pattern part for decimal format with a specified number of digits.
-     *
-     * @param digits number of digits
-     * @return pattern part for decimal format
-     */
-    private static String getDigits ( final int digits )
-    {
-        final StringBuilder stringBuilder = new StringBuilder ( digits );
-        for ( int i = 0; i < digits; i++ )
-        {
-            stringBuilder.append ( "#" );
-        }
-        return stringBuilder.toString ();
     }
 
     /**
@@ -1408,26 +1576,9 @@ public final class FileUtils
      */
     public static boolean copyFile ( final String src, final String dst )
     {
-        try
-        {
-            // Creating destination directory if needed
-            final File dstDir = new File ( new File ( dst ).getParent () );
-            if ( ensureDirectoryExists ( dstDir ) )
-            {
-                final FileChannel srcFC = new FileInputStream ( src ).getChannel ();
-                final FileChannel dstFC = new FileOutputStream ( dst ).getChannel ();
-                return copyFile ( srcFC, dstFC );
-            }
-            else
-            {
-                return false;
-            }
-
-        }
-        catch ( final FileNotFoundException e )
-        {
-            return false;
-        }
+        final File srcFile = src != null ? new File ( src ) : null;
+        final File dstFile = dst != null ? new File ( dst ) : null;
+        return copyFile ( srcFile, dstFile );
     }
 
     /**
@@ -1441,13 +1592,12 @@ public final class FileUtils
      */
     public static boolean copyFile ( final File srcFile, final File dstFile )
     {
-        if ( srcFile.exists () && srcFile.isFile () )
+        if ( srcFile != null && srcFile.exists () && srcFile.isFile () && dstFile != null )
         {
             try
             {
                 // Creating destination directory if needed
-                final File dstDir = new File ( dstFile.getParent () );
-                if ( ensureDirectoryExists ( dstDir ) )
+                if ( ensureDirectoryExists ( getParent ( dstFile ) ) )
                 {
                     final FileChannel srcFC = new FileInputStream ( srcFile ).getChannel ();
                     final FileChannel dstFC = new FileOutputStream ( dstFile ).getChannel ();
@@ -1517,7 +1667,7 @@ public final class FileUtils
         {
             return readToString ( nearClass.getResourceAsStream ( resource ), encoding );
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
             return null;
         }
@@ -1547,7 +1697,7 @@ public final class FileUtils
         {
             return readToString ( url.openStream (), encoding );
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
             return null;
         }
@@ -1584,7 +1734,7 @@ public final class FileUtils
                 return null;
             }
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
             return null;
         }
@@ -1621,7 +1771,7 @@ public final class FileUtils
                 return null;
             }
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
             return null;
         }
@@ -1631,7 +1781,7 @@ public final class FileUtils
             {
                 inputStream.close ();
             }
-            catch ( final IOException e )
+            catch ( final IOException ignored )
             {
                 // Ignore this exception
             }
@@ -1661,7 +1811,7 @@ public final class FileUtils
             }
             return sb.toString ();
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
             return "";
         }
@@ -1671,7 +1821,7 @@ public final class FileUtils
             {
                 reader.close ();
             }
-            catch ( final IOException e )
+            catch ( final IOException ignored )
             {
                 // Ignore this exception
             }
@@ -1707,7 +1857,7 @@ public final class FileUtils
         }
 
         // Creating directories if necessary
-        file.getParentFile ().mkdirs ();
+        getParent ( file ).mkdirs ();
 
         // Writing text to file
         PrintWriter writer = null;
@@ -1718,11 +1868,11 @@ public final class FileUtils
         }
         catch ( final FileNotFoundException e )
         {
-            Log.error ( FileUtils.class, e );
+            LoggerFactory.getLogger ( FileUtils.class ).error ( e.toString (), e );
         }
         catch ( final UnsupportedEncodingException e )
         {
-            Log.error ( FileUtils.class, e );
+            LoggerFactory.getLogger ( FileUtils.class ).error ( e.toString (), e );
         }
         finally
         {
@@ -1793,6 +1943,7 @@ public final class FileUtils
 
     /**
      * Downloads file from the specified url to destination file and returns it if download succeed or null if not.
+     * todo Instead of multiple methods create DownloadParameters class that would contain all of the settings
      *
      * @param url     file source url
      * @param dstFile destination file
@@ -1800,12 +1951,13 @@ public final class FileUtils
      */
     public static File downloadFile ( final String url, final File dstFile )
     {
-        return downloadFile ( url, dstFile, false, null, GlobalConstants.SHORT_TIMEOUT, null );
+        return downloadFile ( url, dstFile, false, null, 3000, null );
     }
 
     /**
      * Downloads file from the specified url to destination file and returns it if download succeed or null if not.
      * You can observe and manipulate the download process by providing a file download listener.
+     * todo Instead of multiple methods create DownloadParameters class that would contain all of the settings
      *
      * @param url      file source url
      * @param dstFile  destination file
@@ -1814,11 +1966,12 @@ public final class FileUtils
      */
     public static File downloadFile ( final String url, final File dstFile, final FileDownloadListener listener )
     {
-        return downloadFile ( url, dstFile, false, null, GlobalConstants.SHORT_TIMEOUT, listener );
+        return downloadFile ( url, dstFile, false, null, 3000, listener );
     }
 
     /**
      * Downloads file from the specified url to destination file and returns it if download succeed or null if not.
+     * todo Instead of multiple methods create DownloadParameters class that would contain all of the settings
      *
      * @param url         file source url
      * @param dst         destination file path
@@ -1836,6 +1989,7 @@ public final class FileUtils
     /**
      * Downloads file from the specified url to destination file and returns it if download succeed or null if not.
      * You can observe and manipulate the download process by providing a file download listener.
+     * todo Instead of multiple methods create DownloadParameters class that would contain all of the settings
      *
      * @param url         file source url
      * @param dst         destination file path
@@ -1853,6 +2007,7 @@ public final class FileUtils
 
     /**
      * Downloads file from the specified url to destination file and returns it if download succeed or null if not.
+     * todo Instead of multiple methods create DownloadParameters class that would contain all of the settings
      *
      * @param url         file source url
      * @param dstFile     destination file
@@ -1870,6 +2025,7 @@ public final class FileUtils
     /**
      * Downloads file from the specified url to destination file and returns it if download succeed or null if not.
      * You can observe and manipulate the download process by providing a file download listener.
+     * todo Instead of multiple methods create DownloadParameters class that would contain all of the settings
      *
      * @param url         file source url
      * @param dstFile     destination file
@@ -1933,11 +2089,7 @@ public final class FileUtils
             // Checking stop flag
             if ( listener != null && listener.shouldStopDownload () )
             {
-                out.flush ();
-                out.close ();
-                in.close ();
-                deleteFile ( dstFile );
-                return null;
+                return haltDownload ( dstFile, in, out );
             }
 
             // Downloading content part by part
@@ -1954,11 +2106,7 @@ public final class FileUtils
                     // Checking stop flag
                     if ( listener.shouldStopDownload () )
                     {
-                        out.flush ();
-                        out.close ();
-                        in.close ();
-                        deleteFile ( dstFile );
-                        return null;
+                        return haltDownload ( dstFile, in, out );
                     }
                 }
                 out.write ( buf, 0, bytesRead );
@@ -1974,7 +2122,7 @@ public final class FileUtils
             }
             return dstFile;
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
             // Informing about failed download
             if ( listener != null )
@@ -1983,6 +2131,24 @@ public final class FileUtils
             }
             return null;
         }
+    }
+
+    /**
+     * Halts download by properly closing streams and removing destination file.
+     *
+     * @param dstFile destination file
+     * @param in      input stream
+     * @param out     output stream
+     * @return always {@code null}
+     * @throws IOException if some IO operation failed
+     */
+    private static File haltDownload ( final File dstFile, final InputStream in, final FileOutputStream out ) throws IOException
+    {
+        out.flush ();
+        out.close ();
+        in.close ();
+        deleteFile ( dstFile );
+        return null;
     }
 
     /**
@@ -1997,9 +2163,9 @@ public final class FileUtils
         {
             return getFileSize ( new URL ( url ) );
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
-            Log.error ( FileUtils.class, e );
+            LoggerFactory.getLogger ( FileUtils.class ).error ( e.toString (), e );
             return -1;
         }
     }
@@ -2021,9 +2187,9 @@ public final class FileUtils
             // Retrieving file size
             return uc.getContentLength ();
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
-            Log.error ( FileUtils.class, e );
+            LoggerFactory.getLogger ( FileUtils.class ).error ( e.toString (), e );
             return -1;
         }
     }
@@ -2202,7 +2368,7 @@ public final class FileUtils
      */
     public static boolean ensureDirectoryExists ( final File dir )
     {
-        return dir.exists () || dir.mkdirs ();
+        return dir != null && ( dir.exists () || dir.mkdirs () );
     }
 
     /**
@@ -2240,7 +2406,7 @@ public final class FileUtils
         {
             return isDriveCache.get ( absolutePath );
         }
-        else
+        else if ( file.exists () )
         {
             final boolean isDrive;
             synchronized ( fsv )
@@ -2249,6 +2415,10 @@ public final class FileUtils
             }
             isDriveCache.put ( absolutePath, isDrive );
             return isDrive;
+        }
+        else
+        {
+            return false;
         }
     }
 
@@ -2287,7 +2457,7 @@ public final class FileUtils
         {
             return isComputerCache.get ( absolutePath );
         }
-        else
+        else if ( file.exists () )
         {
             final boolean isComputer;
             synchronized ( fsv )
@@ -2296,6 +2466,10 @@ public final class FileUtils
             }
             isComputerCache.put ( absolutePath, isComputer );
             return isComputer;
+        }
+        else
+        {
+            return false;
         }
     }
 
@@ -2336,7 +2510,7 @@ public final class FileUtils
         {
             return isCdDriveCache.get ( absolutePath );
         }
-        else
+        else if ( file.exists () )
         {
             final boolean isCdDrive;
             if ( file.getParent () == null )
@@ -2351,8 +2525,8 @@ public final class FileUtils
                 {
                     description = file.getName ();
                 }
-                isCdDrive = description.contains ( "cd" ) || description.contains ( "dvd" ) ||
-                        description.contains ( "blu-ray" ) || description.contains ( "bluray" );
+                isCdDrive = description.contains ( "cd" ) || description.contains ( "dvd" ) || description.contains ( "blu-ray" ) ||
+                        description.contains ( "bluray" );
             }
             else
             {
@@ -2360,6 +2534,10 @@ public final class FileUtils
             }
             isCdDriveCache.put ( absolutePath, isCdDrive );
             return isCdDrive;
+        }
+        else
+        {
+            return false;
         }
     }
 
@@ -2404,11 +2582,15 @@ public final class FileUtils
             {
                 return isFileCache.get ( absolutePath );
             }
-            else
+            else if ( file.exists () )
             {
                 final boolean isFile = file.isFile ();
                 isFileCache.put ( absolutePath, isFile );
                 return isFile;
+            }
+            else
+            {
+                return false;
             }
         }
     }
@@ -2454,11 +2636,15 @@ public final class FileUtils
             {
                 return isDirectoryCache.get ( absolutePath );
             }
-            else
+            else if ( file.exists () )
             {
                 final boolean isDirectory = file.isDirectory ();
                 isDirectoryCache.put ( absolutePath, isDirectory );
                 return isDirectory;
+            }
+            else
+            {
+                return false;
             }
         }
     }
@@ -2504,12 +2690,16 @@ public final class FileUtils
             {
                 return isHiddenCache.get ( absolutePath );
             }
-            else
+            else if ( file.exists () )
             {
                 file = file.getAbsoluteFile ();
-                final boolean isHidden = file.getParentFile () != null && file.isHidden ();
+                final boolean isHidden = getParent ( file ) != null && file.isHidden ();
                 isHiddenCache.put ( absolutePath, isHidden );
                 return isHidden;
+            }
+            else
+            {
+                return false;
             }
         }
     }
@@ -2550,12 +2740,39 @@ public final class FileUtils
         {
             return fileDescriptionCache.get ( absolutePath );
         }
-        else
+        else if ( file.exists () )
         {
             final FileDescription fileDescription = createFileDescription ( file, fileSize );
             fileDescriptionCache.put ( absolutePath, fileDescription );
             return fileDescription;
         }
+        else
+        {
+            return new FileDescription ( "Unknown", "0", "", null );
+        }
+    }
+
+    /**
+     * Returns appropriate file name based on provided text.
+     *
+     * @param text text to trim
+     * @return appropriate file name based on provided text
+     */
+    public static String appropriateFileName ( final String text )
+    {
+        return appropriateFileName ( text, "" );
+    }
+
+    /**
+     * Returns appropriate file name based on provided text.
+     *
+     * @param text        text to trim
+     * @param replacement replacement for each invalid symbol
+     * @return appropriate file name based on provided text
+     */
+    public static String appropriateFileName ( final String text, final String replacement )
+    {
+        return text.replaceAll ( "[^ a-zA-Zа-яА-Я0-9.-]", replacement );
     }
 
     /**
@@ -2584,7 +2801,7 @@ public final class FileUtils
      */
     public static String getDisplayFileName ( final File file )
     {
-        final String absolutePath = file == null ? null : file.getAbsolutePath ();
+        final String absolutePath = file.getAbsolutePath ();
         if ( absolutePath == null )
         {
             return "";
@@ -2593,14 +2810,14 @@ public final class FileUtils
         {
             return displayFileNameCache.get ( absolutePath );
         }
-        else
+        else if ( file.exists () )
         {
             String name;
             synchronized ( fsv )
             {
                 name = fsv.getSystemDisplayName ( file );
             }
-            if ( TextUtils.isEmpty ( name ) )
+            if ( TextUtils.isBlank ( name ) )
             {
                 name = getFileTypeDescription ( file );
             }
@@ -2610,6 +2827,15 @@ public final class FileUtils
             }
             displayFileNameCache.put ( absolutePath, name );
             return name;
+        }
+        else if ( !file.exists () && file.getName () != null )
+        {
+            displayFileNameCache.put ( absolutePath, file.getName () );
+            return file.getName ();
+        }
+        else
+        {
+            return file.getName () != null ? file.getName () : "";
         }
     }
 
@@ -2639,7 +2865,7 @@ public final class FileUtils
      */
     public static String getDisplayFileCreationDate ( final File file )
     {
-        final String absolutePath = file == null ? null : file.getAbsolutePath ();
+        final String absolutePath = file.getAbsolutePath ();
         if ( absolutePath == null )
         {
             return "";
@@ -2648,11 +2874,15 @@ public final class FileUtils
         {
             return displayFileCreationDateCache.get ( absolutePath );
         }
-        else
+        else if ( file.exists () )
         {
             final String date = sdf.format ( new Date ( file.lastModified () ) );
             displayFileCreationDateCache.put ( absolutePath, date );
             return date;
+        }
+        else
+        {
+            return "";
         }
     }
 
@@ -2682,7 +2912,7 @@ public final class FileUtils
      */
     public static String getDisplayFileModificationDate ( final File file )
     {
-        final String absolutePath = file == null ? null : file.getAbsolutePath ();
+        final String absolutePath = file.getAbsolutePath ();
         if ( absolutePath == null )
         {
             return "";
@@ -2691,11 +2921,15 @@ public final class FileUtils
         {
             return displayFileModificationDateCache.get ( absolutePath );
         }
-        else
+        else if ( file.exists () )
         {
             final String date = sdf.format ( new Date ( file.lastModified () ) );
             displayFileModificationDateCache.put ( absolutePath, date );
             return date;
+        }
+        else
+        {
+            return "";
         }
     }
 
@@ -2740,7 +2974,7 @@ public final class FileUtils
             {
                 return fileTypeDescriptionCache.get ( absolutePath );
             }
-            else
+            else if ( file.exists () )
             {
                 String description;
                 synchronized ( fsv )
@@ -2754,17 +2988,11 @@ public final class FileUtils
                 fileTypeDescriptionCache.put ( absolutePath, absolutePath );
                 return description;
             }
+            else
+            {
+                return "";
+            }
         }
-    }
-
-    /**
-     * Returns default icon for "My computer" file.
-     *
-     * @return default icon for "My computer" file
-     */
-    public static ImageIcon getMyComputerIcon ()
-    {
-        return COMPUTER_ICON;
     }
 
     /**
@@ -2955,7 +3183,7 @@ public final class FileUtils
     private static String getStandardFileIconCacheKey ( final String extension, final boolean large, final float opacity,
                                                         final boolean enabled )
     {
-        return extension + StyleConstants.SEPARATOR + large + StyleConstants.SEPARATOR + opacity + StyleConstants.SEPARATOR + enabled;
+        return extension + CACHE_KEYS_SEPARATOR + large + CACHE_KEYS_SEPARATOR + opacity + CACHE_KEYS_SEPARATOR + enabled;
     }
 
     /**
@@ -2968,8 +3196,8 @@ public final class FileUtils
      */
     public static ImageIcon getStandardFileIcon ( final boolean large, final String extension, final float opacity )
     {
-        return getIconResource ( FileUtils.class, "icons/extensions/" + ( large ? "32" : "16" ) + "/file_extension_" + extension +
-                ".png", opacity );
+        final String path = "icons/extensions/" + ( large ? "32" : "16" ) + "/file_extension_" + extension + ".png";
+        return getIconResource ( FileUtils.class, path, opacity );
     }
 
     /**
@@ -2996,7 +3224,7 @@ public final class FileUtils
      */
     public static ImageIcon getIconResource ( final Class nearClass, final String resource, final float opacity )
     {
-        final String key = nearClass.getCanonicalName () + StyleConstants.SEPARATOR + resource + StyleConstants.SEPARATOR + opacity;
+        final String key = nearClass.getCanonicalName () + CACHE_KEYS_SEPARATOR + resource + CACHE_KEYS_SEPARATOR + opacity;
         if ( resourceIconsCache.containsKey ( key ) )
         {
             return resourceIconsCache.get ( key );

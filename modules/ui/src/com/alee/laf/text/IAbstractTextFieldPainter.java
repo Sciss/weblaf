@@ -1,5 +1,7 @@
 package com.alee.laf.text;
 
+import com.alee.api.annotations.Nullable;
+
 import javax.swing.plaf.basic.BasicTextUI;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
@@ -7,18 +9,18 @@ import java.awt.*;
 /**
  * Base interface for text field component painters.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @author Alexandr Zernov
  */
-
-public interface IAbstractTextFieldPainter<E extends JTextComponent, U extends BasicTextUI> extends IAbstractTextEditorPainter<E, U>
+public interface IAbstractTextFieldPainter<C extends JTextComponent, U extends BasicTextUI> extends IAbstractTextEditorPainter<C, U>
 {
     /**
      * Returns field leading component.
      *
      * @return field leading component
      */
+    @Nullable
     public Component getLeadingComponent ();
 
     /**
@@ -26,5 +28,6 @@ public interface IAbstractTextFieldPainter<E extends JTextComponent, U extends B
      *
      * @return field trailing component
      */
+    @Nullable
     public Component getTrailingComponent ();
 }

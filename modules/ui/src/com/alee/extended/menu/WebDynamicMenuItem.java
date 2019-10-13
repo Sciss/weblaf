@@ -34,7 +34,6 @@ import java.awt.geom.Ellipse2D;
  *
  * @author Mikle Garin
  */
-
 public class WebDynamicMenuItem extends JComponent
 {
     /**
@@ -128,10 +127,7 @@ public class WebDynamicMenuItem extends JComponent
         setOpaque ( false );
         setBackground ( new Color ( 0, 0, 0, 200 ) );
         setForeground ( Color.WHITE );
-
         setFont ( SwingUtils.getDefaultLabelFont () );
-        SwingUtils.setBoldFont ( this );
-        SwingUtils.changeFontSize ( this, 2 );
 
         final MouseAdapter mouseAdapter = new MouseAdapter ()
         {

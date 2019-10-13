@@ -17,28 +17,25 @@
 
 package com.alee.laf.tooltip;
 
-import com.alee.laf.WebLookAndFeel;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
+import com.alee.api.jdk.Consumer;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
-import javax.swing.plaf.basic.BasicHTML;
-import javax.swing.plaf.basic.BasicToolTipUI;
 import java.awt.*;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 
 /**
- * Custom UI for JTooltip component.
+ * Custom UI for {@link JToolTip} component.
  *
+ * @param <C> component type
  * @author Mikle Garin
  */
-
-public class WebToolTipUI extends BasicToolTipUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebToolTipUI<C extends JToolTip> extends WToolTipUI<C> implements ShapeSupport, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -47,136 +44,80 @@ public class WebToolTipUI extends BasicToolTipUI implements Styleable, ShapeProv
     protected IToolTipPainter painter;
 
     /**
-     * Base listeners.
-     */
-    protected PropertyChangeListener propertyChangeListener;
-
-    /**
-     * Runtime variables.
-     */
-    protected JComponent tooltip = null;
-    protected Insets margin = null;
-    protected Insets padding = null;
-
-    /**
-     * Returns an instance of the WebToolTipUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebToolTipUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebToolTipUI
+     * @return instance of the {@link WebToolTipUI}
      */
-    @SuppressWarnings ( "UnusedParameters" )
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebToolTipUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
-    public void installUI ( final JComponent c )
+    public void installUI ( @NotNull final JComponent c )
     {
+        // Installing UI
         super.installUI ( c );
 
-        // Saving tooltip to local variable
-        tooltip = c;
-
         // Applying skin
-        StyleManager.installSkin ( tooltip );
+        StyleManager.installSkin ( toolTip );
     }
 
     @Override
-    protected void installListeners ( final JComponent c )
-    {
-        propertyChangeListener = new PropertyChangeListener ()
-        {
-            @Override
-            public void propertyChange ( final PropertyChangeEvent e )
-            {
-                final String name = e.getPropertyName ();
-                if ( name.equals ( WebLookAndFeel.TIP_TEXT_PROPERTY ) || name.equals ( WebLookAndFeel.FONT_PROPERTY ) ||
-                        name.equals ( WebLookAndFeel.FOREGROUND_PROPERTY ) )
-                {
-                    // Remove the old html view client property if one existed
-                    // Install a new one if the text installed into the JLabel is html source
-                    final JToolTip tip = ( JToolTip ) e.getSource ();
-                    final String text = tip.getTipText ();
-                    BasicHTML.updateRenderer ( tip, text );
-                }
-            }
-        };
-        c.addPropertyChangeListener ( propertyChangeListener );
-    }
-
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
-    @Override
-    public void uninstallUI ( final JComponent c )
+    public void uninstallUI ( @NotNull final JComponent c )
     {
         // Uninstalling applied skin
-        StyleManager.uninstallSkin ( tooltip );
-
-        // Cleaning up reference
-        this.tooltip = null;
+        StyleManager.uninstallSkin ( toolTip );
 
         // Uninstalling UI
         super.uninstallUI ( c );
     }
 
+    @NotNull
     @Override
-    protected void uninstallListeners ( final JComponent c )
+    public Shape getShape ()
     {
-        c.removePropertyChangeListener ( propertyChangeListener );
+        return PainterSupport.getShape ( toolTip, painter );
     }
 
     @Override
-    public StyleId getStyleId ()
+    public boolean isShapeDetectionEnabled ()
     {
-        return StyleManager.getStyleId ( tooltip );
+        return PainterSupport.isShapeDetectionEnabled ( toolTip, painter );
     }
 
     @Override
-    public StyleId setStyleId ( final StyleId id )
+    public void setShapeDetectionEnabled ( final boolean enabled )
     {
-        return StyleManager.setStyleId ( tooltip, id );
+        PainterSupport.setShapeDetectionEnabled ( toolTip, painter, enabled );
     }
 
-    @Override
-    public Shape provideShape ()
-    {
-        return PainterSupport.getShape ( tooltip, painter );
-    }
-
+    @Nullable
     @Override
     public Insets getMargin ()
     {
-        return margin;
+        return PainterSupport.getMargin ( toolTip );
     }
 
     @Override
-    public void setMargin ( final Insets margin )
+    public void setMargin ( @Nullable final Insets margin )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setMargin ( toolTip, margin );
     }
 
+    @Nullable
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( toolTip );
     }
 
     @Override
-    public void setPadding ( final Insets padding )
+    public void setPadding ( @Nullable final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( toolTip, padding );
     }
 
     /**
@@ -186,7 +127,7 @@ public class WebToolTipUI extends BasicToolTipUI implements Styleable, ShapeProv
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -197,10 +138,10 @@ public class WebToolTipUI extends BasicToolTipUI implements Styleable, ShapeProv
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( tooltip, new DataRunnable<IToolTipPainter> ()
+        PainterSupport.setPainter ( toolTip, this, new Consumer<IToolTipPainter> ()
         {
             @Override
-            public void run ( final IToolTipPainter newPainter )
+            public void accept ( final IToolTipPainter newPainter )
             {
                 WebToolTipUI.this.painter = newPainter;
             }
@@ -208,11 +149,29 @@ public class WebToolTipUI extends BasicToolTipUI implements Styleable, ShapeProv
     }
 
     @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
+    }
+
+    @Override
+    public int getBaseline ( final JComponent c, final int width, final int height )
+    {
+        return PainterSupport.getBaseline ( c, this, painter, width, height );
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
+    {
+        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+    }
+
+    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 

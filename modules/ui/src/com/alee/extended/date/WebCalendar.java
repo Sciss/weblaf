@@ -17,6 +17,8 @@
 
 package com.alee.extended.date;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.jdk.Objects;
 import com.alee.extended.layout.TableLayout;
 import com.alee.extended.transition.ComponentTransition;
 import com.alee.extended.transition.TransitionAdapter;
@@ -28,10 +30,13 @@ import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.separator.WebSeparator;
+import com.alee.managers.language.Language;
+import com.alee.managers.language.LanguageListener;
+import com.alee.managers.language.LanguageManager;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
-import com.alee.utils.CompareUtils;
 import com.alee.utils.SwingUtils;
+import com.alee.utils.SystemUtils;
 import com.alee.utils.TimeUtils;
 
 import javax.swing.*;
@@ -40,20 +45,18 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
+import java.util.*;
 import java.util.List;
 
 /**
  * Custom calendar component.
  *
  * @author Mikle Garin
- * @see com.alee.extended.date.WebDateField
+ * @see WebDateField
  */
-
-public class WebCalendar extends WebPanel
+public class WebCalendar extends WebPanel implements LanguageListener
 {
     /**
      * todo 1. Create WebCalendarUI with all ui data there
@@ -77,7 +80,10 @@ public class WebCalendar extends WebPanel
      * Calendar title format.
      * Usually displays currently visible month and year.
      */
-    protected SimpleDateFormat titleFormat = new SimpleDateFormat ( "MMMM yyyy" );
+    protected DateFormat titleFormat = new SimpleDateFormat (
+            SystemUtils.isJava8orAbove () ? "LLLL yyyy" : "MMMM yyyy",
+            LanguageManager.getLocale ()
+    );
 
     /**
      * Whether sunday should be the first day of week or not.
@@ -134,11 +140,16 @@ public class WebCalendar extends WebPanel
     protected WebToggleButton lastSelectedDayButton;
 
     /**
+     * Runtime settings.
+     */
+    protected final Map<Integer, WebToggleButton> mothDaysButtons;
+
+    /**
      * Constructs new calendar without selected date.
      */
     public WebCalendar ()
     {
-        this ( StyleId.calendar, null );
+        this ( StyleId.auto, null );
     }
 
     /**
@@ -148,7 +159,7 @@ public class WebCalendar extends WebPanel
      */
     public WebCalendar ( final Date date )
     {
-        this ( StyleId.calendar, date );
+        this ( StyleId.auto, date );
     }
 
     /**
@@ -247,6 +258,7 @@ public class WebCalendar extends WebPanel
         updateWeekHeaders ();
 
         // Month days panel
+        mothDaysButtons = new HashMap<Integer, WebToggleButton> ( 31 );
         monthDays = createMonthPanel ();
         updateMonth ( monthDays );
 
@@ -262,6 +274,27 @@ public class WebCalendar extends WebPanel
             }
         } );
         centerPanel.add ( monthDaysTransition, BorderLayout.CENTER );
+
+        // Language listener
+        addLanguageListener ( this );
+    }
+
+    @NotNull
+    @Override
+    public StyleId getDefaultStyleId ()
+    {
+        return StyleId.calendar;
+    }
+
+    @Override
+    public void languageChanged ( @NotNull final Language oldLanguage, @NotNull final Language newLanguage )
+    {
+        if ( titleFormat instanceof SimpleDateFormat )
+        {
+            final String pattern = ( ( SimpleDateFormat ) titleFormat ).toPattern ();
+            titleFormat = new SimpleDateFormat ( pattern, newLanguage.getLocale () );
+            updateTitleLabel ();
+        }
     }
 
     /**
@@ -286,6 +319,8 @@ public class WebCalendar extends WebPanel
         {
             // Creating new dates panel
             monthDays = createMonthPanel ();
+
+            // Updating current dates
             updateMonth ( monthDays );
 
             // Setting collapse transition effects
@@ -303,8 +338,10 @@ public class WebCalendar extends WebPanel
         }
         else
         {
-            // Simply updating current dates panel
+            // Updating current dates
             updateMonth ( monthDays );
+
+            // Transferring focus
             requestFocusToSelected ();
         }
     }
@@ -350,6 +387,42 @@ public class WebCalendar extends WebPanel
     }
 
     /**
+     * Creates and returns month panel.
+     *
+     * @return created month panel
+     */
+    protected WebPanel createMonthPanel ()
+    {
+        return new WebPanel ( StyleId.calendarMonthPanel.at ( this ), createMonthLayout () );
+    }
+
+    /**
+     * Creates and returns week headers panel layout.
+     *
+     * @return created week headers panel layout
+     */
+    protected TableLayout createWeekHeadersLayout ()
+    {
+        final double p = TableLayout.PREFERRED;
+        final double[] cols = getContentColumns ();
+        final double[] rows = { p };
+        return new TableLayout ( new double[][]{ cols, rows } );
+    }
+
+    /**
+     * Creates and returns month panel layout.
+     *
+     * @return created month panel layout
+     */
+    protected TableLayout createMonthLayout ()
+    {
+        final double f = TableLayout.FILL;
+        final double[] cols = getContentColumns ();
+        final double[] rows = { f, f, f, f, f, f };
+        return new TableLayout ( new double[][]{ cols, rows }, 0, 0 );
+    }
+
+    /**
      * Returns content columns.
      *
      * @return content columns
@@ -358,8 +431,14 @@ public class WebCalendar extends WebPanel
     {
         final double f = TableLayout.FILL;
         final double p = TableLayout.PREFERRED;
-        return displayWeekNumbers ? new double[]{ f, p, f, p, f, p, f, p, f, p, f, p, f, p, f } :
-                new double[]{ f, p, f, p, f, p, f, p, f, p, f, p, f };
+        if ( displayWeekNumbers )
+        {
+            return new double[]{ f, p, f, p, f, p, f, p, f, p, f, p, f, p, f };
+        }
+        else
+        {
+            return new double[]{ f, p, f, p, f, p, f, p, f, p, f, p, f };
+        }
     }
 
     /**
@@ -370,19 +449,6 @@ public class WebCalendar extends WebPanel
     protected int getFirstDatesColumn ()
     {
         return displayWeekNumbers ? 2 : 0;
-    }
-
-    /**
-     * Creates and returns month panel.
-     *
-     * @return created month panel
-     */
-    protected WebPanel createMonthPanel ()
-    {
-        final double f = TableLayout.FILL;
-        final double[] cols = getContentColumns ();
-        final double[] rows = { f, f, f, f, f, f };
-        return new WebPanel ( StyleId.calendarMonthPanel.at ( this ), new TableLayout ( new double[][]{ cols, rows }, 0, 0 ) );
     }
 
     /**
@@ -424,10 +490,7 @@ public class WebCalendar extends WebPanel
     protected void updateWeekHeaders ()
     {
         weekHeaders.removeAll ();
-
-        final double[] cols = getContentColumns ();
-        final double[] rows = { TableLayout.PREFERRED };
-        weekHeaders.setLayout ( new TableLayout ( new double[][]{ cols, rows } ) );
+        weekHeaders.setLayout ( createWeekHeadersLayout () );
 
         final StyleId separatorId = StyleId.calendarWeekTitleSeparator.at ( weekHeaders );
         final StyleId weekNumberId = StyleId.calendarWeekTitleLabel.at ( weekHeaders );
@@ -469,8 +532,13 @@ public class WebCalendar extends WebPanel
      */
     protected void updateMonth ( final JPanel monthDays )
     {
+        // Removing dates panel contents
         monthDays.removeAll ();
         lastSelectedDayButton = null;
+
+        // Updating dates panel layout
+        final TableLayout monthLayout = createMonthLayout ();
+        monthDays.setLayout ( monthLayout );
 
         // Separators
         final StyleId separatorId = StyleId.calendarMonthDateSeparator.at ( monthDays );
@@ -491,7 +559,7 @@ public class WebCalendar extends WebPanel
         calendar.setTime ( shownDate );
         calendar.set ( Calendar.DAY_OF_MONTH, 1 );
 
-        final int max = getContentColumns ().length;
+        final int cols = monthLayout.getNumColumn ();
         int col = getFirstDatesColumn ();
         int row = 0;
         int days = 0;
@@ -528,27 +596,13 @@ public class WebCalendar extends WebPanel
         }
         TimeUtils.changeByDays ( calendar, -shift );
 
-        // Week numbers
-        if ( displayWeekNumbers )
-        {
-            final StyleId weekNumberId = StyleId.calendarWeekTitleLabel.at ( weekHeaders );
-            int week = calendar.get ( Calendar.WEEK_OF_YEAR );
-            for ( int i = 0; i < 6; i++ )
-            {
-                final WebLabel weekNumberLabel = new WebLabel ( weekNumberId, "" + week );
-                weekNumberLabel.setFontSizeAndStyle ( 10, Font.BOLD );
-                monthDays.add ( weekNumberLabel, "0," + i );
-                week++;
-            }
-        }
-
         // Month before
         while ( calendar.get ( Calendar.DAY_OF_MONTH ) > 1 )
         {
             final Date thisDate = calendar.getTime ();
             final StyleId dayId = StyleId.calendarPreviousMonthDateToggleButton.at ( monthDays );
-            final WebToggleButton day = new WebToggleButton ( dayId, "" + calendar.get ( Calendar.DAY_OF_MONTH ) );
-            day.addItemListener ( new ItemListener ()
+            final WebToggleButton dayButton = new WebToggleButton ( dayId, "" + calendar.get ( Calendar.DAY_OF_MONTH ) );
+            dayButton.addItemListener ( new ItemListener ()
             {
                 @Override
                 public void itemStateChanged ( final ItemEvent e )
@@ -562,23 +616,40 @@ public class WebCalendar extends WebPanel
             } );
             if ( dateCustomizer != null )
             {
-                dateCustomizer.customize ( day, thisDate );
+                dateCustomizer.customize ( dayButton, thisDate );
             }
-            monthDays.add ( day, col + "," + row );
-            dates.add ( day );
+            monthDays.add ( dayButton, col + "," + row );
+            dates.add ( dayButton );
 
             TimeUtils.increaseByDay ( calendar );
 
             days++;
             col += 2;
-            if ( col > max )
+            if ( col > cols )
             {
                 col = getFirstDatesColumn ();
                 row++;
             }
         }
 
+        // Week numbers
+        if ( displayWeekNumbers )
+        {
+            // Custom formatter for week numbers to avoid visual issues
+            final StyleId weekNumberId = StyleId.calendarWeekTitleLabel.at ( weekHeaders );
+            int week = calendar.get ( Calendar.WEEK_OF_YEAR );
+            for ( int i = 0; i < 6; i++ )
+            {
+                final String weekNumberText = Integer.toString ( week );
+                final WebLabel weekNumberLabel = new WebLabel ( weekNumberId, weekNumberText );
+                weekNumberLabel.setFontSizeAndStyle ( 10, Font.BOLD );
+                monthDays.add ( weekNumberLabel, "0," + i );
+                week++;
+            }
+        }
+
         // Current month
+        mothDaysButtons.clear ();
         do
         {
             final boolean weekend = calendar.get ( Calendar.DAY_OF_WEEK ) == 1 || calendar.get ( Calendar.DAY_OF_WEEK ) == 7;
@@ -587,9 +658,10 @@ public class WebCalendar extends WebPanel
             final Date thisDate = calendar.getTime ();
             final StyleId dayId = weekend ? StyleId.calendarWeekendMonthDateToggleButton.at ( monthDays ) :
                     StyleId.calendarCurrentMonthDateToggleButton.at ( monthDays );
-            final WebToggleButton day = new WebToggleButton ( dayId, "" + calendar.get ( Calendar.DAY_OF_MONTH ) );
-            day.setSelected ( selected );
-            day.addActionListener ( new ActionListener ()
+            final int dayNumber = calendar.get ( Calendar.DAY_OF_MONTH );
+            final WebToggleButton dayButton = new WebToggleButton ( dayId, "" + dayNumber );
+            dayButton.setSelected ( selected );
+            dayButton.addActionListener ( new ActionListener ()
             {
                 @Override
                 public void actionPerformed ( final ActionEvent e )
@@ -600,21 +672,22 @@ public class WebCalendar extends WebPanel
             } );
             if ( dateCustomizer != null )
             {
-                dateCustomizer.customize ( day, thisDate );
+                dateCustomizer.customize ( dayButton, thisDate );
             }
-            monthDays.add ( day, col + "," + row );
-            dates.add ( day );
+            mothDaysButtons.put ( dayNumber, dayButton );
+            monthDays.add ( dayButton, col + "," + row );
+            dates.add ( dayButton );
 
             if ( selected )
             {
-                lastSelectedDayButton = day;
+                lastSelectedDayButton = dayButton;
             }
 
             TimeUtils.increaseByDay ( calendar );
 
             days++;
             col += 2;
-            if ( col > max )
+            if ( col > cols )
             {
                 col = getFirstDatesColumn ();
                 row++;
@@ -628,8 +701,8 @@ public class WebCalendar extends WebPanel
         {
             final Date thisDate = calendar.getTime ();
             final StyleId dayId = StyleId.calendarNextMonthDateToggleButton.at ( monthDays );
-            final WebToggleButton day = new WebToggleButton ( dayId, "" + calendar.get ( Calendar.DAY_OF_MONTH ) );
-            day.addItemListener ( new ItemListener ()
+            final WebToggleButton dayButton = new WebToggleButton ( dayId, "" + calendar.get ( Calendar.DAY_OF_MONTH ) );
+            dayButton.addItemListener ( new ItemListener ()
             {
                 @Override
                 public void itemStateChanged ( final ItemEvent e )
@@ -643,15 +716,15 @@ public class WebCalendar extends WebPanel
             } );
             if ( dateCustomizer != null )
             {
-                dateCustomizer.customize ( day, thisDate );
+                dateCustomizer.customize ( dayButton, thisDate );
             }
-            monthDays.add ( day, col + "," + row );
-            dates.add ( day );
+            monthDays.add ( dayButton, col + "," + row );
+            dates.add ( dayButton );
 
             TimeUtils.increaseByDay ( calendar );
 
             col += 2;
-            if ( col > max )
+            if ( col > cols )
             {
                 col = getFirstDatesColumn ();
                 row++;
@@ -663,11 +736,21 @@ public class WebCalendar extends WebPanel
     }
 
     /**
+     * Updates selected day number.
+     *
+     * @param dayNumber day number
+     */
+    protected void updateSelectedDay ( final int dayNumber )
+    {
+        mothDaysButtons.get ( dayNumber ).setSelected ( true );
+    }
+
+    /**
      * Returns title format.
      *
      * @return title format
      */
-    public SimpleDateFormat getTitleFormat ()
+    public DateFormat getTitleFormat ()
     {
         return titleFormat;
     }
@@ -677,7 +760,7 @@ public class WebCalendar extends WebPanel
      *
      * @param titleFormat title format
      */
-    public void setTitleFormat ( final SimpleDateFormat titleFormat )
+    public void setTitleFormat ( final DateFormat titleFormat )
     {
         this.titleFormat = titleFormat;
         updateTitleLabel ();
@@ -711,7 +794,7 @@ public class WebCalendar extends WebPanel
      */
     public void setDate ( final Date date, final boolean animate )
     {
-        if ( !CompareUtils.equals ( this.date, date ) )
+        if ( Objects.notEquals ( this.date, date ) )
         {
             setDateImpl ( date, animate );
         }
@@ -780,10 +863,12 @@ public class WebCalendar extends WebPanel
         final Calendar calendar = Calendar.getInstance ();
 
         calendar.setTime ( oldShownDate );
+        final int oldDay = calendar.get ( Calendar.DAY_OF_MONTH );
         final int oldMonth = calendar.get ( Calendar.MONTH );
         final int oldYear = calendar.get ( Calendar.YEAR );
 
         calendar.setTime ( date );
+        final int newDay = calendar.get ( Calendar.DAY_OF_MONTH );
         final int newMonth = calendar.get ( Calendar.MONTH );
         final int newYear = calendar.get ( Calendar.YEAR );
 
@@ -791,6 +876,10 @@ public class WebCalendar extends WebPanel
         {
             updateTitleLabel ();
             updateMonth ( animate );
+        }
+        else if ( oldDay != newDay )
+        {
+            updateSelectedDay ( newDay );
         }
     }
 

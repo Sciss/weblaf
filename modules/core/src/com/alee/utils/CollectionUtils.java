@@ -17,29 +17,63 @@
 
 package com.alee.utils;
 
-import com.alee.utils.collection.IndexedSupplier;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.api.jdk.Function;
+import com.alee.api.jdk.Objects;
+import com.alee.api.jdk.Supplier;
 import com.alee.utils.compare.Filter;
-import com.alee.utils.text.TextProvider;
 
 import java.util.*;
 
 /**
- * This class provides a set of utilities to work with collections.
+ * This class provides a set of utilities to work with {@link Collection} implementations.
  *
  * @author Mikle Garin
  */
-
 public final class CollectionUtils
 {
     /**
-     * Returns whether specified collection is empty or not.
-     *
-     * @param collection collection to process
-     * @return true if specified collection is empty, false otherwise
+     * Private constructor to avoid instantiation.
      */
-    public static boolean isEmpty ( final Collection collection )
+    private CollectionUtils ()
+    {
+        throw new UtilityException ( "Utility classes are not meant to be instantiated" );
+    }
+
+    /**
+     * Returns whether specified {@link Collection} is empty or not.
+     *
+     * @param collection {@link Collection} to process
+     * @return {@code true} if specified {@link Collection} is empty, {@code false} otherwise
+     */
+    public static boolean isEmpty ( @Nullable final Collection collection )
     {
         return collection == null || collection.isEmpty ();
+    }
+
+    /**
+     * Returns whether specified {@link Collection} is empty or not.
+     *
+     * @param collection {@link Collection} to process
+     * @return {@code true} if specified {@link Collection} is not empty, {@code false} otherwise
+     */
+    public static boolean notEmpty ( @Nullable final Collection collection )
+    {
+        return !isEmpty ( collection );
+    }
+
+    /**
+     * Returns non-{@code null} {@link List} that is either specified {@code list} or new empty {@link ArrayList}.
+     *
+     * @param list {@link List}
+     * @param <T>  elements type
+     * @return non-{@code null} {@link List} that is either specified {@code list} or new empty {@link ArrayList}
+     */
+    @NotNull
+    public static <T> List<T> nonNull ( @Nullable final List<T> list )
+    {
+        return list != null ? list : new ArrayList<T> ( 0 );
     }
 
     /**
@@ -51,9 +85,38 @@ public final class CollectionUtils
      * @param <T>   object type
      * @return list with limited amount of objects from the initial list
      */
-    public static <T> List<T> limit ( final List<T> list, final int limit )
+    @NotNull
+    public static <T> List<T> limit ( @NotNull final List<T> list, final int limit )
     {
         return list.size () <= limit ? list : copySubList ( list, 0, limit );
+    }
+
+    /**
+     * Returns maximum element of the {@link Collection} according to {@link Comparator}.
+     * This methid is slightly more optimal and safe unlike {@link Collections#max(Collection, Comparator)}.
+     *
+     * @param collection {@link Collection}
+     * @param comparator {@link Comparator}
+     * @param <T>        collection element type
+     * @return maximum element of the {@link Collection} according to {@link Comparator}
+     */
+    @Nullable
+    public static <T> T max ( @Nullable final Collection<T> collection, @NotNull final Comparator<T> comparator )
+    {
+        final T result;
+        if ( CollectionUtils.isEmpty ( collection ) )
+        {
+            result = null;
+        }
+        else if ( collection.size () == 1 )
+        {
+            result = collection.iterator ().next ();
+        }
+        else
+        {
+            result = Collections.max ( collection, comparator );
+        }
+        return result;
     }
 
     /**
@@ -65,9 +128,146 @@ public final class CollectionUtils
      * @param <T>       data type
      * @return sub list with copied values
      */
-    public static <T> ArrayList<T> copySubList ( final List<T> list, final int fromIndex, final int toIndex )
+    @NotNull
+    public static <T> ArrayList<T> copySubList ( @NotNull final List<T> list, final int fromIndex, final int toIndex )
     {
         return new ArrayList<T> ( list.subList ( fromIndex, toIndex ) );
+    }
+
+    /**
+     * Returns booleans converted into list.
+     *
+     * @param data booleans array
+     * @return booleans list
+     */
+    @NotNull
+    public static ArrayList<Boolean> asList ( @NotNull final boolean[] data )
+    {
+        final ArrayList<Boolean> list = new ArrayList<Boolean> ( data.length );
+        for ( final boolean i : data )
+        {
+            list.add ( i );
+        }
+        return list;
+    }
+
+    /**
+     * Returns integers converted into list.
+     *
+     * @param data integers array
+     * @return integers list
+     */
+    @NotNull
+    public static ArrayList<Integer> asList ( @NotNull final int[] data )
+    {
+        final ArrayList<Integer> list = new ArrayList<Integer> ( data.length );
+        for ( final int i : data )
+        {
+            list.add ( i );
+        }
+        return list;
+    }
+
+    /**
+     * Returns characters converted into list.
+     *
+     * @param data characters array
+     * @return characters list
+     */
+    @NotNull
+    public static ArrayList<Character> asList ( @NotNull final char[] data )
+    {
+        final ArrayList<Character> list = new ArrayList<Character> ( data.length );
+        for ( final char i : data )
+        {
+            list.add ( i );
+        }
+        return list;
+    }
+
+    /**
+     * Returns bytes converted into list.
+     *
+     * @param data bytes array
+     * @return bytes list
+     */
+    @NotNull
+    public static ArrayList<Byte> asList ( @NotNull final byte[] data )
+    {
+        final ArrayList<Byte> list = new ArrayList<Byte> ( data.length );
+        for ( final byte i : data )
+        {
+            list.add ( i );
+        }
+        return list;
+    }
+
+    /**
+     * Returns shorts converted into list.
+     *
+     * @param data shorts array
+     * @return shorts list
+     */
+    @NotNull
+    public static ArrayList<Short> asList ( @NotNull final short[] data )
+    {
+        final ArrayList<Short> list = new ArrayList<Short> ( data.length );
+        for ( final short i : data )
+        {
+            list.add ( i );
+        }
+        return list;
+    }
+
+    /**
+     * Returns longs converted into list.
+     *
+     * @param data longs array
+     * @return longs list
+     */
+    @NotNull
+    public static ArrayList<Long> asList ( @NotNull final long[] data )
+    {
+        final ArrayList<Long> list = new ArrayList<Long> ( data.length );
+        for ( final long i : data )
+        {
+            list.add ( i );
+        }
+        return list;
+    }
+
+    /**
+     * Returns floats converted into list.
+     *
+     * @param data floats array
+     * @return floats list
+     */
+    @NotNull
+    public static ArrayList<Float> asList ( @NotNull final float[] data )
+    {
+        final ArrayList<Float> list = new ArrayList<Float> ( data.length );
+        for ( final float i : data )
+        {
+            list.add ( i );
+        }
+        return list;
+    }
+
+    /**
+     * Returns doubles converted into list.
+     *
+     * @param data doubles array
+     * @return doubles list
+     */
+    @NotNull
+    public static ArrayList<Double> asList ( @NotNull final double[] data )
+    {
+        final ArrayList<Double> list = new ArrayList<Double> ( data.length );
+        for ( final double i : data )
+        {
+            list.add ( i );
+        }
+        return list;
     }
 
     /**
@@ -77,7 +277,8 @@ public final class CollectionUtils
      * @param <T>  data type
      * @return data list
      */
-    public static <T> ArrayList<T> asList ( final T... data )
+    @NotNull
+    public static <T> ArrayList<T> asList ( @NotNull final T... data )
     {
         final ArrayList<T> list = new ArrayList<T> ( data.length );
         Collections.addAll ( list, data );
@@ -91,7 +292,8 @@ public final class CollectionUtils
      * @param <T>  data type
      * @return data list
      */
-    public static <T> ArrayList<T> asList ( final Iterator<T> data )
+    @NotNull
+    public static <T> ArrayList<T> asList ( @NotNull final Iterator<T> data )
     {
         final ArrayList<T> list = new ArrayList<T> ();
         while ( data.hasNext () )
@@ -108,20 +310,190 @@ public final class CollectionUtils
      * @param <T>  data type
      * @return non-null data list
      */
-    public static <T> ArrayList<T> asNonNullList ( final T... data )
+    @NotNull
+    public static <T> ArrayList<T> asNonNullList ( @NotNull final T... data )
     {
         final ArrayList<T> list = new ArrayList<T> ( data.length );
-        if ( data != null )
+        for ( final T object : data )
         {
-            for ( final T object : data )
+            if ( object != null )
             {
-                if ( object != null )
-                {
-                    list.add ( object );
-                }
+                list.add ( object );
             }
         }
         return list;
+    }
+
+    /**
+     * Returns whether or not all {@link Collection} elements are unique.
+     *
+     * @param collection {@link Collection}
+     * @param <T>        {@link Collection} element type
+     * @return {@code true} if all {@link Collection} elements are unique, {@code false} otherwise
+     */
+    public static <T> boolean areAllUnique ( @NotNull final Collection<T> collection )
+    {
+        return new HashSet<T> ( collection ).size () == collection.size ();
+    }
+
+    /**
+     * Adds all objects into the specified list.
+     *
+     * @param collection list to fill
+     * @param objects    objects
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
+     */
+    public static boolean addUnique ( @NotNull final Collection<Boolean> collection, @NotNull final boolean[] objects )
+    {
+        boolean result = false;
+        for ( final boolean object : objects )
+        {
+            if ( !collection.contains ( object ) )
+            {
+                result |= collection.add ( object );
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Adds all objects into the specified list.
+     *
+     * @param collection list to fill
+     * @param objects    objects
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
+     */
+    public static boolean addUnique ( @NotNull final Collection<Integer> collection, @NotNull final int[] objects )
+    {
+        boolean result = false;
+        for ( final int object : objects )
+        {
+            if ( !collection.contains ( object ) )
+            {
+                result |= collection.add ( object );
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Adds all objects into the specified list.
+     *
+     * @param collection list to fill
+     * @param objects    objects
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
+     */
+    public static boolean addUnique ( @NotNull final Collection<Character> collection, @NotNull final char[] objects )
+    {
+        boolean result = false;
+        for ( final char object : objects )
+        {
+            if ( !collection.contains ( object ) )
+            {
+                result |= collection.add ( object );
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Adds all objects into the specified list.
+     *
+     * @param collection list to fill
+     * @param objects    objects
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
+     */
+    public static boolean addUnique ( @NotNull final Collection<Byte> collection, @NotNull final byte[] objects )
+    {
+        boolean result = false;
+        for ( final byte object : objects )
+        {
+            if ( !collection.contains ( object ) )
+            {
+                result |= collection.add ( object );
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Adds all objects into the specified list.
+     *
+     * @param collection list to fill
+     * @param objects    objects
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
+     */
+    public static boolean addUnique ( @NotNull final Collection<Short> collection, @NotNull final short[] objects )
+    {
+        boolean result = false;
+        for ( final short object : objects )
+        {
+            if ( !collection.contains ( object ) )
+            {
+                result |= collection.add ( object );
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Adds all objects into the specified list.
+     *
+     * @param collection list to fill
+     * @param objects    objects
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
+     */
+    public static boolean addUnique ( @NotNull final Collection<Long> collection, @NotNull final long[] objects )
+    {
+        boolean result = false;
+        for ( final long object : objects )
+        {
+            if ( !collection.contains ( object ) )
+            {
+                result |= collection.add ( object );
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Adds all objects into the specified list.
+     *
+     * @param collection list to fill
+     * @param objects    objects
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
+     */
+    public static boolean addUnique ( @NotNull final Collection<Float> collection, @NotNull final float[] objects )
+    {
+        boolean result = false;
+        for ( final float object : objects )
+        {
+            if ( !collection.contains ( object ) )
+            {
+                result |= collection.add ( object );
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Adds all objects into the specified list.
+     *
+     * @param collection list to fill
+     * @param objects    objects
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
+     */
+    public static boolean addUnique ( @NotNull final Collection<Double> collection, @NotNull final double[] objects )
+    {
+        boolean result = false;
+        for ( final double object : objects )
+        {
+            if ( !collection.contains ( object ) )
+            {
+                result |= collection.add ( object );
+            }
+        }
+        return result;
     }
 
     /**
@@ -130,9 +502,30 @@ public final class CollectionUtils
      * @param collection list to fill
      * @param objects    objects
      * @param <T>        objects type
-     * @return true if list changed as the result of this operation, false otherwise
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
      */
-    public static <T> boolean addAll ( final Collection<T> collection, final T... objects )
+    public static <T> boolean addUnique ( @NotNull final Collection<T> collection, @NotNull final T... objects )
+    {
+        boolean result = false;
+        for ( final T object : objects )
+        {
+            if ( !collection.contains ( object ) )
+            {
+                result |= collection.add ( object );
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Adds all objects into the specified list.
+     *
+     * @param collection list to fill
+     * @param objects    objects
+     * @param <T>        objects type
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
+     */
+    public static <T> boolean addUnique ( @NotNull final Collection<T> collection, @NotNull final Collection<T> objects )
     {
         boolean result = false;
         for ( final T object : objects )
@@ -151,9 +544,9 @@ public final class CollectionUtils
      * @param collection list to fill
      * @param objects    objects
      * @param <T>        objects type
-     * @return true if list changed as the result of this operation, false otherwise
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
      */
-    public static <T> boolean addAllNonNull ( final Collection<T> collection, final T... objects )
+    public static <T> boolean addUniqueNonNull ( @NotNull final Collection<T> collection, @NotNull final T... objects )
     {
         boolean result = false;
         for ( final T object : objects )
@@ -167,35 +560,14 @@ public final class CollectionUtils
     }
 
     /**
-     * Adds all objects into the specified list.
-     *
-     * @param collection list to fill
-     * @param objects    objects
-     * @param <T>        objects type
-     * @return true if list changed as the result of this operation, false otherwise
-     */
-    public static <T> boolean addAll ( final Collection<T> collection, final Collection<T> objects )
-    {
-        boolean result = false;
-        for ( final T object : objects )
-        {
-            if ( !collection.contains ( object ) )
-            {
-                result |= collection.add ( object );
-            }
-        }
-        return result;
-    }
-
-    /**
      * Adds all non-null objects into the specified list.
      *
      * @param collection list to fill
      * @param objects    objects
      * @param <T>        objects type
-     * @return true if list changed as the result of this operation, false otherwise
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
      */
-    public static <T> boolean addAllNonNull ( final Collection<T> collection, final Collection<T> objects )
+    public static <T> boolean addUniqueNonNull ( @NotNull final Collection<T> collection, @NotNull final Collection<T> objects )
     {
         boolean result = false;
         for ( final T object : objects )
@@ -214,9 +586,27 @@ public final class CollectionUtils
      * @param collection list to fill
      * @param objects    objects
      * @param <T>        objects type
-     * @return true if list changed as the result of this operation, false otherwise
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
      */
-    public static <T> boolean removeAll ( final Collection<T> collection, final T... objects )
+    public static <T> boolean removeAll ( @NotNull final Collection<T> collection, @NotNull final T... objects )
+    {
+        boolean result = false;
+        for ( final T object : objects )
+        {
+            result |= collection.remove ( object );
+        }
+        return result;
+    }
+
+    /**
+     * Removes all objects from the specified list.
+     *
+     * @param collection list to fill
+     * @param objects    objects
+     * @param <T>        objects type
+     * @return {@code true} if list changed as the result of this operation, {@code false} otherwise
+     */
+    public static <T> boolean removeAll ( @NotNull final Collection<T> collection, @NotNull final Collection<T> objects )
     {
         boolean result = false;
         for ( final T object : objects )
@@ -234,7 +624,8 @@ public final class CollectionUtils
      * @param <T>         collection type
      * @return collection that contains elements from all specified collections
      */
-    public static <T> ArrayList<T> join ( final Collection<T>... collections )
+    @NotNull
+    public static <T> ArrayList<T> join ( @Nullable final Collection<T>... collections )
     {
         // Calculating final collection size
         int size = 0;
@@ -252,7 +643,7 @@ public final class CollectionUtils
         {
             for ( final Collection<T> collection : collections )
             {
-                if ( !isEmpty ( collection ) )
+                if ( notEmpty ( collection ) )
                 {
                     list.addAll ( collection );
                 }
@@ -269,13 +660,10 @@ public final class CollectionUtils
      * @param <T>        list type
      * @return copy of the specified list
      */
-    public static <T> ArrayList<T> copy ( final Collection<T> collection )
+    @Nullable
+    public static <T> ArrayList<T> copy ( @Nullable final Collection<T> collection )
     {
-        if ( collection == null )
-        {
-            return null;
-        }
-        return new ArrayList<T> ( collection );
+        return collection != null ? new ArrayList<T> ( collection ) : null;
     }
 
     /**
@@ -285,44 +673,78 @@ public final class CollectionUtils
      * @param <T>  list type
      * @return refactored list
      */
-    public static <T> List<T> removeNulls ( final List<T> list )
+    @Nullable
+    public static <T> List<T> removeNulls ( @Nullable final List<T> list )
     {
-        if ( list == null )
+        if ( list != null )
         {
-            return null;
-        }
-        for ( int i = list.size () - 1; i >= 0; i-- )
-        {
-            if ( list.get ( i ) == null )
+            for ( int i = list.size () - 1; i >= 0; i-- )
             {
-                list.remove ( i );
+                if ( list.get ( i ) == null )
+                {
+                    list.remove ( i );
+                }
             }
         }
         return list;
     }
 
     /**
-     * Returns whether lists are equal or not.
+     * Returns whether {@link Collection}s are equal or not.
      *
-     * @param list1 first list
-     * @param list2 second list
-     * @return true if lists are equal, false otherwise
+     * @param collection1 first {@link Collection}
+     * @param collection2 second {@link Collection}
+     * @return {@code true} if {@link Collection}s are equal, {@code false} otherwise
      */
-    public static boolean equals ( final List list1, final List list2 )
+    public static boolean equals ( @NotNull final Collection collection1, @NotNull final Collection collection2 )
     {
+        boolean equal = collection1.size () == collection2.size ();
+        if ( equal )
+        {
+            for ( final Object element : collection1 )
+            {
+                if ( !collection2.contains ( element ) )
+                {
+                    equal = false;
+                    break;
+                }
+            }
+        }
+        return equal;
+    }
+
+    /**
+     * Returns whether {@link List}s are equal or not.
+     *
+     * @param list1         first {@link List}
+     * @param list2         second {@link List}
+     * @param strictIndices whether or not {@link List}s should have same elements at the same indices
+     * @return {@code true} if {@link List}s are equal, {@code false} otherwise
+     */
+    public static boolean equals ( @Nullable final List list1, @Nullable final List list2, final boolean strictIndices )
+    {
+        final boolean equals;
         if ( list1 == null && list2 == null )
         {
-            return true;
+            equals = true;
         }
-        else if ( ( list1 == null || list2 == null ) && list1 != list2 )
+        else if ( list1 == null || list2 == null || list1.size () != list2.size () )
         {
-            return false;
+            equals = false;
         }
         else
         {
-            if ( list1.size () != list2.size () )
+            boolean eq = true;
+            if ( strictIndices )
             {
-                return false;
+                for ( int i = 0; i < list1.size (); i++ )
+                {
+                    if ( Objects.notEquals ( list1.get ( i ), list2.get ( i ) ) )
+                    {
+                        eq = false;
+                        break;
+                    }
+                }
             }
             else
             {
@@ -330,57 +752,90 @@ public final class CollectionUtils
                 {
                     if ( !list2.contains ( object ) )
                     {
-                        return false;
+                        eq = false;
+                        break;
                     }
                 }
-                return true;
+                for ( final Object object : list2 )
+                {
+                    if ( !list1.contains ( object ) )
+                    {
+                        eq = false;
+                        break;
+                    }
+                }
             }
+            equals = eq;
         }
+        return equals;
     }
 
     /**
-     * Returns list of strings extracted from the specified elements list.
+     * Returns an {@code int[]} array created using {@link Collection} of {@link Integer}s.
      *
-     * @param list         elements list
-     * @param textProvider text provider
-     * @param <T>          elements type
-     * @return list of strings extracted from the specified elements list
+     * @param collection {@link Collection} of {@link Integer}s
+     * @return {@code int[]} array created using {@link Collection} of {@link Integer}s
      */
-    public static <T> ArrayList<String> toStringList ( final List<T> list, final TextProvider<T> textProvider )
+    @NotNull
+    public static int[] toIntArray ( @NotNull final Collection<Integer> collection )
     {
-        final ArrayList<String> stringList = new ArrayList<String> ( list.size () );
-        for ( final T element : list )
+        final int[] array = new int[ collection.size () ];
+        int index = 0;
+        for ( final Integer integer : collection )
         {
-            stringList.add ( textProvider.getText ( element ) );
-        }
-        return stringList;
-    }
-
-    /**
-     * Returns an int array created using Integer list.
-     *
-     * @param list Integer list
-     * @return int array
-     */
-    public static int[] toArray ( final List<Integer> list )
-    {
-        final int[] array = new int[ list.size () ];
-        for ( int i = 0; i < list.size (); i++ )
-        {
-            final Integer integer = list.get ( i );
-            array[ i ] = integer != null ? integer : 0;
+            array[ index ] = integer != null ? integer : 0;
+            index++;
         }
         return array;
     }
 
     /**
-     * Returns a list of objects converted from array.
+     * Returns an {@code Object[]} array created using {@link Collection} of {@link Object}s.
      *
-     * @param array data array
-     * @param <T>   data type
-     * @return data list
+     * @param collection {@link Collection} of {@link Object}s
+     * @return {@code Object[]} array created using {@link Collection} of {@link Object}s
      */
-    public static <T> ArrayList<T> toList ( final T[] array )
+    @NotNull
+    public static Object[] toObjectArray ( @NotNull final Collection collection )
+    {
+        final Object[] array = new Object[ collection.size () ];
+        int index = 0;
+        for ( final Object object : collection )
+        {
+            array[ index ] = object;
+            index++;
+        }
+        return array;
+    }
+
+    /**
+     * Returns {@link List} of {@link String}s extracted from the specified elements {@link List}.
+     *
+     * @param list         {@link List}
+     * @param textProvider {@link String} provider
+     * @param <T>          {@link List} elements type
+     * @return {@link List} of {@link String}s extracted from the specified elements {@link List}
+     */
+    @NotNull
+    public static <T> ArrayList<String> toStringList ( @NotNull final List<T> list, @NotNull final Function<T, String> textProvider )
+    {
+        final ArrayList<String> stringList = new ArrayList<String> ( list.size () );
+        for ( final T element : list )
+        {
+            stringList.add ( textProvider.apply ( element ) );
+        }
+        return stringList;
+    }
+
+    /**
+     * Returns {@link List} of {@link Object}s converted from array.
+     *
+     * @param array array
+     * @param <T>   array elements type
+     * @return {@link List} of {@link Object}s converted from array
+     */
+    @NotNull
+    public static <T> ArrayList<T> toList ( @NotNull final T[] array )
     {
         final ArrayList<T> list = new ArrayList<T> ( array.length );
         Collections.addAll ( list, array );
@@ -388,15 +843,16 @@ public final class CollectionUtils
     }
 
     /**
-     * Returns a list of objects converted from deque.
+     * Returns {@link List} of objects converted from {@link Collection}.
      *
-     * @param deque data deque
-     * @param <T>   data type
-     * @return data list
+     * @param collection {@link Collection}
+     * @param <T>        {@link Collection} elements type
+     * @return {@link List} of objects converted from {@link Collection}
      */
-    public static <T> ArrayList<T> toList ( final Deque<T> deque )
+    @NotNull
+    public static <T> ArrayList<T> toList ( @NotNull final Collection<T> collection )
     {
-        return new ArrayList<T> ( deque );
+        return new ArrayList<T> ( collection );
     }
 
     /**
@@ -406,13 +862,24 @@ public final class CollectionUtils
      * @param <T>        data type
      * @return a vector of objects converted from collection
      */
-    public static <T> Vector<T> toVector ( final Collection<T> collection )
+    @NotNull
+    public static <T> Vector<T> toVector ( @NotNull final Collection<T> collection )
     {
-        final Vector<T> vector = new Vector<T> ( collection.size () );
-        for ( final T element : collection )
-        {
-            vector.add ( element );
-        }
+        return new Vector<T> ( collection );
+    }
+
+    /**
+     * Returns a vector of objects converted from data.
+     *
+     * @param data data
+     * @param <T>  data type
+     * @return a vector of objects converted from data
+     */
+    @NotNull
+    public static <T> Vector<T> asVector ( @NotNull final T... data )
+    {
+        final Vector<T> vector = new Vector<T> ( data.length );
+        Collections.addAll ( vector, data );
         return vector;
     }
 
@@ -424,17 +891,129 @@ public final class CollectionUtils
      * @param <T>        elements type
      * @return list of elements filtered from collection
      */
-    public static <T> ArrayList<T> filter ( final Collection<T> collection, final Filter<T> filter )
+    @NotNull
+    public static <T> ArrayList<T> filter ( @NotNull final Collection<T> collection, @Nullable final Filter<T> filter )
+    {
+        final ArrayList<T> filtered;
+        if ( filter != null )
+        {
+            filtered = new ArrayList<T> ( collection.size () );
+            for ( final T element : collection )
+            {
+                if ( filter.accept ( element ) )
+                {
+                    filtered.add ( element );
+                }
+            }
+        }
+        else
+        {
+            filtered = new ArrayList<T> ( collection );
+        }
+        return filtered;
+    }
+
+    /**
+     * Returns list of elements filtered from collection.
+     *
+     * @param collection collection to filter
+     * @param filters    filters to process
+     * @param <T>        elements type
+     * @return list of elements filtered from collection
+     */
+    @NotNull
+    public static <T> ArrayList<T> filter ( @NotNull final Collection<T> collection, @NotNull final Filter<T>... filters )
     {
         final ArrayList<T> filtered = new ArrayList<T> ( collection.size () );
         for ( final T element : collection )
         {
-            if ( filter.accept ( element ) )
+            for ( int i = 0; i < filters.length; i++ )
             {
-                filtered.add ( element );
+                final Filter<T> filter = filters[ i ];
+                if ( filter != null && !filter.accept ( element ) )
+                {
+                    break;
+                }
+                else if ( i == filters.length - 1 )
+                {
+                    filtered.add ( element );
+                }
             }
         }
         return filtered;
+    }
+
+    /**
+     * Removes non-distinct {@link List} elements.
+     *
+     * @param list {@link List} to distinct
+     * @param <T>  elements type
+     * @return same {@link List} with non-distinct elements removed
+     */
+    @NotNull
+    public static <T> List<T> distinct ( @NotNull final List<T> list )
+    {
+        final Set<T> seen = new HashSet<T> ( list.size () );
+        final Iterator<T> iterator = list.iterator ();
+        while ( iterator.hasNext () )
+        {
+            final T element = iterator.next ();
+            if ( !seen.contains ( element ) )
+            {
+                seen.add ( element );
+            }
+            else
+            {
+                iterator.remove ();
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Sorts {@link List} using the specified {@link Comparator}.
+     *
+     * @param list       {@link List} to sort
+     * @param comparator {@link Comparator}
+     * @param <T>        elements type
+     * @return same {@link List} but sorted according to the specified {@link Comparator}
+     */
+    @NotNull
+    public static <T> List<T> sort ( @NotNull final List<T> list, @Nullable final Comparator<T> comparator )
+    {
+        if ( comparator != null )
+        {
+            final Object[] array = list.toArray ();
+            Arrays.sort ( array, ( Comparator ) comparator );
+            final ListIterator<T> iterator = list.listIterator ();
+            for ( final Object element : array )
+            {
+                iterator.next ();
+                iterator.set ( ( T ) element );
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Sorts {@link List} using the specified {@link Comparator}s.
+     *
+     * @param list        {@link List} to sort
+     * @param comparators {@link List} of {@link Comparator}s
+     * @param <T>         elements type
+     * @return same {@link List} but sorted according to the specified {@link Comparator}
+     */
+    @NotNull
+    public static <T> List<T> sort ( @NotNull final List<T> list, @NotNull final Comparator<T>... comparators )
+    {
+        for ( final Comparator<T> comparator : comparators )
+        {
+            if ( comparator != null )
+            {
+                sort ( list, comparator );
+            }
+        }
+        return list;
     }
 
     /**
@@ -445,7 +1024,8 @@ public final class CollectionUtils
      * @param <V> value object type
      * @return map keys list
      */
-    public static <K, V> ArrayList<K> keysList ( final Map<K, V> map )
+    @NotNull
+    public static <K, V> ArrayList<K> keysList ( @NotNull final Map<K, V> map )
     {
         return new ArrayList<K> ( map.keySet () );
     }
@@ -458,7 +1038,8 @@ public final class CollectionUtils
      * @param <V> value object type
      * @return map values list
      */
-    public static <K, V> ArrayList<V> valuesList ( final Map<K, V> map )
+    @NotNull
+    public static <K, V> ArrayList<V> valuesList ( @NotNull final Map<K, V> map )
     {
         return new ArrayList<V> ( map.values () );
     }
@@ -471,7 +1052,8 @@ public final class CollectionUtils
      * @param <V> value object type
      * @return map values summary list with unique elements only
      */
-    public static <K, V> ArrayList<V> valuesSummaryList ( final Map<K, List<V>> map )
+    @NotNull
+    public static <K, V> ArrayList<V> valuesSummaryList ( @NotNull final Map<K, List<V>> map )
     {
         final ArrayList<V> summary = new ArrayList<V> ( 0 );
         for ( final Map.Entry<K, List<V>> entry : map.entrySet () )
@@ -490,20 +1072,103 @@ public final class CollectionUtils
     }
 
     /**
-     * Fills and returns list with data provided by supplier interface implementation.
+     * Returns {@link List} filled with data provided by index mapping {@link Function}.
      *
-     * @param amount   amount of list elements
-     * @param supplier data provider
-     * @param <T>      data type
-     * @return list filled with data provided by supplier interface implementation
+     * @param size        {@link List} size
+     * @param indexMapper index mapping {@link Function}
+     * @param <T>         elements type
+     * @return {@link List} filled with data provided by index mapping {@link Function}
      */
-    public static <T> List<T> fillList ( final int amount, final IndexedSupplier<T> supplier )
+    @NotNull
+    public static <T> List<T> fillList ( final int size, @NotNull final Function<Integer, T> indexMapper )
     {
-        final List<T> list = new ArrayList<T> ( amount );
-        for ( int i = 0; i < amount; i++ )
+        final List<T> list = new ArrayList<T> ( size );
+        for ( int i = 0; i < size; i++ )
         {
-            list.add ( supplier.get ( i ) );
+            list.add ( indexMapper.apply ( i ) );
         }
         return list;
+    }
+
+    /**
+     * Returns data converted into {@link HashSet}.
+     *
+     * @param data data
+     * @param <T>  data type
+     * @return data {@link HashSet}
+     */
+    @NotNull
+    public static <T> HashSet<T> asHashSet ( @NotNull final Collection<T> data )
+    {
+        return new HashSet<T> ( data );
+    }
+
+    /**
+     * Returns data converted into {@link HashSet}.
+     *
+     * @param data data
+     * @param <T>  data type
+     * @return data {@link HashSet}
+     */
+    @NotNull
+    public static <T> HashSet<T> asHashSet ( @NotNull final T... data )
+    {
+        final HashSet<T> set = new HashSet<T> ( data.length );
+        Collections.addAll ( set, data );
+        return set;
+    }
+
+    /**
+     * Returns new {@link List} filled with {@link Integer}s in the specified range.
+     *
+     * @param from first range integer, inclusive
+     * @param to   last range integer, inclusive
+     * @return new {@link List} filled with {@link Integer}s in the specified range
+     */
+    @NotNull
+    public static List<Integer> intRange ( final int from, final int to )
+    {
+        final List<Integer> range = new ArrayList<Integer> ( Math.max ( from, to ) - Math.min ( from, to ) + 1 );
+        for ( int i = from; i != to; i += from < to ? 1 : -1 )
+        {
+            range.add ( i );
+        }
+        range.add ( to );
+        return range;
+    }
+
+    /**
+     * Checks that the specified {@link Collection} is not empty and throws a customized {@link RuntimeException} if it is.
+     *
+     * @param collection        {@link Collection} to check for emptiness
+     * @param exceptionSupplier {@link Supplier} for a customized exception
+     * @param <T>               {@link Collection} type
+     * @return {@link Collection} if not empty
+     * @throws RuntimeException if {@link Collection} is empty
+     */
+    @NotNull
+    public static <T extends Collection<?>> T requireNotEmpty ( @Nullable final T collection,
+                                                                @NotNull final Supplier<RuntimeException> exceptionSupplier )
+    {
+        if ( isEmpty ( collection ) )
+        {
+            throw exceptionSupplier.get ();
+        }
+        return collection;
+    }
+
+    /**
+     * Returns item from the {@link List} at the specified index.
+     * Index can be larger than {@link List} size, allowing round robin item selection.
+     *
+     * @param index index in the {@link List} or a number larger than {@link List} size, cannot be less than zero
+     * @param items {@link List}
+     * @param <T>   item type
+     * @return item from the {@link List} at the specified index
+     */
+    @Nullable
+    public static <T> T roundRobin ( final int index, @NotNull final List<T> items )
+    {
+        return items.size () > 0 ? items.get ( index % items.size () ) : null;
     }
 }

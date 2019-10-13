@@ -17,7 +17,6 @@
 
 package com.alee.extended.colorchooser;
 
-import com.alee.global.StyleConstants;
 import com.alee.laf.WebLookAndFeel;
 
 import java.awt.*;
@@ -25,7 +24,6 @@ import java.awt.*;
 /**
  * @author Mikle Garin
  */
-
 public final class WebGradientColorChooserStyle
 {
     /**

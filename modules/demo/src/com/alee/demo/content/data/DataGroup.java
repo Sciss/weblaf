@@ -17,7 +17,9 @@
 
 package com.alee.demo.content.data;
 
-import com.alee.demo.api.AbstractExampleGroup;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.AbstractExampleGroup;
+import com.alee.demo.content.data.combobox.ComboboxesGroup;
 import com.alee.demo.content.data.grid.GridsGroup;
 import com.alee.demo.content.data.list.ListsGroup;
 import com.alee.demo.content.data.tree.TreesGroup;
@@ -28,9 +30,9 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
 public class DataGroup extends AbstractExampleGroup
 {
+    @NotNull
     @Override
     public String getId ()
     {
@@ -40,6 +42,11 @@ public class DataGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleGroupClasses ()
     {
-        return CollectionUtils.<Class>asList ( ListsGroup.class, GridsGroup.class, TreesGroup.class );
+        return CollectionUtils.<Class>asList (
+                ComboboxesGroup.class,
+                ListsGroup.class,
+                GridsGroup.class,
+                TreesGroup.class
+        );
     }
 }

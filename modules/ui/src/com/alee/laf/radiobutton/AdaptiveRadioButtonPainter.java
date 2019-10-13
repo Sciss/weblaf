@@ -7,17 +7,18 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Simple RadioButtonPainter adapter class.
- * It is used to install simple non-specific painters into WebCheckBoxUI.
+ * Simple {@link RadioButtonPainter} adapter class.
+ * It is used to install simple non-specific painters into {@link WRadioButtonUI}.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Alexandr Zernov
  */
-
-public final class AdaptiveRadioButtonPainter<E extends JRadioButton, U extends WebRadioButtonUI> extends AdaptivePainter<E, U>
-        implements IRadioButtonPainter<E, U>
+public final class AdaptiveRadioButtonPainter<C extends JRadioButton, U extends WRadioButtonUI<C>>
+        extends AdaptivePainter<C, U> implements IRadioButtonPainter<C, U>
 {
     /**
-     * Constructs new AdaptiveCheckBoxPainter for the specified painter.
+     * Constructs new {@link AdaptiveRadioButtonPainter} for the specified painter.
      *
      * @param painter painter to adapt
      */
@@ -27,7 +28,7 @@ public final class AdaptiveRadioButtonPainter<E extends JRadioButton, U extends 
     }
 
     @Override
-    public Rectangle getIconRect ()
+    public Rectangle getIconBounds ()
     {
         return null;
     }

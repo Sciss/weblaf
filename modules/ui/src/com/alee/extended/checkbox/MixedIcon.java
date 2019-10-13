@@ -17,46 +17,68 @@
 
 package com.alee.extended.checkbox;
 
-import com.alee.painter.decoration.DecorationState;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.painter.decoration.IDecoration;
 import com.alee.painter.decoration.content.AbstractContent;
 import com.alee.utils.GraphicsUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
 /**
- * Mixed state icon content for {@link com.alee.extended.checkbox.WebTristateCheckBox} component.
+ * Mixed state icon content for any {@link AbstractButton} component.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <D> decoration type
  * @param <I> content type
  * @author Mikle Garin
  */
-
 @XStreamAlias ( "MixedIcon" )
-public class MixedIcon<E extends WebTristateCheckBox, D extends IDecoration<E, D>, I extends MixedIcon<E, D, I>>
-        extends AbstractContent<E, D, I>
+public class MixedIcon<C extends AbstractButton, D extends IDecoration<C, D>, I extends MixedIcon<C, D, I>> extends AbstractContent<C, D, I>
 {
+    /**
+     * Preferred icon size.
+     */
+    @XStreamAsAttribute
+    protected Dimension size;
+
+    /**
+     * Icon shape rounding.
+     */
     @XStreamAsAttribute
     protected Integer round;
 
+    /**
+     * Left side background color.
+     */
     @XStreamAsAttribute
     protected Color leftColor;
 
+    /**
+     * Right side background color.
+     */
     @XStreamAsAttribute
     protected Color rightColor;
 
+    @Nullable
     @Override
     public String getId ()
     {
-        return DecorationState.mixed;
+        return id != null ? id : "mixed";
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final D d )
+    public boolean isEmpty ( final C c, final D d )
+    {
+        return false;
+    }
+
+    @Override
+    protected void paintContent ( final Graphics2D g2d, final C c, final D d, final Rectangle bounds )
     {
         final int x = bounds.x + 2;
         final int y = bounds.y + 2;
@@ -73,20 +95,8 @@ public class MixedIcon<E extends WebTristateCheckBox, D extends IDecoration<E, D
     }
 
     @Override
-    public I merge ( final I icon )
+    protected Dimension getContentPreferredSize ( final C c, final D d, final Dimension available )
     {
-        if ( icon.round != null )
-        {
-            round = icon.round;
-        }
-        if ( icon.leftColor != null )
-        {
-            leftColor = icon.leftColor;
-        }
-        if ( icon.rightColor != null )
-        {
-            rightColor = icon.rightColor;
-        }
-        return ( I ) this;
+        return size != null ? new Dimension ( size ) : new Dimension ( 0, 0 );
     }
 }

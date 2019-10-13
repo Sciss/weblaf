@@ -17,15 +17,19 @@
 
 package com.alee.managers.popup;
 
+import com.alee.api.annotations.NotNull;
 import com.alee.extended.layout.TableLayout;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.panel.PanelPainter;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.panel.WebPanelUI;
+import com.alee.managers.style.Bounds;
+import com.alee.managers.style.ShapeMethodsImpl;
 import com.alee.painter.decoration.IDecoration;
+import com.alee.utils.CoreSwingUtils;
 import com.alee.utils.ShapeUtils;
-import com.alee.utils.SwingUtils;
+import com.alee.utils.collection.ImmutableList;
 import com.alee.utils.swing.AncestorAdapter;
 
 import javax.swing.*;
@@ -34,20 +38,23 @@ import java.awt.*;
 import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * @author Mikle Garin
  */
-
+@Deprecated
 public class WebButtonPopup extends WebInnerPopup
 {
-    private static final List<String> BUTTON_PROPERTIES =
-            Arrays.asList ( AbstractButton.ICON_CHANGED_PROPERTY, AbstractButton.TEXT_CHANGED_PROPERTY,
-                    AbstractButton.HORIZONTAL_ALIGNMENT_CHANGED_PROPERTY, AbstractButton.VERTICAL_ALIGNMENT_CHANGED_PROPERTY,
-                    AbstractButton.HORIZONTAL_TEXT_POSITION_CHANGED_PROPERTY, AbstractButton.VERTICAL_TEXT_POSITION_CHANGED_PROPERTY,
-                    WebLookAndFeel.ICON_TEXT_GAP_PROPERTY, WebLookAndFeel.BORDER_PROPERTY );
+    private static final ImmutableList<String> BUTTON_PROPERTIES = new ImmutableList<String> (
+            AbstractButton.ICON_CHANGED_PROPERTY,
+            AbstractButton.TEXT_CHANGED_PROPERTY,
+            AbstractButton.HORIZONTAL_ALIGNMENT_CHANGED_PROPERTY,
+            AbstractButton.VERTICAL_ALIGNMENT_CHANGED_PROPERTY,
+            AbstractButton.HORIZONTAL_TEXT_POSITION_CHANGED_PROPERTY,
+            AbstractButton.VERTICAL_TEXT_POSITION_CHANGED_PROPERTY,
+            WebLookAndFeel.ICON_TEXT_GAP_PROPERTY,
+            WebLookAndFeel.BORDER_PROPERTY
+    );
 
     private PopupWay popupWay;
 
@@ -320,6 +327,7 @@ public class WebButtonPopup extends WebInnerPopup
     {
         final WebButton copy = new WebButton ()
         {
+            @NotNull
             @Override
             public Dimension getPreferredSize ()
             {
@@ -355,7 +363,7 @@ public class WebButtonPopup extends WebInnerPopup
     {
         if ( isShowing () && button.isShowing () )
         {
-            final Point rl = SwingUtils.getRelativeLocation ( button, getParent () );
+            final Point rl = CoreSwingUtils.getRelativeLocation ( button, getParent () );
             final Dimension ps = getPreferredSize ();
 
             // Bottom popup
@@ -574,10 +582,23 @@ public class WebButtonPopup extends WebInnerPopup
         return new Point ( x, y );
     }
 
+    @NotNull
     @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return getPopupShape ( this );
+    }
+
+    @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return ShapeMethodsImpl.isShapeDetectionEnabled ( this );
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        ShapeMethodsImpl.setShapeDetectionEnabled ( this, enabled );
     }
 
     public void showPopup ()
@@ -617,10 +638,11 @@ public class WebButtonPopup extends WebInnerPopup
     /**
      * Custom button popup painter.
      */
-    protected class ButtonPopupPainter<D extends IDecoration<WebButtonPopup, D>> extends PanelPainter<WebButtonPopup, WebPanelUI, D>
+    protected class ButtonPopupPainter<D extends IDecoration<WebButtonPopup, D>>
+            extends PanelPainter<WebButtonPopup, WebPanelUI<WebButtonPopup>, D>
     {
         @Override
-        public void paint ( final Graphics2D g2d, final Rectangle bounds, final WebButtonPopup c, final WebPanelUI ui )
+        public void paint ( @NotNull final Graphics2D g2d, @NotNull final WebButtonPopup c, @NotNull final WebPanelUI ui, @NotNull final Bounds bounds )
         {
             // todo FIX
             //            LafUtils.drawCustomWebBorder ( g2d, c, getPopupShape ( c ),

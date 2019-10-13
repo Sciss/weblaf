@@ -17,20 +17,22 @@
 
 package com.alee.laf.tree;
 
-import javax.swing.tree.DefaultMutableTreeNode;
+import com.alee.api.annotations.NotNull;
+
+import javax.swing.tree.MutableTreeNode;
 
 /**
  * Custom runnable that provides single tree node.
  *
+ * @param <N> node type
  * @author Mikle Garin
  */
-
-public interface TreeNodeEventRunnable<E extends DefaultMutableTreeNode>
+public interface TreeNodeEventRunnable<N extends MutableTreeNode>
 {
     /**
      * Performs action according to node.
      *
      * @param node tree node
      */
-    public void run ( E node );
+    public void run ( @NotNull N node );
 }

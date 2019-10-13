@@ -17,15 +17,17 @@
 
 package com.alee.utils.swing;
 
+import com.alee.api.annotations.Nullable;
+
 import java.util.EventListener;
 
 /**
  * Custom listener that informs about hover object changes.
  * This listener provides ready-to-use functionality in components where it is supported.
  *
+ * @param <E> object type
  * @author Mikle Garin
  */
-
 public interface HoverListener<E> extends EventListener
 {
     /**
@@ -34,5 +36,5 @@ public interface HoverListener<E> extends EventListener
      * @param previous previous hover object
      * @param current  current hover object
      */
-    public void hoverChanged ( E previous, E current );
+    public void hoverChanged ( @Nullable E previous, @Nullable E current );
 }

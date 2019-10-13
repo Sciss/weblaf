@@ -17,9 +17,11 @@
 
 package com.alee.demo.content.tooltip;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.laf.label.WebLabel;
-import com.alee.managers.language.LM;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
@@ -29,32 +31,43 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JTooltipExample extends AbstractExample
+public class JTooltipExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "jtooltip";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "tooltip";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.swing;
     }
 
+    @NotNull
+    @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Use Tool Tips", "tooltip" );
+    }
+
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicTooltip e1 = new BasicTooltip ( FeatureState.updated, StyleId.tooltip );
-        return CollectionUtils.<Preview>asList ( e1 );
+        return CollectionUtils.<Preview>asList (
+                new BasicTooltip ( FeatureState.updated, StyleId.tooltip )
+        );
     }
 
     /**
@@ -73,11 +86,11 @@ public class JTooltipExample extends AbstractExample
             super ( JTooltipExample.this, "basic", featureState, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebLabel label = new WebLabel ( getPreviewLanguagePrefix () + "text" );
-            label.setToolTipText ( LM.get ( getPreviewLanguagePrefix () + "tip" ) );
             return CollectionUtils.asList ( label );
         }
     }

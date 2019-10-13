@@ -1,5 +1,6 @@
 package com.alee.laf.text;
 
+import com.alee.api.annotations.Nullable;
 import com.alee.painter.AdaptivePainter;
 import com.alee.painter.Painter;
 
@@ -7,19 +8,20 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Simple TextFieldPainter adapter class.
- * It is used to install simple non-specific painters into WebTextFieldUI.
+ * Simple {@link TextFieldPainter} adapter class.
+ * It is used to install simple non-specific painters into {@link WTextFieldUI}.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Alexandr Zernov
  */
-
-public final class AdaptiveTextFieldPainter<E extends JTextField, U extends WebTextFieldUI> extends AdaptivePainter<E, U>
-        implements ITextFieldPainter<E, U>
+public final class AdaptiveTextFieldPainter<C extends JTextField, U extends WTextFieldUI> extends AdaptivePainter<C, U>
+        implements ITextFieldPainter<C, U>
 {
     /**
-     * Constructs new AdaptiveTextFieldPainter for the specified painter.
+     * Constructs new {@link AdaptiveTextFieldPainter} for the specified painter.
      *
-     * @param painter painter to adapt
+     * @param painter {@link Painter} to adapt
      */
     public AdaptiveTextFieldPainter ( final Painter painter )
     {
@@ -38,12 +40,14 @@ public final class AdaptiveTextFieldPainter<E extends JTextField, U extends WebT
         return false;
     }
 
+    @Nullable
     @Override
     public Component getLeadingComponent ()
     {
         return null;
     }
 
+    @Nullable
     @Override
     public Component getTrailingComponent ()
     {

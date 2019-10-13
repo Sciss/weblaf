@@ -17,9 +17,14 @@
 
 package com.alee.demo.content.data.list;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.demo.api.example.*;
+import com.alee.laf.list.ListCellArea;
+import com.alee.laf.list.ListToolTipProvider;
 import com.alee.laf.list.WebList;
 import com.alee.laf.scroll.WebScrollPane;
+import com.alee.managers.language.LM;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 import com.alee.utils.TextUtils;
@@ -30,34 +35,39 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebListExample extends AbstractExample
+public class WebListExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "weblist";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "list";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.extended;
     }
 
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicList basic = new BasicList ( StyleId.list );
-        final ScrollableList scrollable = new ScrollableList ( StyleId.list );
-        final EditableList editable = new EditableList ( StyleId.list );
-        return CollectionUtils.<Preview>asList ( basic, scrollable, editable );
+        return CollectionUtils.<Preview>asList (
+                new BasicList ( StyleId.list ),
+                new ScrollableList ( StyleId.list ),
+                new EditableList ( StyleId.list ),
+                new ListTooltips ( StyleId.list )
+        );
     }
 
     /**
@@ -75,8 +85,9 @@ public class WebListExample extends AbstractExample
             super ( WebListExample.this, "basic", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebList list = new WebList ( getStyleId (), createShortData () );
             return CollectionUtils.asList ( list );
@@ -98,8 +109,9 @@ public class WebListExample extends AbstractExample
             super ( WebListExample.this, "scrollable", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebList list = new WebList ( getStyleId (), createLongData () );
             list.setVisibleRowCount ( 4 );
@@ -122,12 +134,48 @@ public class WebListExample extends AbstractExample
             super ( WebListExample.this, "editable", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebList list = new WebList ( getStyleId (), createLongData () );
             list.setVisibleRowCount ( 4 );
             list.setEditable ( true );
+            return CollectionUtils.asList ( new WebScrollPane ( list ) );
+        }
+    }
+
+    /**
+     * Custom list tooltips preview.
+     */
+    protected class ListTooltips extends AbstractStylePreview
+    {
+        /**
+         * Constructs new style preview.
+         *
+         * @param styleId preview style ID
+         */
+        public ListTooltips ( final StyleId styleId )
+        {
+            super ( WebListExample.this, "tooltips", FeatureState.updated, styleId );
+        }
+
+        @NotNull
+        @Override
+        protected List<? extends JComponent> createPreviewElements ()
+        {
+            final WebList list = new WebList ( getStyleId (), createLongData () );
+            list.setVisibleRowCount ( 4 );
+            list.setToolTipProvider ( new ListToolTipProvider<String> ()
+            {
+                @Nullable
+                @Override
+                protected String getToolTipText ( @NotNull final JList list,
+                                                  @NotNull final ListCellArea<String, JList> area )
+                {
+                    return LM.get ( getPreviewLanguageKey ( "cell" ), area.index (), area.getValue ( list ) );
+                }
+            } );
             return CollectionUtils.asList ( new WebScrollPane ( list ) );
         }
     }

@@ -17,13 +17,16 @@
 
 package com.alee.managers.hotkey;
 
+import com.alee.api.annotations.NotNull;
+
 import javax.swing.*;
 import java.awt.event.KeyEvent;
 
 /**
  * @author Mikle Garin
+ * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-HotkeyManager">How to use HotkeyManager</a>
+ * @see HotkeyManager
  */
-
 public class ButtonHotkeyRunnable implements HotkeyRunnable
 {
     private final AbstractButton button;
@@ -42,7 +45,7 @@ public class ButtonHotkeyRunnable implements HotkeyRunnable
     }
 
     @Override
-    public void run ( final KeyEvent e )
+    public void run ( @NotNull final KeyEvent e )
     {
         button.doClick ( pressTime );
     }

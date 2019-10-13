@@ -17,13 +17,17 @@
 
 package com.alee.painter.decoration;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.painter.decoration.background.GradientColor;
 import com.alee.painter.decoration.background.GradientType;
+import com.alee.utils.CollectionUtils;
 import com.alee.utils.MathUtils;
 import com.alee.utils.SwingUtils;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -31,7 +35,6 @@ import java.util.List;
  *
  * @author Mikle Garin
  */
-
 public final class DecorationUtils
 {
     /**
@@ -45,14 +48,16 @@ public final class DecorationUtils
      * @param y2     gradient end Y coordinate
      * @return separator line paint
      */
-    public static Paint getPaint ( final GradientType type, final List<GradientColor> colors, final int x1, final int y1, final int x2,
-                                   final int y2 )
+    @NotNull
+    public static Paint getPaint ( @NotNull final GradientType type, @NotNull final List<GradientColor> colors,
+                                   final int x1, final int y1, final int x2, final int y2 )
     {
+        final Paint result;
         if ( colors.size () == 1 )
         {
-            return colors.get ( 0 ).getColor ();
+            result = colors.get ( 0 ).getColor ();
         }
-        else
+        else if ( colors.size () > 1 )
         {
             final float[] f = new float[ colors.size () ];
             final Color[] c = new Color[ colors.size () ];
@@ -80,11 +85,11 @@ public final class DecorationUtils
             {
                 if ( fits )
                 {
-                    return new LinearGradientPaint ( x1, y1, x2, y2, f, c );
+                    result = new LinearGradientPaint ( x1, y1, x2, y2, f, c );
                 }
                 else
                 {
-                    return colors.get ( 0 ).getColor ();
+                    result = colors.get ( 0 ).getColor ();
                 }
             }
             else if ( type == GradientType.radial )
@@ -92,18 +97,23 @@ public final class DecorationUtils
                 if ( fits )
                 {
                     final float r = ( float ) Point.distance ( x1, y1, x2, y2 );
-                    return new RadialGradientPaint ( x1, y1, r, f, c );
+                    result = new RadialGradientPaint ( x1, y1, r, f, c );
                 }
                 else
                 {
-                    return colors.get ( 0 ).getColor ();
+                    result = colors.get ( 0 ).getColor ();
                 }
             }
             else
             {
-                throw new RuntimeException ( "Unknown gradient type provided" );
+                throw new RuntimeException ( "Unknown GradientType provided" );
             }
         }
+        else
+        {
+            throw new RuntimeException ( "At least one GradientColor must be provided" );
+        }
+        return result;
     }
 
     /**
@@ -115,18 +125,58 @@ public final class DecorationUtils
      * @param right  whether or not right should be painted
      * @return sides or lines descriptor string representation
      */
+    @NotNull
     public static String toString ( final boolean top, final boolean left, final boolean bottom, final boolean right )
     {
         return ( top ? 1 : 0 ) + "," + ( left ? 1 : 0 ) + "," + ( bottom ? 1 : 0 ) + "," + ( right ? 1 : 0 );
     }
 
     /**
-     * Informs about decoratable state changes.
+     * Returns {@link List} of extra decoration states from {@link Object} based on its {@link Stateful} implementation.
+     * It performs all necessary checks and always returns non-{@code null} {@link List} of states, though it might be empty.
      *
-     * @param component component states changed for
+     * @param object {@link Object} to retrieve {@link List} of extra decoration states from
+     * @return {@link List} of extra decoration states from {@link Object} based on its {@link Stateful} implementation
      */
-    public static void fireStatesChanged ( final JComponent component )
+    @NotNull
+    public static List<String> getExtraStates ( @Nullable final Object object )
     {
-        SwingUtils.firePropertyChanged ( component, AbstractDecorationPainter.DECORATION_STATES_PROPERTY, null, null );
+        final List<String> states;
+        if ( object instanceof Stateful )
+        {
+            final List<String> extra = ( ( Stateful ) object ).getStates ();
+            states = CollectionUtils.notEmpty ( extra ) ? extra : Collections.<String>emptyList ();
+        }
+        else
+        {
+            states = Collections.emptyList ();
+        }
+        return states;
+    }
+
+    /**
+     * Informs about {@link Component} decoration states changes.
+     *
+     * @param component {@link Component} decoration states changed for
+     */
+    public static void fireStatesChanged ( @Nullable final Component component )
+    {
+        if ( component instanceof JComponent )
+        {
+            SwingUtils.firePropertyChanged ( component, AbstractDecorationPainter.DECORATION_STATES_PROPERTY, null, null );
+        }
+    }
+
+    /**
+     * Informs about {@link Component} decoration border changes.
+     *
+     * @param component {@link Component} decoration border changed for
+     */
+    public static void fireBorderChanged ( @Nullable final Component component )
+    {
+        if ( component instanceof JComponent )
+        {
+            SwingUtils.firePropertyChanged ( component, AbstractDecorationPainter.DECORATION_BORDER_PROPERTY, null, null );
+        }
     }
 }

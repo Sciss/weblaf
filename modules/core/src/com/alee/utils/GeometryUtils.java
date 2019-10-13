@@ -17,6 +17,9 @@
 
 package com.alee.utils;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+
 import java.awt.*;
 import java.util.List;
 
@@ -25,16 +28,24 @@ import java.util.List;
  *
  * @author Mikle Garin
  */
-
 public final class GeometryUtils
 {
+    /**
+     * Private constructor to avoid instantiation.
+     */
+    private GeometryUtils ()
+    {
+        throw new UtilityException ( "Utility classes are not meant to be instantiated" );
+    }
+
     /**
      * Returns rectangle containing all specified points.
      *
      * @param points points to process
      * @return rectangle containing all specified points
      */
-    public static Rectangle getContainingRect ( final List<Point> points )
+    @Nullable
+    public static Rectangle getContainingRect ( @Nullable final List<Point> points )
     {
         return points != null && points.size () > 0 ? getContainingRect ( points.toArray ( new Point[ points.size () ] ) ) : null;
     }
@@ -45,11 +56,13 @@ public final class GeometryUtils
      * @param points points to process
      * @return rectangle containing all specified points
      */
-    public static Rectangle getContainingRect ( final Point... points )
+    @Nullable
+    public static Rectangle getContainingRect ( @Nullable final Point... points )
     {
+        final Rectangle rect;
         if ( points != null && points.length > 0 )
         {
-            final Rectangle rect = new Rectangle ( points[ 0 ], new Dimension ( 0, 0 ) );
+            rect = new Rectangle ( points[ 0 ], new Dimension ( 0, 0 ) );
             int i = 1;
             while ( i < points.length )
             {
@@ -84,12 +97,12 @@ public final class GeometryUtils
             {
                 rect.height = 1;
             }
-            return rect;
         }
         else
         {
-            return null;
+            rect = null;
         }
+        return rect;
     }
 
     /**
@@ -98,23 +111,21 @@ public final class GeometryUtils
      * @param rectangles rectangles to process
      * @return rectangle containing all specified rectangles
      */
-    public static Rectangle getContainingRect ( final Rectangle... rectangles )
+    @Nullable
+    public static Rectangle getContainingRect ( @Nullable final Rectangle... rectangles )
     {
+        Rectangle rect = null;
         if ( rectangles != null && rectangles.length > 0 )
         {
-            Rectangle rect = rectangles[ 0 ];
+            rect = rectangles[ 0 ];
             int i = 1;
             while ( i < rectangles.length )
             {
                 rect = getContainingRect ( rect, rectangles[ i ] );
                 i++;
             }
-            return rect;
         }
-        else
-        {
-            return null;
-        }
+        return rect;
     }
 
     /**
@@ -124,21 +135,58 @@ public final class GeometryUtils
      * @param r2 second rectangle
      * @return rectangle containing two others or null if both rectangles are null
      */
-    public static Rectangle getContainingRect ( final Rectangle r1, final Rectangle r2 )
+    @Nullable
+    public static Rectangle getContainingRect ( @Nullable final Rectangle r1, @Nullable final Rectangle r2 )
     {
-        if ( r1 == null && r2 != null )
+        final Rectangle rect;
+        if ( r1 != null && r2 != null )
         {
-            return r2;
+            final int minX = Math.min ( r1.x, r2.x );
+            final int minY = Math.min ( r1.y, r2.y );
+            final int maxX = Math.max ( r1.x + r1.width, r2.x + r2.width );
+            final int maxY = Math.max ( r1.y + r1.height, r2.y + r2.height );
+            rect = new Rectangle ( minX, minY, maxX - minX, maxY - minY );
         }
-        else if ( r2 == null && r1 != null )
+        else if ( r1 != null )
         {
-            return r1;
+            rect = r1;
         }
-        else if ( r1 == null && r2 == null )
+        else
         {
-            return null;
+            rect = r2;
         }
+        return rect;
+    }
 
+    /**
+     * Returns rectangle containing all specified rectangles.
+     *
+     * @param rectangles rectangles to process
+     * @return rectangle containing all specified rectangles
+     */
+    @NotNull
+    public static Rectangle getNonNullContainingRect ( @NotNull final Rectangle... rectangles )
+    {
+        Rectangle rect = rect = rectangles[ 0 ];
+        int i = 1;
+        while ( i < rectangles.length )
+        {
+            rect = getNonNullContainingRect ( rect, rectangles[ i ] );
+            i++;
+        }
+        return rect;
+    }
+
+    /**
+     * Returns rectangle containing two others.
+     *
+     * @param r1 first rectangle
+     * @param r2 second rectangle
+     * @return rectangle containing two others or null if both rectangles are null
+     */
+    @NotNull
+    public static Rectangle getNonNullContainingRect ( @NotNull final Rectangle r1, @NotNull final Rectangle r2 )
+    {
         final int minX = Math.min ( r1.x, r2.x );
         final int minY = Math.min ( r1.y, r2.y );
         final int maxX = Math.max ( r1.x + r1.width, r2.x + r2.width );
@@ -147,42 +195,13 @@ public final class GeometryUtils
     }
 
     /**
-     * Returns valid rectangle with non-negative width and height.
-     *
-     * @param rect rectangle to validate
-     * @return valid rectangle with non-negative width and height
-     */
-    public static Rectangle validateRect ( final Rectangle rect )
-    {
-        if ( rect.width >= 0 && rect.height >= 0 )
-        {
-            return rect;
-        }
-        else
-        {
-            int x = rect.x;
-            final int width = Math.abs ( rect.width );
-            if ( rect.width < 0 )
-            {
-                x = x - width;
-            }
-            int y = rect.y;
-            final int height = Math.abs ( rect.height );
-            if ( rect.height < 0 )
-            {
-                y = y - height;
-            }
-            return new Rectangle ( x, y, width, height );
-        }
-    }
-
-    /**
      * Returns middle point for the specified rectangle.
      *
      * @param rectangle rectangle to process
      * @return middle point for the specified rectangle
      */
-    public static Point middle ( final Rectangle rectangle )
+    @NotNull
+    public static Point middle ( @NotNull final Rectangle rectangle )
     {
         return new Point ( rectangle.x + rectangle.width / 2, rectangle.y + rectangle.height / 2 );
     }
@@ -194,7 +213,8 @@ public final class GeometryUtils
      * @param p2 second point
      * @return middle point between the specified points
      */
-    public static Point middle ( final Point p1, final Point p2 )
+    @NotNull
+    public static Point middle ( @NotNull final Point p1, @NotNull final Point p2 )
     {
         return new Point ( ( p1.x + p2.x ) / 2, ( p1.y + p2.y ) / 2 );
     }
@@ -208,6 +228,7 @@ public final class GeometryUtils
      * @param y2 second point Y coordinate
      * @return middle point between the specified points
      */
+    @NotNull
     public static Point middle ( final int x1, final int y1, final int x2, final int y2 )
     {
         return new Point ( ( x1 + x2 ) / 2, ( y1 + y2 ) / 2 );
@@ -220,7 +241,8 @@ public final class GeometryUtils
      * @param expansion expansion
      * @return rectangle expanded in four directions for the specified values
      */
-    public static Rectangle expand ( final Rectangle rect, final int expansion )
+    @NotNull
+    public static Rectangle expand ( @NotNull final Rectangle rect, final int expansion )
     {
         return expand ( rect, expansion, expansion, expansion, expansion );
     }
@@ -235,7 +257,8 @@ public final class GeometryUtils
      * @param right  right expansion
      * @return rectangle expanded in four directions for the specified values
      */
-    public static Rectangle expand ( final Rectangle rect, final int top, final int left, final int bottom, final int right )
+    @NotNull
+    public static Rectangle expand ( @NotNull final Rectangle rect, final int top, final int left, final int bottom, final int right )
     {
         return new Rectangle ( rect.x - left, rect.y - top, rect.width + left + right, rect.height + top + bottom );
     }
@@ -248,7 +271,8 @@ public final class GeometryUtils
      * @param yMod  Y coordinate modifier
      * @return modified point
      */
-    public static Point modify ( final Point point, final int xMod, final int yMod )
+    @NotNull
+    public static Point modify ( @NotNull final Point point, final int xMod, final int yMod )
     {
         return new Point ( point.x + xMod, point.y + yMod );
     }
@@ -260,7 +284,7 @@ public final class GeometryUtils
      * @param p2 second line point
      * @return angle between the line specified by points and y=0 line
      */
-    public static double getAngle ( final Point p1, final Point p2 )
+    public static double getAngle ( @NotNull final Point p1, @NotNull final Point p2 )
     {
         return getAngle ( p1.x, p1.y, p2.x, p2.y );
     }
@@ -287,8 +311,10 @@ public final class GeometryUtils
      * @param outer outer point to process
      * @return intersection point of the rectangle and the line going from the middle of that rectangle to the outer point
      */
-    public static Point findMiddleLineIntersection ( final Rectangle rect, final Point outer )
+    @NotNull
+    public static Point findMiddleLineIntersection ( @NotNull final Rectangle rect, @NotNull final Point outer )
     {
+        Point intersection = null;
         final Point middle = GeometryUtils.middle ( rect );
         final int x1 = middle.x;
         final int y1 = middle.y;
@@ -300,7 +326,7 @@ public final class GeometryUtils
             final int y = ( x1 * ( y2 - y1 ) - y1 * ( x2 - x1 ) - x * ( y2 - y1 ) ) / ( x1 - x2 );
             if ( y >= rect.y && y <= rect.y + rect.height )
             {
-                return new Point ( x, y );
+                intersection = new Point ( x, y );
             }
         }
         else if ( x2 > rect.x + rect.width )
@@ -309,28 +335,35 @@ public final class GeometryUtils
             final int y = ( x1 * ( y2 - y1 ) - y1 * ( x2 - x1 ) - x * ( y2 - y1 ) ) / ( x1 - x2 );
             if ( y >= rect.y && y <= rect.y + rect.height )
             {
-                return new Point ( x, y );
+                intersection = new Point ( x, y );
             }
         }
-        if ( y2 < rect.y )
+        if ( intersection == null )
         {
-            final int y = rect.y;
-            final int x = ( x1 * ( y2 - y1 ) - y1 * ( x2 - x1 ) - y * ( x1 - x2 ) ) / ( y2 - y1 );
-            if ( x >= rect.x && x <= rect.x + rect.width )
+            if ( y2 < rect.y )
             {
-                return new Point ( x, y );
+                final int y = rect.y;
+                final int x = ( x1 * ( y2 - y1 ) - y1 * ( x2 - x1 ) - y * ( x1 - x2 ) ) / ( y2 - y1 );
+                if ( x >= rect.x && x <= rect.x + rect.width )
+                {
+                    intersection = new Point ( x, y );
+                }
+            }
+            else if ( y2 > rect.y + rect.height )
+            {
+                final int y = rect.y + rect.height;
+                final int x = ( x1 * ( y2 - y1 ) - y1 * ( x2 - x1 ) - y * ( x1 - x2 ) ) / ( y2 - y1 );
+                if ( x >= rect.x && x <= rect.x + rect.width )
+                {
+                    intersection = new Point ( x, y );
+                }
+            }
+            if ( intersection == null )
+            {
+                intersection = middle;
             }
         }
-        else if ( y2 > rect.y + rect.height )
-        {
-            final int y = rect.y + rect.height;
-            final int x = ( x1 * ( y2 - y1 ) - y1 * ( x2 - x1 ) - y * ( x1 - x2 ) ) / ( y2 - y1 );
-            if ( x >= rect.x && x <= rect.x + rect.width )
-            {
-                return new Point ( x, y );
-            }
-        }
-        return middle;
+        return intersection;
     }
 
     /**

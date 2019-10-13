@@ -1,5 +1,6 @@
 package com.alee.laf.text;
 
+import com.alee.api.annotations.Nullable;
 import com.alee.painter.AdaptivePainter;
 import com.alee.painter.Painter;
 
@@ -7,19 +8,20 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Simple PasswordFieldPainter adapter class.
- * It is used to install simple non-specific painters into WebPasswordFieldUI.
+ * Simple {@link PasswordFieldPainter} adapter class.
+ * It is used to install simple non-specific painters into {@link WPasswordFieldUI}.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Alexandr Zernov
  */
-
-public final class AdaptivePasswordFieldPainter<E extends JPasswordField, U extends WebPasswordFieldUI> extends AdaptivePainter<E, U>
-        implements IPasswordFieldPainter<E, U>
+public final class AdaptivePasswordFieldPainter<C extends JPasswordField, U extends WPasswordFieldUI> extends AdaptivePainter<C, U>
+        implements IPasswordFieldPainter<C, U>
 {
     /**
-     * Constructs new AdaptivePasswordFieldPainter for the specified painter.
+     * Constructs new {@link AdaptivePasswordFieldPainter} for the specified painter.
      *
-     * @param painter painter to adapt
+     * @param painter {@link Painter} to adapt
      */
     public AdaptivePasswordFieldPainter ( final Painter painter )
     {
@@ -38,12 +40,14 @@ public final class AdaptivePasswordFieldPainter<E extends JPasswordField, U exte
         return false;
     }
 
+    @Nullable
     @Override
     public Component getLeadingComponent ()
     {
         return null;
     }
 
+    @Nullable
     @Override
     public Component getTrailingComponent ()
     {

@@ -17,25 +17,25 @@
 
 package com.alee.laf.label;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.api.jdk.Consumer;
 import com.alee.managers.style.*;
-import com.alee.managers.style.Bounds;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
-import javax.swing.plaf.basic.BasicLabelUI;
 import java.awt.*;
 
 /**
- * Custom UI for JLabel component.
+ * Custom UI for {@link JLabel} component.
  *
+ * @param <C> component type
  * @author Mikle Garin
  */
-
-public class WebLabelUI extends BasicLabelUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebLabelUI<C extends JLabel> extends WLabelUI<C> implements ShapeSupport, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -44,102 +44,78 @@ public class WebLabelUI extends BasicLabelUI implements Styleable, ShapeProvider
     protected ILabelPainter painter;
 
     /**
-     * Runtime variables.
-     */
-    protected JLabel label;
-    protected Insets margin = null;
-    protected Insets padding = null;
-
-    /**
-     * Returns an instance of the WebLabelUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebLabelUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebLabelUI
+     * @return instance of the {@link WebLabelUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebLabelUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
-    public void installUI ( final JComponent c )
+    public void installUI ( @NotNull final JComponent c )
     {
         super.installUI ( c );
-
-        // Saving label reference
-        label = ( JLabel ) c;
 
         // Applying skin
         StyleManager.installSkin ( label );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
-    public void uninstallUI ( final JComponent c )
+    public void uninstallUI ( @NotNull final JComponent c )
     {
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( label );
 
-        // Removing label reference
-        label = null;
-
-        // Uninstalling UI
         super.uninstallUI ( c );
     }
 
+    @NotNull
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( label );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( label, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( label, painter );
     }
 
     @Override
-    public Insets getMargin ()
+    public boolean isShapeDetectionEnabled ()
     {
-        return margin;
+        return PainterSupport.isShapeDetectionEnabled ( label, painter );
     }
 
     @Override
-    public void setMargin ( final Insets margin )
+    public void setShapeDetectionEnabled ( final boolean enabled )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setShapeDetectionEnabled ( label, painter, enabled );
     }
 
+    @Nullable
+    @Override
+    public Insets getMargin ()
+    {
+        return PainterSupport.getMargin ( label );
+    }
+
+    @Override
+    public void setMargin ( @Nullable final Insets margin )
+    {
+        PainterSupport.setMargin ( label, margin );
+    }
+
+    @Nullable
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( label );
     }
 
     @Override
-    public void setPadding ( final Insets padding )
+    public void setPadding ( @Nullable final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( label, padding );
     }
 
     /**
@@ -149,7 +125,7 @@ public class WebLabelUI extends BasicLabelUI implements Styleable, ShapeProvider
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -160,10 +136,10 @@ public class WebLabelUI extends BasicLabelUI implements Styleable, ShapeProvider
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( label, new DataRunnable<ILabelPainter> ()
+        PainterSupport.setPainter ( label, this, new Consumer<ILabelPainter> ()
         {
             @Override
-            public void run ( final ILabelPainter newPainter )
+            public void accept ( final ILabelPainter newPainter )
             {
                 WebLabelUI.this.painter = newPainter;
             }
@@ -171,11 +147,29 @@ public class WebLabelUI extends BasicLabelUI implements Styleable, ShapeProvider
     }
 
     @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
+    }
+
+    @Override
+    public int getBaseline ( final JComponent c, final int width, final int height )
+    {
+        return PainterSupport.getBaseline ( c, this, painter, width, height );
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
+    {
+        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+    }
+
+    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 

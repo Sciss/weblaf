@@ -17,11 +17,15 @@
 
 package com.alee.extended.progress;
 
+import com.alee.api.annotations.NotNull;
 import com.alee.extended.layout.AbstractLayoutManager;
-import com.alee.global.StyleConstants;
-import com.alee.utils.*;
-import com.alee.managers.style.ShapeProvider;
-import com.alee.utils.swing.SizeMethods;
+import com.alee.managers.style.ShapeMethods;
+import com.alee.utils.CollectionUtils;
+import com.alee.utils.ColorUtils;
+import com.alee.utils.GraphicsUtils;
+import com.alee.utils.SwingUtils;
+import com.alee.utils.swing.extensions.SizeMethods;
+import com.alee.utils.swing.extensions.SizeMethodsImpl;
 
 import javax.swing.*;
 import java.awt.*;
@@ -47,8 +51,7 @@ import java.util.List;
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebStepProgress">How to use WebStepProgress</a>
  */
-
-public class WebStepProgress extends JComponent implements SwingConstants, ShapeProvider, SizeMethods<WebStepProgress>
+public class WebStepProgress extends JComponent implements SwingConstants, ShapeMethods, SizeMethods<WebStepProgress>
 {
     /**
      * todo 1. Implement ShapeCache
@@ -887,7 +890,7 @@ public class WebStepProgress extends JComponent implements SwingConstants, Shape
     /**
      * Returns total progress for the specified point on progress component.
      *
-     * @param point point to retrive total progress for
+     * @param point point to retrieve total progress for
      * @return total progress for the specified point on progress component
      */
     public float getTotalProgressAt ( final Point point )
@@ -967,9 +970,23 @@ public class WebStepProgress extends JComponent implements SwingConstants, Shape
 
         final Graphics2D g2d = ( Graphics2D ) g;
         final Object aa = GraphicsUtils.setupAntialias ( g2d );
+        final Shape shape = getBorderShape ();
 
-        // Border and background
-        LafUtils.drawCustomWebBorder ( g2d, this, getBorderShape (), new Color ( 210, 210, 210 ), shadeWidth, true, true );
+        // Outer shadow
+        if ( isEnabled () )
+        {
+            GraphicsUtils.drawShade ( g2d, shape, ColorUtils.color ( 210, 210, 210 ), shadeWidth );
+        }
+
+        // Background
+        final Rectangle shapeBounds = shape.getBounds ();
+        g2d.setPaint ( new GradientPaint ( 0, shapeBounds.y, Color.WHITE, 0, shapeBounds.y + shapeBounds.height,
+                ColorUtils.color ( 223, 223, 223 ) ) );
+        g2d.fill ( shape );
+
+        // Border
+        g2d.setPaint ( isEnabled () ? Color.GRAY : Color.LIGHT_GRAY );
+        g2d.draw ( shape );
 
         // Progress line
         g2d.setPaint ( getFillPaint () );
@@ -978,10 +995,23 @@ public class WebStepProgress extends JComponent implements SwingConstants, Shape
         GraphicsUtils.restoreAntialias ( g2d, aa );
     }
 
+    @NotNull
     @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return getBorderShape ();
+    }
+
+    @Override
+    public boolean isShapeDetectionEnabled ()
+    {
+        return false;
+    }
+
+    @Override
+    public void setShapeDetectionEnabled ( final boolean enabled )
+    {
+        throw new UnsupportedOperationException ( "Shape detection is not yet supported for WebStepProgress" );
     }
 
     /**
@@ -1096,18 +1126,18 @@ public class WebStepProgress extends JComponent implements SwingConstants, Shape
         if ( orientation == HORIZONTAL )
         {
             final boolean ltr = getComponentOrientation ().isLeftToRight ();
-            final float px = ltr ? ( p1.x - stepControlFillWidth / 2 ) : ( p1.x + stepControlFillWidth / 2 - pw );
+            final float px = ltr ? p1.x - stepControlFillWidth / 2 : p1.x + stepControlFillWidth / 2 - pw;
             final float[] fractions = ltr ? new float[]{ 0f, ( stepControlFillWidth + sw * tss ) / pw, 1f } :
                     new float[]{ 0f, 1 - ( stepControlFillWidth + sw * tss ) / pw, 1f };
             final Color[] colors =
-                    ltr ? new Color[]{ color, color, StyleConstants.transparent } : new Color[]{ StyleConstants.transparent, color, color };
+                    ltr ? new Color[]{ color, color, ColorUtils.transparent () } : new Color[]{ ColorUtils.transparent (), color, color };
             return new LinearGradientPaint ( px, 0, px + pw, 0, fractions, colors );
         }
         else
         {
             final float py = p1.y - stepControlFillWidth / 2;
             return new LinearGradientPaint ( 0, py, 0, py + pw, new float[]{ 0f, ( stepControlFillWidth + sw * tss ) / pw, 1f },
-                    new Color[]{ color, color, StyleConstants.transparent } );
+                    new Color[]{ color, color, ColorUtils.transparent () } );
         }
     }
 
@@ -1174,7 +1204,7 @@ public class WebStepProgress extends JComponent implements SwingConstants, Shape
         if ( orientation == HORIZONTAL )
         {
             final boolean ltr = getComponentOrientation ().isLeftToRight ();
-            return new Rectangle2D.Double ( ltr ? p1.x : p2.x, p1.y - pathWidth / 2f, ltr ? ( p2.x - p1.x ) : ( p1.x - p2.x ), pathWidth );
+            return new Rectangle2D.Double ( ltr ? p1.x : p2.x, p1.y - pathWidth / 2f, ltr ? p2.x - p1.x : p1.x - p2.x, pathWidth );
         }
         else
         {
@@ -1194,7 +1224,7 @@ public class WebStepProgress extends JComponent implements SwingConstants, Shape
         if ( orientation == HORIZONTAL )
         {
             final boolean ltr = getComponentOrientation ().isLeftToRight ();
-            return new Rectangle2D.Double ( ltr ? p1.x : p2.x, p1.y + 0.5f - pathFillWidth / 2f, ltr ? ( p2.x - p1.x ) : ( p1.x - p2.x ),
+            return new Rectangle2D.Double ( ltr ? p1.x : p2.x, p1.y + 0.5f - pathFillWidth / 2f, ltr ? p2.x - p1.x : p1.x - p2.x,
                     pathFillWidth );
         }
         else
@@ -1237,7 +1267,7 @@ public class WebStepProgress extends JComponent implements SwingConstants, Shape
 
         if ( orientation == HORIZONTAL )
         {
-            final int pathPart = midSteps > 0 ? getPathLength () * ( ltr ? step : ( midSteps - step ) ) / midSteps : 0;
+            final int pathPart = midSteps > 0 ? getPathLength () * ( ltr ? step : midSteps - step ) / midSteps : 0;
             final int x = margin.left + sideWidth + pathPart;
             final int wh = getHeight () - margin.top - margin.bottom;
             final int sh = max.height + ( max.height > 0 ? spacing : 0 );
@@ -1273,7 +1303,7 @@ public class WebStepProgress extends JComponent implements SwingConstants, Shape
     /**
      * Returns step shape index at the specified point or -1 if none found.
      *
-     * @param point point to retrive shape index for
+     * @param point point to retrieve shape index for
      * @return step shape index at the specified point or -1 if none found
      */
     public int getStepShapeIndexAt ( final Point point )
@@ -1291,85 +1321,142 @@ public class WebStepProgress extends JComponent implements SwingConstants, Shape
     @Override
     public int getPreferredWidth ()
     {
-        return SizeUtils.getPreferredWidth ( this );
+        return SizeMethodsImpl.getPreferredWidth ( this );
     }
 
+    @NotNull
     @Override
     public WebStepProgress setPreferredWidth ( final int preferredWidth )
     {
-        return SizeUtils.setPreferredWidth ( this, preferredWidth );
+        return SizeMethodsImpl.setPreferredWidth ( this, preferredWidth );
     }
 
     @Override
     public int getPreferredHeight ()
     {
-        return SizeUtils.getPreferredHeight ( this );
+        return SizeMethodsImpl.getPreferredHeight ( this );
     }
 
+    @NotNull
     @Override
     public WebStepProgress setPreferredHeight ( final int preferredHeight )
     {
-        return SizeUtils.setPreferredHeight ( this, preferredHeight );
+        return SizeMethodsImpl.setPreferredHeight ( this, preferredHeight );
     }
 
+    @NotNull
     @Override
-    public int getMinimumWidth ()
+    public Dimension getPreferredSize ()
     {
-        return SizeUtils.getMinimumWidth ( this );
+        return SizeMethodsImpl.getPreferredSize ( this, super.getPreferredSize () );
     }
 
+    @NotNull
     @Override
-    public WebStepProgress setMinimumWidth ( final int minimumWidth )
+    public Dimension getOriginalPreferredSize ()
     {
-        return SizeUtils.setMinimumWidth ( this, minimumWidth );
+        return SizeMethodsImpl.getOriginalPreferredSize ( this, super.getPreferredSize () );
     }
 
+    @NotNull
     @Override
-    public int getMinimumHeight ()
+    public WebStepProgress setPreferredSize ( final int width, final int height )
     {
-        return SizeUtils.getMinimumHeight ( this );
-    }
-
-    @Override
-    public WebStepProgress setMinimumHeight ( final int minimumHeight )
-    {
-        return SizeUtils.setMinimumHeight ( this, minimumHeight );
+        return SizeMethodsImpl.setPreferredSize ( this, width, height );
     }
 
     @Override
     public int getMaximumWidth ()
     {
-        return SizeUtils.getMaximumWidth ( this );
+        return SizeMethodsImpl.getMaximumWidth ( this );
     }
 
+    @NotNull
     @Override
     public WebStepProgress setMaximumWidth ( final int maximumWidth )
     {
-        return SizeUtils.setMaximumWidth ( this, maximumWidth );
+        return SizeMethodsImpl.setMaximumWidth ( this, maximumWidth );
     }
 
     @Override
     public int getMaximumHeight ()
     {
-        return SizeUtils.getMaximumHeight ( this );
+        return SizeMethodsImpl.getMaximumHeight ( this );
     }
 
+    @NotNull
     @Override
     public WebStepProgress setMaximumHeight ( final int maximumHeight )
     {
-        return SizeUtils.setMaximumHeight ( this, maximumHeight );
+        return SizeMethodsImpl.setMaximumHeight ( this, maximumHeight );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getMaximumSize ()
+    {
+        return SizeMethodsImpl.getMaximumSize ( this, super.getMaximumSize () );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getOriginalMaximumSize ()
+    {
+        return SizeMethodsImpl.getOriginalMaximumSize ( this, super.getMaximumSize () );
+    }
+
+    @NotNull
+    @Override
+    public WebStepProgress setMaximumSize ( final int width, final int height )
+    {
+        return SizeMethodsImpl.setMaximumSize ( this, width, height );
     }
 
     @Override
-    public Dimension getPreferredSize ()
+    public int getMinimumWidth ()
     {
-        return SizeUtils.getPreferredSize ( this, super.getPreferredSize () );
+        return SizeMethodsImpl.getMinimumWidth ( this );
+    }
+
+    @NotNull
+    @Override
+    public WebStepProgress setMinimumWidth ( final int minimumWidth )
+    {
+        return SizeMethodsImpl.setMinimumWidth ( this, minimumWidth );
     }
 
     @Override
-    public WebStepProgress setPreferredSize ( final int width, final int height )
+    public int getMinimumHeight ()
     {
-        return SizeUtils.setPreferredSize ( this, width, height );
+        return SizeMethodsImpl.getMinimumHeight ( this );
+    }
+
+    @NotNull
+    @Override
+    public WebStepProgress setMinimumHeight ( final int minimumHeight )
+    {
+        return SizeMethodsImpl.setMinimumHeight ( this, minimumHeight );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getMinimumSize ()
+    {
+        return SizeMethodsImpl.getMinimumSize ( this, super.getMinimumSize () );
+    }
+
+    @NotNull
+    @Override
+    public Dimension getOriginalMinimumSize ()
+    {
+        return SizeMethodsImpl.getOriginalMinimumSize ( this, super.getMinimumSize () );
+    }
+
+    @NotNull
+    @Override
+    public WebStepProgress setMinimumSize ( final int width, final int height )
+    {
+        return SizeMethodsImpl.setMinimumSize ( this, width, height );
     }
 
     /**
@@ -1448,7 +1535,7 @@ public class WebStepProgress extends JComponent implements SwingConstants, Shape
     protected class ProgressLayout extends AbstractLayoutManager
     {
         @Override
-        public void layoutContainer ( final Container parent )
+        public void layoutContainer ( @NotNull final Container container )
         {
             final boolean ltr = getComponentOrientation ().isLeftToRight ();
             for ( int i = 0; i < steps.size (); i++ )
@@ -1490,8 +1577,9 @@ public class WebStepProgress extends JComponent implements SwingConstants, Shape
             }
         }
 
+        @NotNull
         @Override
-        public Dimension preferredLayoutSize ( final Container parent )
+        public Dimension preferredLayoutSize ( @NotNull final Container container )
         {
             final Dimension max = getMaximumComponentSize ();
             final Dimension maxSide = getMaximumSideComponentSize ();

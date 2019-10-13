@@ -21,17 +21,18 @@ import com.alee.painter.AdaptivePainter;
 import com.alee.painter.Painter;
 
 /**
- * Simple StatusBarPainter adapter class.
- * It is used to install simple non-specific painters into WebStatusBarUI.
+ * Simple {@link StatusBarPainter} adapter class.
+ * It is used to install simple non-specific painters into {@link WStatusBarUI}.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Mikle Garin
  */
-
-public final class AdaptiveStatusBarPainter<E extends WebStatusBar, U extends WebStatusBarUI> extends AdaptivePainter<E, U>
-        implements IStatusBarPainter<E, U>
+public final class AdaptiveStatusBarPainter<C extends WebStatusBar, U extends WStatusBarUI> extends AdaptivePainter<C, U>
+        implements IStatusBarPainter<C, U>
 {
     /**
-     * Constructs new AdaptiveStatusBarPainter for the specified painter.
+     * Constructs new {@link AdaptiveStatusBarPainter} for the specified painter.
      *
      * @param painter painter to adapt
      */

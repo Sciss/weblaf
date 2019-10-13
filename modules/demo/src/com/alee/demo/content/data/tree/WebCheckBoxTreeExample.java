@@ -17,15 +17,18 @@
 
 package com.alee.demo.content.data.tree;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.jdk.Objects;
+import com.alee.api.jdk.Predicate;
+import com.alee.demo.api.example.*;
+import com.alee.demo.content.SampleData;
+import com.alee.demo.content.data.tree.model.SampleNode;
+import com.alee.demo.content.data.tree.model.SampleTreeCellEditor;
 import com.alee.extended.tree.WebCheckBoxTree;
 import com.alee.laf.scroll.WebScrollPane;
-import com.alee.laf.tree.UniqueNode;
 import com.alee.laf.tree.WebTreeModel;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
-import com.alee.utils.CompareUtils;
-import com.alee.utils.swing.StateProvider;
 
 import javax.swing.*;
 import java.util.List;
@@ -33,37 +36,41 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebCheckBoxTreeExample extends AbstractExample
+public class WebCheckBoxTreeExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
-        return "webcheckboxtree";
+        return "checkboxtree";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "checkboxtree";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.extended;
     }
 
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicTree basic = new BasicTree ( StyleId.checkboxtree );
-        final CustomizedTree customized = new CustomizedTree ( StyleId.checkboxtree );
-        return CollectionUtils.<Preview>asList ( basic, customized );
+        return CollectionUtils.<Preview>asList (
+                new BasicTree ( StyleId.checkboxtree ),
+                new CustomizedTree ( StyleId.checkboxtree )
+        );
     }
 
     /**
-     * Basic extended tree preview.
+     * Basic {@link WebCheckBoxTree} preview.
      */
     protected class BasicTree extends AbstractStylePreview
     {
@@ -77,17 +84,19 @@ public class WebCheckBoxTreeExample extends AbstractExample
             super ( WebCheckBoxTreeExample.this, "basic", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final WebCheckBoxTree tree = new WebCheckBoxTree ( getStyleId () );
+            final WebTreeModel<SampleNode> model = SampleData.createCheckBoxTreeModel ();
+            final WebCheckBoxTree tree = new WebCheckBoxTree ( getStyleId (), model );
             tree.setVisibleRowCount ( 8 );
             return CollectionUtils.asList ( new WebScrollPane ( tree ).setPreferredWidth ( 200 ) );
         }
     }
 
     /**
-     * Editable extended tree preview.
+     * Customized and editable {@link WebCheckBoxTree} preview.
      */
     protected class CustomizedTree extends AbstractStylePreview
     {
@@ -101,68 +110,41 @@ public class WebCheckBoxTreeExample extends AbstractExample
             super ( WebCheckBoxTreeExample.this, "custom", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final WebCheckBoxTree tree = new WebCheckBoxTree ( getStyleId (), createSampleModel () );
+            final WebTreeModel<SampleNode> model = SampleData.createCustomizedCheckBoxTreeModel ();
+            final WebCheckBoxTree tree = new WebCheckBoxTree ( getStyleId (), model );
             tree.setEditable ( true );
+            tree.setCellEditor ( new SampleTreeCellEditor () );
             tree.setVisibleRowCount ( 13 );
-            tree.setCheckBoxEnabledStateProvider ( new StateProvider<UniqueNode> ()
+            tree.setCheckBoxEnabledStateProvider ( new Predicate<SampleNode> ()
             {
                 @Override
-                public boolean provide ( final UniqueNode node )
+                public boolean test ( @NotNull final SampleNode node )
                 {
-                    return !node.isLeaf () || !CompareUtils.equals ( node.getParent ().getUserObject ().toString (), "Disabled" );
+                    return !node.isLeaf () || Objects.notEquals ( node.getParent ().getId (), "disabled" );
                 }
             } );
-            tree.setCheckBoxVisibleStateProvider ( new StateProvider<UniqueNode> ()
+            tree.setCheckBoxVisibleStateProvider ( new Predicate<SampleNode> ()
             {
                 @Override
-                public boolean provide ( final UniqueNode node )
+                public boolean test ( @NotNull final SampleNode node )
                 {
-                    return !node.isLeaf () || !CompareUtils.equals ( node.getParent ().getUserObject ().toString (), "Hidden" );
+                    return !node.isLeaf () || Objects.notEquals ( node.getParent ().getId (), "hidden" );
                 }
             } );
-            tree.setEditableStateProvider ( new StateProvider<UniqueNode> ()
+            tree.setEditableStateProvider ( new Predicate<SampleNode> ()
             {
                 @Override
-                public boolean provide ( final UniqueNode node )
+                public boolean test ( @NotNull final SampleNode node )
                 {
-                    return node.isLeaf () && CompareUtils.equals ( node.getParent ().getUserObject ().toString (), "Editable" );
+                    return node.isLeaf () && Objects.equals ( node.getParent ().getId (), "editable" );
                 }
             } );
             tree.expandAll ();
             return CollectionUtils.asList ( new WebScrollPane ( tree ).setPreferredWidth ( 280 ) );
         }
-    }
-
-    /**
-     * Returns sample tree model for checkbox tree.
-     *
-     * @return sample tree model for checkbox tree
-     */
-    protected WebTreeModel createSampleModel ()
-    {
-        final UniqueNode root = new UniqueNode ( "Checkbox tree" );
-
-        UniqueNode parent = new UniqueNode ( "Disabled" );
-        parent.add ( new UniqueNode ( "Can't check this" ) );
-        parent.add ( new UniqueNode ( "And this one too" ) );
-        parent.add ( new UniqueNode ( "Not even this one" ) );
-        root.add ( parent );
-
-        parent = new UniqueNode ( "Hidden" );
-        parent.add ( new UniqueNode ( "No check here" ) );
-        parent.add ( new UniqueNode ( "And for this one" ) );
-        parent.add ( new UniqueNode ( "They're all gone" ) );
-        root.add ( parent );
-
-        parent = new UniqueNode ( "Editable" );
-        parent.add ( new UniqueNode ( "Edit this node" ) );
-        parent.add ( new UniqueNode ( "Or this one instead" ) );
-        parent.add ( new UniqueNode ( "This one is editable too" ) );
-        root.add ( parent );
-
-        return new WebTreeModel<UniqueNode> ( root );
     }
 }

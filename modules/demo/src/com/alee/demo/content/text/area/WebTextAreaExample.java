@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.text.area;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.text.WebTextArea;
 import com.alee.managers.style.StyleId;
@@ -29,33 +30,37 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebTextAreaExample extends AbstractExample
+public class WebTextAreaExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "webtextarea";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "textarea";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.extended;
     }
 
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final PromptArea e1 = new PromptArea ( "prompt", StyleId.textarea );
-        final DecoratedArea e2 = new DecoratedArea ( "decorated", StyleId.textareaDecorated );
-        return CollectionUtils.<Preview>asList ( e1, e2 );
+        return CollectionUtils.<Preview>asList (
+                new PromptArea ( "prompt", StyleId.textarea ),
+                new DecoratedArea ( "decorated", StyleId.textareaDecorated )
+        );
     }
 
     /**
@@ -74,8 +79,9 @@ public class WebTextAreaExample extends AbstractExample
             super ( WebTextAreaExample.this, id, FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebTextArea textArea = new WebTextArea ( getStyleId (), 3, 20 );
             textArea.setInputPrompt ( getPreviewLanguagePrefix () + "prompt" );
@@ -99,8 +105,9 @@ public class WebTextAreaExample extends AbstractExample
             super ( WebTextAreaExample.this, id, FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebTextArea textArea = new WebTextArea ( getStyleId (), "Sample\nmultiline\ntext", 3, 20 );
             return CollectionUtils.asList ( textArea );

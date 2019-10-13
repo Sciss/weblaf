@@ -17,6 +17,9 @@
 
 package com.alee.extended.layout;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+
 import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +30,6 @@ import java.util.Map;
  *
  * @author Mikle Garin
  */
-
 public class StackLayout extends AbstractLayoutManager
 {
     /**
@@ -55,7 +57,7 @@ public class StackLayout extends AbstractLayoutManager
     }
 
     @Override
-    public void addComponent ( final Component component, final Object constraints )
+    public void addComponent ( @NotNull final Component component, @Nullable final Object constraints )
     {
         final String value = ( String ) constraints;
         if ( value != null && !value.trim ().equals ( "" ) && !value.equals ( CONTENT ) && !value.equals ( HIDDEN ) )
@@ -66,17 +68,18 @@ public class StackLayout extends AbstractLayoutManager
     }
 
     @Override
-    public void removeComponent ( final Component component )
+    public void removeComponent ( @NotNull final Component component )
     {
         this.constraints.remove ( component );
     }
 
+    @NotNull
     @Override
-    public Dimension preferredLayoutSize ( final Container parent )
+    public Dimension preferredLayoutSize ( @NotNull final Container container )
     {
-        final Insets insets = parent.getInsets ();
+        final Insets insets = container.getInsets ();
         final Dimension ps = new Dimension ( 0, 0 );
-        for ( final Component component : parent.getComponents () )
+        for ( final Component component : container.getComponents () )
         {
             if ( constraints.get ( component ) == null || !constraints.get ( component ).equals ( HIDDEN ) )
             {
@@ -89,15 +92,15 @@ public class StackLayout extends AbstractLayoutManager
     }
 
     @Override
-    public void layoutContainer ( final Container parent )
+    public void layoutContainer ( @NotNull final Container container )
     {
-        final Insets insets = parent.getInsets ();
-        for ( final Component component : parent.getComponents () )
+        final Insets insets = container.getInsets ();
+        for ( final Component component : container.getComponents () )
         {
             if ( constraints.get ( component ) == null || !constraints.get ( component ).equals ( HIDDEN ) )
             {
-                component.setBounds ( insets.left, insets.top, parent.getWidth () - insets.left - insets.right,
-                        parent.getHeight () - insets.top - insets.bottom );
+                component.setBounds ( insets.left, insets.top, container.getWidth () - insets.left - insets.right,
+                        container.getHeight () - insets.top - insets.bottom );
             }
         }
     }

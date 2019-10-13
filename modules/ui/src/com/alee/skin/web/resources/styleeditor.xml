@@ -1,4 +1,4 @@
-<skin>
+<skin xmlns="http://weblookandfeel.com/XmlSkin">
 
     <!-- com.alee.extended.style.StyleEditor -->
 
@@ -6,18 +6,17 @@
     <style type="rootpane" id="styleeditor" extends="frame">
 
         <!-- Content split -->
-        <style type="splitpane" id="split">
+        <style type="multisplitpane" id="split">
 
             <!-- Preview panel -->
             <style type="panel" id="preview">
 
                 <!-- Preview components toolbar -->
-                <style type="toolbar" id="toolbar" extends="attached" padding="4,4,4,4">
+                <style type="toolbar" id="toolbar" extends="attached-north" padding="4,4,4,4">
                     <component>
                         <floatable>false</floatable>
                     </component>
                     <painter>
-                        <spacing>4</spacing>
                         <decorations>
                             <decoration>
                                 <WebShadow type="outer" width="0" />
@@ -60,7 +59,7 @@
                 <!-- Previews scroll -->
                 <style type="scrollpane" id="scroll" extends="undecorated">
 
-                    <!-- Custom panel styling with inner shade used for components preview -->
+                    <!-- Custom panel styling with inner shadow used for components preview -->
                     <style type="panel" id="pane" padding="15">
                         <painter>
                             <decorations>
@@ -76,10 +75,10 @@
                         <style type="panel" id="single" extends="transparent">
 
                             <!-- Preview component title label -->
-                            <style type="label" id="title" extends="shade" padding="0,7,3,7" />
+                            <style type="label" id="title" extends="shadow" padding="0,7,3,7" />
 
-                            <!-- Custom panel styling with inner shade used for components preview -->
-                            <style type="panel" id="shade" padding="10">
+                            <!-- Custom panel styling with inner shadow used for components preview -->
+                            <style type="panel" id="shadow" padding="10">
                                 <component>
                                     <opaque>false</opaque>
                                 </component>
@@ -129,11 +128,7 @@
             <style type="panel" id="editors">
 
                 <!-- Skin XML editors tabs -->
-                <style type="tabbedpane" id="tabs">
-                    <ui>
-                        <tabbedPaneStyle>attached</tabbedPaneStyle>
-                    </ui>
-                </style>
+                <style type="tabbedpane" id="tabs" />
 
             </style>
 
@@ -146,7 +141,11 @@
             <style type="label" id="label" padding="4" />
 
             <!-- Delay field -->
-            <style type="textfield" id="delay" />
+            <style type="textfield" id="delay">
+                <component>
+                    <horizontalAlignment>0</horizontalAlignment>
+                </component>
+            </style>
 
             <!-- Status bar buttons -->
             <style type="togglebutton" id="toggle" extends="icon-hover">

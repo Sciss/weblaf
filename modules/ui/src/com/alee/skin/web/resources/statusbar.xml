@@ -1,9 +1,12 @@
-<skin>
+<skin xmlns="http://weblookandfeel.com/XmlSkin">
 
     <!-- com.alee.extended.statusbar.WebStatusBar -->
 
     <!-- StatusBar -->
     <style type="statusbar" padding="2">
+        <component>
+            <layout class="StatusBarLayout$UIResource" />
+        </component>
         <painter>
             <decorations>
                 <decoration>

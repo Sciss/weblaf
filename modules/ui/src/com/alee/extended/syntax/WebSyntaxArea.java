@@ -17,11 +17,13 @@
 
 package com.alee.extended.syntax;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.extended.behavior.DocumentChangeBehavior;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.managers.hotkey.HotkeyData;
 import com.alee.managers.style.StyleId;
-import com.alee.utils.EventUtils;
-import com.alee.utils.general.Pair;
+import com.alee.utils.swing.extensions.*;
 import com.alee.utils.swing.*;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RUndoManager;
@@ -30,19 +32,17 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
-import java.beans.PropertyChangeListener;
 import java.util.List;
 
 /**
- * Easily customizable RSyntaxTextArea extension.
- * This class is basically the same as RSyntaxTextArea but additionally accepts SyntaxPresets for fast configuration.
+ * Easily customizable {@link RSyntaxTextArea} extension.
+ * This class is basically the same as RSyntaxTextArea but additionally accepts {@link SyntaxPreset}s for fast configuration.
  *
  * @author Mikle Garin
  * @see com.alee.extended.syntax.SyntaxPreset
  * @see com.alee.extended.syntax.SyntaxTheme
  */
-
-public class WebSyntaxArea extends RSyntaxTextArea implements DocumentEventMethods, EventMethods
+public class WebSyntaxArea extends RSyntaxTextArea implements DocumentEventMethods<WebSyntaxArea>, EventMethods
 {
     /**
      * Document history manager.
@@ -149,7 +149,7 @@ public class WebSyntaxArea extends RSyntaxTextArea implements DocumentEventMetho
         onKeyPress ( Hotkey.CTRL_SHIFT_Z, new KeyEventRunnable ()
         {
             @Override
-            public void run ( final KeyEvent e )
+            public void run ( @NotNull final KeyEvent e )
             {
                 redoLastAction ();
             }
@@ -267,116 +267,148 @@ public class WebSyntaxArea extends RSyntaxTextArea implements DocumentEventMetho
     }
 
     @Override
-    public Pair<DocumentChangeListener, PropertyChangeListener> onChange ( final DocumentEventRunnable runnable )
+    public DocumentChangeBehavior<WebSyntaxArea> onChange ( final DocumentEventRunnable<WebSyntaxArea> runnable )
     {
-        return EventUtils.onChange ( this, runnable );
+        return DocumentEventMethodsImpl.onChange ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMousePress ( final MouseEventRunnable runnable )
+    public MouseAdapter onMousePress ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMousePress ( this, runnable );
+        return EventMethodsImpl.onMousePress ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMousePress ( final MouseButton mouseButton, final MouseEventRunnable runnable )
+    public MouseAdapter onMousePress ( @Nullable final MouseButton mouseButton, @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMousePress ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMousePress ( this, mouseButton, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseEnter ( final MouseEventRunnable runnable )
+    public MouseAdapter onMouseEnter ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseEnter ( this, runnable );
+        return EventMethodsImpl.onMouseEnter ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseExit ( final MouseEventRunnable runnable )
+    public MouseAdapter onMouseExit ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseExit ( this, runnable );
+        return EventMethodsImpl.onMouseExit ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseDrag ( final MouseEventRunnable runnable )
+    public MouseAdapter onMouseDrag ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseDrag ( this, runnable );
+        return EventMethodsImpl.onMouseDrag ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseDrag ( final MouseButton mouseButton, final MouseEventRunnable runnable )
+    public MouseAdapter onMouseDrag ( @Nullable final MouseButton mouseButton, @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseDrag ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMouseDrag ( this, mouseButton, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseClick ( final MouseEventRunnable runnable )
+    public MouseAdapter onMouseClick ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseClick ( this, runnable );
+        return EventMethodsImpl.onMouseClick ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMouseClick ( final MouseButton mouseButton, final MouseEventRunnable runnable )
+    public MouseAdapter onMouseClick ( @Nullable final MouseButton mouseButton, @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMouseClick ( this, mouseButton, runnable );
+        return EventMethodsImpl.onMouseClick ( this, mouseButton, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onDoubleClick ( final MouseEventRunnable runnable )
+    public MouseAdapter onDoubleClick ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onDoubleClick ( this, runnable );
+        return EventMethodsImpl.onDoubleClick ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public MouseAdapter onMenuTrigger ( final MouseEventRunnable runnable )
+    public MouseAdapter onMenuTrigger ( @NotNull final MouseEventRunnable runnable )
     {
-        return EventUtils.onMenuTrigger ( this, runnable );
+        return EventMethodsImpl.onMenuTrigger ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyType ( final KeyEventRunnable runnable )
+    public KeyAdapter onKeyType ( @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyType ( this, runnable );
+        return EventMethodsImpl.onKeyType ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyType ( final HotkeyData hotkey, final KeyEventRunnable runnable )
+    public KeyAdapter onKeyType ( @Nullable final HotkeyData hotkey, @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyType ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyType ( this, hotkey, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyPress ( final KeyEventRunnable runnable )
+    public KeyAdapter onKeyPress ( @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyPress ( this, runnable );
+        return EventMethodsImpl.onKeyPress ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyPress ( final HotkeyData hotkey, final KeyEventRunnable runnable )
+    public KeyAdapter onKeyPress ( @Nullable final HotkeyData hotkey, @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyPress ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyPress ( this, hotkey, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyRelease ( final KeyEventRunnable runnable )
+    public KeyAdapter onKeyRelease ( @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyRelease ( this, runnable );
+        return EventMethodsImpl.onKeyRelease ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public KeyAdapter onKeyRelease ( final HotkeyData hotkey, final KeyEventRunnable runnable )
+    public KeyAdapter onKeyRelease ( @Nullable final HotkeyData hotkey, @NotNull final KeyEventRunnable runnable )
     {
-        return EventUtils.onKeyRelease ( this, hotkey, runnable );
+        return EventMethodsImpl.onKeyRelease ( this, hotkey, runnable );
     }
 
+    @NotNull
     @Override
-    public FocusAdapter onFocusGain ( final FocusEventRunnable runnable )
+    public FocusAdapter onFocusGain ( @NotNull final FocusEventRunnable runnable )
     {
-        return EventUtils.onFocusGain ( this, runnable );
+        return EventMethodsImpl.onFocusGain ( this, runnable );
     }
 
+    @NotNull
     @Override
-    public FocusAdapter onFocusLoss ( final FocusEventRunnable runnable )
+    public FocusAdapter onFocusLoss ( @NotNull final FocusEventRunnable runnable )
     {
-        return EventUtils.onFocusLoss ( this, runnable );
+        return EventMethodsImpl.onFocusLoss ( this, runnable );
+    }
+
+    @NotNull
+    @Override
+    public MouseAdapter onDragStart ( final int shift, @NotNull final MouseEventRunnable runnable )
+    {
+        return EventMethodsImpl.onDragStart ( this, shift, runnable );
+    }
+
+    @NotNull
+    @Override
+    public MouseAdapter onDragStart ( final int shift, @Nullable final MouseButton mouseButton, @NotNull final MouseEventRunnable runnable )
+    {
+        return EventMethodsImpl.onDragStart ( this, shift, mouseButton, runnable );
     }
 }

@@ -27,7 +27,6 @@ import java.util.Locale;
  *
  * @author Mikle Garin
  */
-
 public class LimitedDocument extends PlainDocument
 {
     /**
@@ -98,18 +97,16 @@ public class LimitedDocument extends PlainDocument
     @Override
     public void insertString ( final int offset, String str, final AttributeSet attr ) throws BadLocationException
     {
-        if ( str == null )
+        if ( str != null )
         {
-            return;
-        }
-
-        if ( getLimit () > 0 && ( getLength () + str.length () ) <= getLimit () )
-        {
-            if ( isToUppercase () )
+            if ( getLimit () > 0 && getLength () + str.length () <= getLimit () )
             {
-                str = str.toUpperCase ( Locale.ROOT );
+                if ( isToUppercase () )
+                {
+                    str = str.toUpperCase ( Locale.ROOT );
+                }
+                super.insertString ( offset, str, attr );
             }
-            super.insertString ( offset, str, attr );
         }
     }
 }

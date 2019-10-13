@@ -17,11 +17,10 @@
 
 package com.alee.extended.list;
 
-import com.alee.global.GlobalConstants;
+import com.alee.utils.CoreSwingUtils;
 import com.alee.utils.FileUtils;
 import com.alee.utils.ImageUtils;
 import com.alee.utils.concurrent.DaemonThreadFactory;
-import com.alee.utils.file.FileThumbnailProvider;
 
 import javax.swing.*;
 import java.awt.*;
@@ -33,9 +32,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
+ * Utility class that allows asynchronous image thumbnails generation.
+ *
  * @author Mikle Garin
  */
-
 public class ThumbnailGenerator implements Runnable
 {
     /**
@@ -46,7 +46,8 @@ public class ThumbnailGenerator implements Runnable
      * Executor service for thumbnails generation.
      * It was made static to be shared by different file lists and avoid overload.
      */
-    protected static final ExecutorService executorService = Executors.newSingleThreadExecutor ( new DaemonThreadFactory () );
+    protected static final ExecutorService executorService =
+            Executors.newSingleThreadExecutor ( new DaemonThreadFactory ( "ThumbnailGenerator" ) );
 
     /**
      * Map containing references to running thumbnail generators.
@@ -70,6 +71,11 @@ public class ThumbnailGenerator implements Runnable
     private final FileElement element;
 
     /**
+     * Requested thumbnail size.
+     */
+    private final Dimension size;
+
+    /**
      * Whether should generate disabled state thumbnail or not.
      */
     private final boolean disabled;
@@ -84,13 +90,15 @@ public class ThumbnailGenerator implements Runnable
      *
      * @param list     file list this generator is working for
      * @param element  element to queue thumbnail generation for
+     * @param size     requested thumbnail size
      * @param disabled whether should generate disabled state thumbnail or not
      */
-    public ThumbnailGenerator ( final WebFileList list, final FileElement element, final boolean disabled )
+    public ThumbnailGenerator ( final WebFileList list, final FileElement element, final Dimension size, final boolean disabled )
     {
         super ();
         this.list = list;
         this.element = element;
+        this.size = size;
         this.disabled = disabled;
         this.aborted = false;
     }
@@ -169,7 +177,7 @@ public class ThumbnailGenerator implements Runnable
 
         // Updating list view
         // Repaint doesn't really require EDT but this is simply a dirty trick to invoke this call later
-        SwingUtilities.invokeLater ( new Runnable ()
+        CoreSwingUtils.invokeLater ( new Runnable ()
         {
             @Override
             public void run ()
@@ -207,13 +215,18 @@ public class ThumbnailGenerator implements Runnable
         }
     }
 
+    /**
+     * Generates thumbnail for the specified file.
+     *
+     * @param file    file to generate thumbnail for
+     * @param preview whether should create thumbnail
+     */
     private void createThumbnail ( final File file, final boolean preview )
     {
         final FileThumbnailProvider thumbnailProvider = list.getThumbnailProvider ();
         if ( thumbnailProvider != null && thumbnailProvider.accept ( file ) )
         {
             // Using thumbnail provider to generate thumbnail icon
-            final Dimension size = new Dimension ( WebFileListCellRenderer.thumbSize, WebFileListCellRenderer.thumbSize );
             final ImageIcon thumb = element.getEnabledThumbnail () != null ? element.getEnabledThumbnail () :
                     thumbnailProvider.provide ( file, size, preview );
             if ( thumb != null )
@@ -234,16 +247,22 @@ public class ThumbnailGenerator implements Runnable
         }
     }
 
+    /**
+     * Generates standard thumbnail for the specified file.
+     *
+     * @param file    file to generate standard thumbnail for
+     * @param preview whether should create thumbnail
+     */
     private void createStandardThumbnail ( final File file, final boolean preview )
     {
         // Using either image thumbnails or default file extension icons
         final String ext = FileUtils.getFileExtPart ( file.getName (), false ).toLowerCase ( Locale.ROOT );
-        if ( preview && GlobalConstants.IMAGE_FORMATS.contains ( ext ) )
+        if ( preview && ImageUtils.VIEWABLE_IMAGES.contains ( ext ) )
         {
             // If thumbnail was already specified we should re-use it
             // It will save us a lot of time if we simply need to generate disabled state in addition to enabled one
             final ImageIcon thumb = element.getEnabledThumbnail () != null ? element.getEnabledThumbnail () :
-                    ImageUtils.createThumbnailIcon ( file.getAbsolutePath (), WebFileListCellRenderer.thumbSize );
+                    ImageUtils.createThumbnailIcon ( file.getAbsolutePath (), Math.min ( size.width, size.height ) );
             if ( thumb != null )
             {
                 // Applying standard image thumbnail
@@ -262,7 +281,12 @@ public class ThumbnailGenerator implements Runnable
         }
     }
 
-    private void applyThumbnail ( final ImageIcon thumb )
+    /**
+     * Applies generated thumbnail to the element.
+     *
+     * @param thumbnail thumbnail icon
+     */
+    private void applyThumbnail ( final ImageIcon thumbnail )
     {
         // Process abort check here
         if ( aborted )
@@ -276,7 +300,7 @@ public class ThumbnailGenerator implements Runnable
             if ( element.isThumbnailQueued () )
             {
                 // We had to check that queue wasn't cancelled from outside
-                element.setEnabledThumbnail ( thumb );
+                element.setEnabledThumbnail ( thumbnail );
             }
         }
 
@@ -289,7 +313,7 @@ public class ThumbnailGenerator implements Runnable
         if ( disabled )
         {
             // Re-using enabled state thumbnail to generate disabled state one
-            final ImageIcon disabledThumbnail = ImageUtils.createDisabledCopy ( thumb );
+            final ImageIcon disabledThumbnail = ImageUtils.createDisabledCopy ( thumbnail );
 
             // Process abort check here
             if ( aborted )
@@ -305,6 +329,11 @@ public class ThumbnailGenerator implements Runnable
         }
     }
 
+    /**
+     * Applies standard icon to the element.
+     *
+     * @param file file to apply standard icon to
+     */
     private void applyStandardIcon ( final File file )
     {
         // Process abort check here
@@ -358,9 +387,11 @@ public class ThumbnailGenerator implements Runnable
      *
      * @param list     file list this generator is working for
      * @param element  element to queue thumbnail generation for
+     * @param size     requested thumbnail size
      * @param disabled whether should generate disabled state thumbnail or not
      */
-    public static void queueThumbnailLoad ( final WebFileList list, final FileElement element, final boolean disabled )
+    public static void queueThumbnailLoad ( final WebFileList list, final FileElement element, final Dimension size,
+                                            final boolean disabled )
     {
         synchronized ( generatorsLock )
         {
@@ -368,8 +399,8 @@ public class ThumbnailGenerator implements Runnable
             synchronized ( element.getLock () )
             {
                 // Skip generation if it was already done or in queue
-                if ( disabled ? ( element.isDisabledThumbnailQueued () || element.getDisabledThumbnail () != null ) :
-                        ( element.isThumbnailQueued () || element.getEnabledThumbnail () != null ) )
+                if ( disabled ? element.isDisabledThumbnailQueued () || element.getDisabledThumbnail () != null :
+                        element.isThumbnailQueued () || element.getEnabledThumbnail () != null )
                 {
                     return;
                 }
@@ -380,7 +411,7 @@ public class ThumbnailGenerator implements Runnable
             }
 
             // Queueing thumbnail generation
-            final ThumbnailGenerator generator = new ThumbnailGenerator ( list, element, disabled );
+            final ThumbnailGenerator generator = new ThumbnailGenerator ( list, element, size, disabled );
             generators.put ( element, generator );
             executorService.submit ( generator );
         }

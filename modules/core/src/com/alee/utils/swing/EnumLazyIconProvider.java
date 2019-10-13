@@ -17,7 +17,9 @@
 
 package com.alee.utils.swing;
 
-import com.alee.managers.log.Log;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.utils.UtilityException;
 
 import javax.swing.*;
 import java.util.HashMap;
@@ -28,17 +30,18 @@ import java.util.Map;
  *
  * @author Mikle Garin
  */
-
-public class EnumLazyIconProvider
+public final class EnumLazyIconProvider
 {
     /**
      * Cached enum icons map.
      */
+    @NotNull
     private static final Map<Enum, Map<String, ImageIcon>> icons = new HashMap<Enum, Map<String, ImageIcon>> ();
 
     /**
      * Default icon files extension.
      */
+    @NotNull
     private static final String DEFAULT_EXTENSION = ".png";
 
     /**
@@ -49,7 +52,8 @@ public class EnumLazyIconProvider
      * @param <E>         enumeration type
      * @return cached or just loaded enum icon
      */
-    public static <E extends Enum<E>> ImageIcon getIcon ( final E enumeration, final String folder )
+    @NotNull
+    public static <E extends Enum<E>> ImageIcon getIcon ( @NotNull final E enumeration, @NotNull final String folder )
     {
         return getIcon ( enumeration, null, folder );
     }
@@ -64,7 +68,9 @@ public class EnumLazyIconProvider
      * @param <E>         enumeration type
      * @return cached or just loaded enum icon
      */
-    public static <E extends Enum<E>> ImageIcon getIcon ( final E enumeration, final String state, final String folder )
+    @NotNull
+    public static <E extends Enum<E>> ImageIcon getIcon ( @NotNull final E enumeration, @Nullable final String state,
+                                                          @NotNull final String folder )
     {
         return getIcon ( enumeration, state, folder, DEFAULT_EXTENSION );
     }
@@ -76,11 +82,13 @@ public class EnumLazyIconProvider
      * @param enumeration enumeration constant for which icon should be loaded
      * @param state       enumeration icon state
      * @param folder      enumeration icons folder
+     * @param extension   image format extension with dot
      * @param <E>         enumeration type
      * @return cached or just loaded enum icon
      */
-    public static <E extends Enum<E>> ImageIcon getIcon ( final E enumeration, final String state, final String folder,
-                                                          final String extension )
+    @NotNull
+    public static <E extends Enum<E>> ImageIcon getIcon ( @NotNull final E enumeration, @Nullable final String state,
+                                                          @NotNull final String folder, @NotNull final String extension )
     {
         Map<String, ImageIcon> stateIcons = icons.get ( enumeration );
         if ( stateIcons == null )
@@ -89,7 +97,7 @@ public class EnumLazyIconProvider
             icons.put ( enumeration, stateIcons );
         }
         ImageIcon imageIcon = stateIcons.get ( state );
-        if ( imageIcon == null && !stateIcons.containsKey ( state ) )
+        if ( imageIcon == null )
         {
             final String stateSuffix = state != null ? "-" + state : "";
             final String path = folder + enumeration + stateSuffix + extension;
@@ -98,11 +106,11 @@ public class EnumLazyIconProvider
                 imageIcon = new ImageIcon ( enumeration.getClass ().getResource ( path ) );
                 stateIcons.put ( state, imageIcon );
             }
-            catch ( final Throwable e )
+            catch ( final Exception e )
             {
+                final String msg = "Unable to find icon '%s' near class: %s";
                 final String cn = enumeration.getClass ().getCanonicalName ();
-                Log.error ( EnumLazyIconProvider.class, "Unable to find icon \"" + path + "\" near class: " + cn );
-                stateIcons.put ( state, null );
+                throw new UtilityException ( String.format ( msg, path, cn ), e );
             }
         }
         return imageIcon;

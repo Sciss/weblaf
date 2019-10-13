@@ -17,17 +17,29 @@
 
 package com.alee.managers.style;
 
-import com.alee.api.IconSupport;
-import com.alee.api.TitleSupport;
+import com.alee.api.Identifiable;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.managers.icon.set.IconSet;
 import com.alee.managers.style.data.ComponentStyle;
 
 import javax.swing.*;
+import java.util.List;
 
 /**
+ * Base interface single WebLaF skin.
+ * Each skin combines a group of component painters and settings to provide an unique visual style.
+ * If can also initialize WebLaF with your skin directly through one of {@link com.alee.laf.WebLookAndFeel} install methods.
+ *
+ * Here is a list of complete skin implementations:
+ * - {@link com.alee.skin.web.WebSkin}
+ * - {@link com.alee.skin.dark.DarkSkin}
+ *
  * @author Mikle Garin
+ * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
+ * @see com.alee.managers.style.StyleManager
  */
-
-public interface Skin extends IconSupport, TitleSupport
+public interface Skin extends Identifiable
 {
     /**
      * Returns unique skin ID.
@@ -35,14 +47,15 @@ public interface Skin extends IconSupport, TitleSupport
      *
      * @return unique skin ID
      */
+    @Nullable
+    @Override
     public String getId ();
 
     /**
-     * Returns skin icon.
+     * Returns skin {@link Icon}.
      *
-     * @return skin icon
+     * @return skin {@link Icon}
      */
-    @Override
     public Icon getIcon ();
 
     /**
@@ -50,7 +63,6 @@ public interface Skin extends IconSupport, TitleSupport
      *
      * @return skin title
      */
-    @Override
     public String getTitle ();
 
     /**
@@ -81,7 +93,35 @@ public interface Skin extends IconSupport, TitleSupport
      *
      * @return skin base class name
      */
-    public abstract String getSkinClass ();
+    public String getSkinClass ();
+
+    /**
+     * Called upon this skin installation as default global skin.
+     */
+    public void install ();
+
+    /**
+     * Called upon this skin uninstallation from being default global skin.
+     */
+    public void uninstall ();
+
+    /**
+     * Applies specified extension to this skin.
+     * Same extension might be applied multiple times in case application switches between styles multiple times.
+     * This might happen because {@link com.alee.managers.style.StyleManager} can't track where exactly they were applied already.
+     * You must ensure nothing goes wrong in case same extension attempts to get applied more than once.
+     *
+     * @param extension skin extension to apply
+     * @return true if extension was applied successfully, false otherwise
+     */
+    public boolean applyExtension ( SkinExtension extension );
+
+    /**
+     * Returns skin icon sets.
+     *
+     * @return skin icon sets
+     */
+    public List<IconSet> getIconSets ();
 
     /**
      * Returns style for the specified supported component type.
@@ -91,7 +131,7 @@ public interface Skin extends IconSupport, TitleSupport
      * @param component component instance
      * @return component style
      */
-    public abstract ComponentStyle getComponentStyle ( JComponent component );
+    public ComponentStyle getStyle ( JComponent component );
 
     /**
      * Applies this skin to the specified component.

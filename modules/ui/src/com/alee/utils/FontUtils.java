@@ -17,6 +17,7 @@
 
 package com.alee.utils;
 
+import com.alee.api.annotations.NotNull;
 import com.alee.utils.font.DerivedFontAttributes;
 import com.alee.utils.map.SoftHashMap;
 
@@ -28,12 +29,12 @@ import java.util.Map;
  *
  * @author Mikle Garin
  */
-
 public final class FontUtils
 {
     /**
      * Derived fonts cache map.
      */
+    @NotNull
     private static final Map<DerivedFontAttributes, Font> derivedFontsCache = new SoftHashMap<DerivedFontAttributes, Font> ();
 
     /**
@@ -57,20 +58,25 @@ public final class FontUtils
     public static final int MAX_LAYOUT_CHARCODE = 0x206F;
 
     /**
-     * Temporary constants moved from CharToGlyphMapper.
+     * Temporary constants moved from {@code sun.font.CharToGlyphMapper} class.
      */
     public static final int HI_SURROGATE_START = 55296;
     public static final int LO_SURROGATE_END = 57343;
+
+    /**
+     * Private constructor to avoid instantiation.
+     */
+    private FontUtils ()
+    {
+        throw new UtilityException ( "Utility classes are not meant to be instantiated" );
+    }
 
     /**
      * Clears derived fonts cache.
      */
     public static void clearDerivedFontsCache ()
     {
-        if ( derivedFontsCache != null )
-        {
-            derivedFontsCache.clear ();
-        }
+        derivedFontsCache.clear ();
     }
 
     /**
@@ -82,7 +88,8 @@ public final class FontUtils
      * @param size  new font size
      * @return the derived font.
      */
-    public static Font getCachedDerivedFont ( final Font font, final int style, final int size )
+    @NotNull
+    public static Font getCachedDerivedFont ( @NotNull final Font font, final int style, final int size )
     {
         final DerivedFontAttributes attribute = getFontAttribute ( font, style, size );
         Font derivedFont = derivedFontsCache.get ( attribute );
@@ -102,7 +109,8 @@ public final class FontUtils
      * @param size  new font size
      * @return font attributes object
      */
-    protected static DerivedFontAttributes getFontAttribute ( final Font font, final int style, final int size )
+    @NotNull
+    protected static DerivedFontAttributes getFontAttribute ( @NotNull final Font font, final int style, final int size )
     {
         return new DerivedFontAttributes ( font, style, size );
     }
@@ -110,15 +118,15 @@ public final class FontUtils
     /**
      * checks whether TextLayout is required to handle characters.
      *
-     * @param text  characters to be tested
-     * @param start start
-     * @param limit limit
+     * @param characters characters to be tested
+     * @param start      start
+     * @param limit      limit
      * @return <tt>true</tt>  if TextLayout is required
      * <tt>false</tt> if TextLayout is not required
      */
-    public static boolean isComplexLayout ( final char[] text, final int start, final int limit )
+    public static boolean isComplexLayout ( @NotNull final char[] characters, final int start, final int limit )
     {
-        return isComplexText ( text, start, limit );
+        return isComplexText ( characters, start, limit );
     }
 
     /**
@@ -137,24 +145,24 @@ public final class FontUtils
      * discover any case where it cannot make naive assumptions about
      * the number of chars, and how to index through them, then it may
      * need the option to have a 'true' return in such a case.
+     *
+     * @param characters characters
+     * @param start      check start index
+     * @param limit      check end index
+     * @return {@code true} if any of the characters are non-simple, {@code false} otherwise
      */
-    @SuppressWarnings ( "JavaDoc" )
-    public static boolean isComplexText ( final char[] chs, final int start, final int limit )
+    public static boolean isComplexText ( @NotNull final char[] characters, final int start, final int limit )
     {
-
+        boolean complex = false;
         for ( int i = start; i < limit; i++ )
         {
-            if ( chs[ i ] < MIN_LAYOUT_CHARCODE )
+            if ( characters[ i ] >= MIN_LAYOUT_CHARCODE && isNonSimpleChar ( characters[ i ] ) )
             {
-                //noinspection UnnecessaryContinue
-                continue;
-            }
-            else if ( isNonSimpleChar ( chs[ i ] ) )
-            {
-                return true;
+                complex = true;
+                break;
             }
         }
-        return false;
+        return complex;
     }
 
     /**
@@ -168,11 +176,13 @@ public final class FontUtils
      * These callers really are asking for more than whether 'layout'
      * needs to be run, they need to know if they can assume 1-&gt;1
      * char-&gt;glyph mapping.
+     *
+     * @param character character
+     * @return {@code true} if character is not simple, {@code false} otherwise
      */
-    @SuppressWarnings ( "JavaDoc" )
-    static boolean isNonSimpleChar ( final char ch )
+    private static boolean isNonSimpleChar ( final char character )
     {
-        return isComplexCharCode ( ch ) || ( ch >= HI_SURROGATE_START && ch <= LO_SURROGATE_END );
+        return isComplexCharCode ( character ) || character >= HI_SURROGATE_START && character <= LO_SURROGATE_END;
     }
 
     /**
@@ -193,34 +203,37 @@ public final class FontUtils
      * converted surrogate pairs into supplementary characters, and so
      * can handle this case and doesn't need to be told such a case is
      * 'complex'.
+     *
+     * @param code character code
+     * @return {@code true} if character code points to a complex character, {@code false} otherwise
      */
-    @SuppressWarnings ( "JavaDoc" )
-    static boolean isComplexCharCode ( final int code )
+    @SuppressWarnings ( "RedundantIfStatement" )
+    private static boolean isComplexCharCode ( final int code )
     {
-
+        final boolean complex;
         if ( code < MIN_LAYOUT_CHARCODE || code > MAX_LAYOUT_CHARCODE )
         {
-            return false;
+            complex = false;
         }
         else if ( code <= 0x036f )
         {
             // Trigger layout for combining diacriticals 0x0300->0x036f
-            return true;
+            complex = true;
         }
         else if ( code < 0x0590 )
         {
             // No automatic layout for Greek, Cyrillic, Armenian.
-            return false;
+            complex = false;
         }
         else if ( code <= 0x06ff )
         {
             // Hebrew 0590 - 05ff
             // Arabic 0600 - 06ff
-            return true;
+            complex = true;
         }
         else if ( code < 0x0900 )
         {
-            return false; // Syriac and Thaana
+            complex = false; // Syriac and Thaana
         }
         else if ( code <= 0x0e7f )
         {
@@ -236,32 +249,39 @@ public final class FontUtils
             // 0D00 - 0D7F Malayalam
             // 0D80 - 0DFF Sinhala
             // 0E00 - 0E7F if Thai, assume shaping for vowel, tone marks
-            return true;
+            complex = true;
         }
         else if ( code < 0x1780 )
         {
-            return false;
+            complex = false;
         }
         else if ( code <= 0x17ff )
-        { // 1780 - 17FF Khmer
-            return true;
+        {
+            // 1780 - 17FF Khmer
+            complex = true;
         }
         else if ( code < 0x200c )
         {
-            return false;
+            complex = false;
         }
         else if ( code <= 0x200d )
         { //  zwj or zwnj
-            return true;
+            complex = true;
         }
         else if ( code >= 0x202a && code <= 0x202e )
-        { // directional control
-            return true;
+        {
+            // directional control
+            complex = true;
         }
-        else if ( code >= 0x206a && code <= 0x206f )
-        { // directional control
-            return true;
+        else if ( code >= 0x206a )
+        {
+            // directional control
+            complex = true;
         }
-        return false;
+        else
+        {
+            complex = false;
+        }
+        return complex;
     }
 }

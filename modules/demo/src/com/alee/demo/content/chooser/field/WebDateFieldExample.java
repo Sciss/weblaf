@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.chooser.field;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
 import com.alee.extended.date.DateListener;
 import com.alee.extended.date.WebDateField;
 import com.alee.laf.label.WebLabel;
@@ -33,32 +34,36 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebDateFieldExample extends AbstractExample
+public class WebDateFieldExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "webdatefield";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "datefield";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.extended;
     }
 
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final DateField e1 = new DateField ( StyleId.datefield );
-        return CollectionUtils.<Preview>asList ( e1 );
+        return CollectionUtils.<Preview>asList (
+                new DateField ( StyleId.datefield )
+        );
     }
 
     /**
@@ -76,8 +81,9 @@ public class WebDateFieldExample extends AbstractExample
             super ( WebDateFieldExample.this, "basic", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebDateField dateField = new WebDateField ( getStyleId () );
             dateField.addDateListener ( new DateListener ()

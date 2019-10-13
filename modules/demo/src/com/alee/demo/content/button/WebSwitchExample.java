@@ -17,8 +17,9 @@
 
 package com.alee.demo.content.button;
 
-import com.alee.demo.api.*;
-import com.alee.demo.icons.DemoIcons;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
+import com.alee.demo.skin.DemoIcons;
 import com.alee.extended.button.WebSwitch;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
@@ -29,33 +30,37 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebSwitchExample extends AbstractExample
+public class WebSwitchExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
-        return "webswitch";
+        return "switch";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "switch";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.extended;
     }
 
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final TextSwitch e1 = new TextSwitch ( StyleId.wswitch );
-        final IconSwitch e2 = new IconSwitch ( StyleId.wswitch );
-        return CollectionUtils.<Preview>asList ( e1, e2 );
+        return CollectionUtils.<Preview>asList (
+                new TextSwitch ( StyleId.wswitch ),
+                new IconSwitch ( StyleId.wswitch )
+        );
     }
 
     /**
@@ -73,8 +78,9 @@ public class WebSwitchExample extends AbstractExample
             super ( WebSwitchExample.this, "text", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebSwitch wswitch = new WebSwitch ( getStyleId () );
             wswitch.setSwitchComponents ( getPreviewLanguagePrefix () + "on", getPreviewLanguagePrefix () + "off" );
@@ -97,8 +103,9 @@ public class WebSwitchExample extends AbstractExample
             super ( WebSwitchExample.this, "icon", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebSwitch wswitch = new WebSwitch ( getStyleId (), true );
             wswitch.setSwitchComponents ( DemoIcons.facebook16, DemoIcons.googleplus16 );

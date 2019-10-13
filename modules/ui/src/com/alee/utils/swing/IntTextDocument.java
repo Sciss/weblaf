@@ -26,7 +26,6 @@ import javax.swing.text.PlainDocument;
  *
  * @author Mikle Garin
  */
-
 public class IntTextDocument extends PlainDocument
 {
     @Override
@@ -43,7 +42,7 @@ public class IntTextDocument extends PlainDocument
             final String newString = oldString.substring ( 0, offs ) + str + oldString.substring ( offs );
             try
             {
-                if ( accept ( Integer.parseInt ( newString + "0" ) ) )
+                if ( accept ( Integer.parseInt ( newString ) ) )
                 {
                     super.insertString ( offs, str, a );
                 }
@@ -61,7 +60,6 @@ public class IntTextDocument extends PlainDocument
      * @param integer entered integer number
      * @return true if entered integer number is accepted, false otherwise
      */
-    @SuppressWarnings ("UnusedParameters")
     protected boolean accept ( final int integer )
     {
         return true;

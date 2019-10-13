@@ -17,6 +17,7 @@
 
 package com.alee.painter.decoration.shape;
 
+import com.alee.api.annotations.NotNull;
 import com.alee.painter.decoration.WebDecoration;
 import com.alee.painter.decoration.shadow.ShadowType;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
@@ -27,33 +28,23 @@ import java.awt.geom.Ellipse2D;
 
 /**
  * Ellipse shape implementation.
+ * Since provided shape is quite simple it is not cached.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <D> decoration type
  * @param <I> shape type
  * @author Mikle Garin
  */
-
-@XStreamAlias ("EllipseShape")
-public class EllipseShape<E extends JComponent, D extends WebDecoration<E, D>, I extends EllipseShape<E, D, I>>
-        extends AbstractShape<E, D, I>
+@XStreamAlias ( "EllipseShape" )
+public class EllipseShape<C extends JComponent, D extends WebDecoration<C, D>, I extends EllipseShape<C, D, I>>
+        extends AbstractShape<C, D, I>
 {
+    @NotNull
     @Override
-    public Insets getBorderInsets ( final E c, final D d )
+    public Shape getShape ( final ShapeType type, final Rectangle bounds, final C c, final D d )
     {
-        // Ellipse doesn't support visual grouping so insets are quite simple
-        final int borderWidth = ( int ) Math.round ( Math.floor ( d.getBorderWidth () ) );
-        final int shadowWidth = d.getShadeWidth ( ShadowType.outer );
-        final int spacing = shadowWidth + borderWidth;
-        return new Insets ( spacing, spacing, spacing, spacing );
-    }
-
-    @Override
-    public Shape getShape ( final ShapeType type, final Rectangle bounds, final E c, final D d )
-    {
-        // Ellipse shape is quite simple so there is no need to cache it
-        final int sw = d.getShadeWidth ( ShadowType.outer );
         final int bgShear = type.isBorder () ? -1 : 0;
+        final int sw = d.getShadowWidth ( ShadowType.outer );
         return new Ellipse2D.Double ( bounds.x + sw, bounds.y + sw, bounds.width - sw * 2 + bgShear, bounds.height - sw * 2 + bgShear );
     }
 }

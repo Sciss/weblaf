@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.container;
 
-import com.alee.demo.api.AbstractExampleGroup;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.AbstractExampleGroup;
 import com.alee.utils.CollectionUtils;
 
 import java.util.List;
@@ -25,9 +26,9 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
 public class ContainersGroup extends AbstractExampleGroup
 {
+    @NotNull
     @Override
     public String getId ()
     {
@@ -37,6 +38,19 @@ public class ContainersGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleClasses ()
     {
-        return CollectionUtils.<Class>asList ( JPanelExample.class, GroupPaneExample.class );
+        return CollectionUtils.<Class>asList (
+                JPanelExample.class,
+                WebPanelExample.class,
+                JScrollPaneExample.class,
+                JSplitPaneExample.class,
+                WebMultiSplitPaneExample.class,
+                JToolBarExample.class,
+                JTabbedPaneExample.class,
+                WebDocumentPaneExample.class,
+                GroupPaneExample.class,
+                WebBreadcrumbExample.class,
+                WebCollapsiblePaneExample.class,
+                WebAccordionExample.class
+        );
     }
 }

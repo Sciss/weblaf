@@ -17,175 +17,43 @@
 
 package com.alee.utils;
 
-import com.alee.painter.common.NinePatchIconPainter;
-import com.alee.painter.common.NinePatchStatePainter;
+import com.alee.api.annotations.NotNull;
 import com.alee.utils.ninepatch.NinePatchIcon;
 import com.alee.utils.ninepatch.NinePatchInterval;
 import com.alee.utils.ninepatch.NinePatchIntervalType;
-import com.alee.utils.xml.ResourceFile;
-import com.alee.utils.xml.ResourceMap;
+import com.alee.utils.xml.Resource;
 
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * This class provides a set of utilities to work with various nine-patch images.
  *
  * @author Mikle Garin
  */
-
 public final class NinePatchUtils
 {
     /**
-     * todo 1. Allow custom shade colors
+     * Private constructor to avoid instantiation.
      */
-
-    /**
-     * Constants used to form icons cache keys.
-     */
-    private static final String OUTER_SHADE_PREFIX = "outer";
-    private static final String INNER_SHADE_PREFIX = "inner";
-    private static final String SEPARATOR = ";";
-
-    /**
-     * Shade nine-patch icons cache.
-     */
-    private static final Map<String, WeakReference<NinePatchIcon>> shadeIconCache = new HashMap<String, WeakReference<NinePatchIcon>> ();
-
-    /**
-     * Fetches the nine-patch icon from the cache.
-     *
-     * @param key Cache key.
-     * @return Nine-patch icon from the cache or null on cache miss.
-     */
-    private static NinePatchIcon getNinePatchIconFromCache ( final String key )
+    private NinePatchUtils ()
     {
-        return shadeIconCache.containsKey ( key ) ? shadeIconCache.get ( key ).get () : null;
+        throw new UtilityException ( "Utility classes are not meant to be instantiated" );
     }
 
     /**
-     * Returns cached shade nine-patch icon.
-     * Note that the cache reference is soft and will be erased on demand.
+     * Returns NinePatchIcon which is read from specified ResourceFile.
      *
-     * @param shadeWidth   shade width
-     * @param round        corners round
-     * @param shadeOpacity shade opacity
-     * @return cached shade nine-patch icon
+     * @param resource file description
+     * @return NinePatchIcon
      */
-    public static NinePatchIcon getShadeIcon ( final int shadeWidth, final int round, final float shadeOpacity )
+    @NotNull
+    public static NinePatchIcon getNinePatchIcon ( @NotNull final Resource resource )
     {
-        final String key = OUTER_SHADE_PREFIX + SEPARATOR + shadeWidth + SEPARATOR + round + SEPARATOR + shadeOpacity;
-        final NinePatchIcon icon = getNinePatchIconFromCache ( key );
-        if ( icon != null )
-        {
-            return icon;
-        }
-        else
-        {
-            final NinePatchIcon ninePatchIcon = createShadeIcon ( shadeWidth, round, shadeOpacity );
-            shadeIconCache.put ( key, new WeakReference<NinePatchIcon> ( ninePatchIcon ) );
-            return ninePatchIcon;
-        }
-    }
-
-    /**
-     * Returns shade nine-patch icon.
-     * todo Pass component width/height here to check whether it is more than required or not and use it instead sometimes
-     *
-     * @param shadeWidth   shade width
-     * @param round        corners round
-     * @param shadeOpacity shade opacity
-     * @return shade nine-patch icon
-     */
-    public static NinePatchIcon createShadeIcon ( final int shadeWidth, final int round, final float shadeOpacity )
-    {
-        // Making round value into real rounding radius
-        final int r = round * 2;
-
-        // Calculating width for temporary image
-        final int inner = Math.max ( shadeWidth, round );
-        final int w = shadeWidth * 2 + inner * 2;
-
-        // Creating shade image
-        final Shape shape = new RoundRectangle2D.Double ( shadeWidth, shadeWidth, w - shadeWidth * 2, w - shadeWidth * 2, r, r );
-        final BufferedImage shade = ImageUtils.createShadeImage ( w, w, shape, shadeWidth, shadeOpacity, true );
-
-        // Creating nine-patch icon based on shade image
-        final NinePatchIcon ninePatchIcon = NinePatchIcon.create ( shade );
-        ninePatchIcon.addHorizontalStretch ( 0, shadeWidth + inner, true );
-        ninePatchIcon.addHorizontalStretch ( shadeWidth + inner + 1, w - shadeWidth - inner - 1, false );
-        ninePatchIcon.addHorizontalStretch ( w - shadeWidth - inner, w, true );
-        ninePatchIcon.addVerticalStretch ( 0, shadeWidth + inner, true );
-        ninePatchIcon.addVerticalStretch ( shadeWidth + inner + 1, w - shadeWidth - inner - 1, false );
-        ninePatchIcon.addVerticalStretch ( w - shadeWidth - inner, w, true );
-        ninePatchIcon.setMargin ( shadeWidth );
-        return ninePatchIcon;
-    }
-
-    /**
-     * Returns cached inner shade nine-patch icon.
-     * Note that the cache reference is soft and will be erased on demand.
-     *
-     * @param shadeWidth   shade width
-     * @param round        corners round
-     * @param shadeOpacity shade opacity
-     * @return cached inner shade nine-patch icon
-     */
-    public static NinePatchIcon getInnerShadeIcon ( final int shadeWidth, final int round, final float shadeOpacity )
-    {
-        final String key = INNER_SHADE_PREFIX + SEPARATOR + shadeWidth + SEPARATOR + round + SEPARATOR + shadeOpacity;
-        final NinePatchIcon icon = getNinePatchIconFromCache ( key );
-        if ( icon != null )
-        {
-            return icon;
-        }
-        else
-        {
-            final NinePatchIcon ninePatchIcon = createInnerShadeIcon ( shadeWidth, round, shadeOpacity );
-            shadeIconCache.put ( key, new WeakReference<NinePatchIcon> ( ninePatchIcon ) );
-            return ninePatchIcon;
-        }
-    }
-
-    /**
-     * Returns inner shade nine-patch icon.
-     *
-     * @param shadeWidth   shade width
-     * @param round        corners round
-     * @param shadeOpacity shade opacity
-     * @return inner shade nine-patch icon
-     */
-    public static NinePatchIcon createInnerShadeIcon ( final int shadeWidth, final int round, final float shadeOpacity )
-    {
-        // Making round value into real rounding radius
-        final int r = round * 2;
-
-        // Calculating width for temporary image
-        final int inner = Math.max ( shadeWidth, round );
-        int width = shadeWidth * 2 + inner * 2;
-
-        // Creating shade image
-        final Shape shape = new RoundRectangle2D.Double ( shadeWidth, shadeWidth, width - shadeWidth * 2, width - shadeWidth * 2, r, r );
-        final BufferedImage croppedShade = ImageUtils.createInnerShadeImage ( width, shape, shadeWidth, shadeOpacity );
-
-        width = croppedShade.getWidth ();
-
-        // Creating nine-patch icon
-        final NinePatchIcon ninePatchIcon = NinePatchIcon.create ( croppedShade );
-        ninePatchIcon.addHorizontalStretch ( 0, inner, true );
-        ninePatchIcon.addHorizontalStretch ( inner + 1, width - inner - 1, false );
-        ninePatchIcon.addHorizontalStretch ( width - inner, width, true );
-        ninePatchIcon.addVerticalStretch ( 0, inner, true );
-        ninePatchIcon.addVerticalStretch ( inner + 1, width - inner - 1, false );
-        ninePatchIcon.addVerticalStretch ( width - inner, width, true );
-        ninePatchIcon.setMargin ( shadeWidth );
-        return ninePatchIcon;
+        return new NinePatchIcon ( ImageUtils.getImageIcon ( resource ) );
     }
 
     /**
@@ -195,12 +63,14 @@ public final class NinePatchUtils
      * @param intervalType intervals type
      * @return list of nine-patch data intervals from the specified image
      */
-    public static List<NinePatchInterval> parseIntervals ( final BufferedImage image, final NinePatchIntervalType intervalType )
+    @NotNull
+    public static List<NinePatchInterval> parseIntervals ( @NotNull final BufferedImage image,
+                                                           @NotNull final NinePatchIntervalType intervalType )
     {
-        final boolean hv = intervalType.equals ( NinePatchIntervalType.horizontalStretch ) ||
-                intervalType.equals ( NinePatchIntervalType.verticalStretch );
-        final int l = ( intervalType.equals ( NinePatchIntervalType.horizontalStretch ) ||
-                intervalType.equals ( NinePatchIntervalType.horizontalContent ) ? image.getWidth () : image.getHeight () ) - 1;
+        final boolean hv = intervalType == NinePatchIntervalType.horizontalStretch ||
+                intervalType == NinePatchIntervalType.verticalStretch;
+        final int l = ( intervalType == NinePatchIntervalType.horizontalStretch ||
+                intervalType == NinePatchIntervalType.horizontalContent ? image.getWidth () : image.getHeight () ) - 1;
 
         final List<NinePatchInterval> intervals = new ArrayList<NinePatchInterval> ();
         NinePatchInterval interval = null;
@@ -238,7 +108,7 @@ public final class NinePatchUtils
                 // Enlarge interval
                 interval.setEnd ( i - 1 );
             }
-            else if ( pixelPart != interval.isPixel () )
+            else
             {
                 // Add pixel interval only for stretch types and non-pixel for any type
                 if ( hv || !interval.isPixel () )
@@ -266,7 +136,8 @@ public final class NinePatchUtils
      * @param filled pixels fill data
      * @return nine-patch stretch intervals
      */
-    public static List<NinePatchInterval> parseStretchIntervals ( final boolean[] filled )
+    @NotNull
+    public static List<NinePatchInterval> parseStretchIntervals ( @NotNull final boolean[] filled )
     {
         final List<NinePatchInterval> intervals = new ArrayList<NinePatchInterval> ();
         NinePatchInterval interval = null;
@@ -284,7 +155,7 @@ public final class NinePatchUtils
                 // Enlarge interval
                 interval.setEnd ( i );
             }
-            else if ( pixelPart != interval.isPixel () )
+            else
             {
                 intervals.add ( interval );
 
@@ -306,7 +177,8 @@ public final class NinePatchUtils
      * @param icon NinePatchIcon to rotate
      * @return rotated by 90 degrees clockwise NinePatchIcon
      */
-    public static NinePatchIcon rotateIcon90CW ( final NinePatchIcon icon )
+    @NotNull
+    public static NinePatchIcon rotateIcon90CW ( @NotNull final NinePatchIcon icon )
     {
         final BufferedImage rawImage = ImageUtils.rotateImage90CW ( icon.getRawImage () );
         final NinePatchIcon rotated = NinePatchIcon.create ( rawImage );
@@ -329,7 +201,8 @@ public final class NinePatchUtils
      * @param icon NinePatchIcon to rotate
      * @return rotated by 90 degrees counter-clockwise NinePatchIcon
      */
-    public static NinePatchIcon rotateIcon90CCW ( final NinePatchIcon icon )
+    @NotNull
+    public static NinePatchIcon rotateIcon90CCW ( @NotNull final NinePatchIcon icon )
     {
         final BufferedImage rawImage = ImageUtils.rotateImage90CCW ( icon.getRawImage () );
         final NinePatchIcon rotated = NinePatchIcon.create ( rawImage );
@@ -352,7 +225,8 @@ public final class NinePatchUtils
      * @param icon NinePatchIcon to rotate
      * @return rotated by 180 degrees NinePatchIcon
      */
-    public static NinePatchIcon rotateIcon180 ( final NinePatchIcon icon )
+    @NotNull
+    public static NinePatchIcon rotateIcon180 ( @NotNull final NinePatchIcon icon )
     {
         final BufferedImage rawImage = ImageUtils.rotateImage180 ( icon.getRawImage () );
         final NinePatchIcon rotated = NinePatchIcon.create ( rawImage );
@@ -369,73 +243,37 @@ public final class NinePatchUtils
     }
 
     /**
-     * Returns NinePatchIcon which is read from the source.
+     * Returns shade nine-patch icon.
      *
-     * @param source one of possible sources: URL, String, File, Reader, InputStream
-     * @return NinePatchIcon
+     * @param shadeWidth   shade width
+     * @param round        corners round
+     * @param shadeOpacity shade opacity
+     * @return shade nine-patch icon
      */
-    public static NinePatchIcon loadNinePatchIcon ( final Object source )
+    @NotNull
+    @Deprecated
+    public static NinePatchIcon createShadeIcon ( final int shadeWidth, final int round, final float shadeOpacity )
     {
-        return loadNinePatchIcon ( XmlUtils.loadResourceFile ( source ) );
-    }
+        // Making round value into real rounding radius
+        final int r = round * 2;
 
-    /**
-     * Returns NinePatchIcon which is read from specified ResourceFile.
-     *
-     * @param resource file description
-     * @return NinePatchIcon
-     */
-    public static NinePatchIcon loadNinePatchIcon ( final ResourceFile resource )
-    {
-        return new NinePatchIcon ( XmlUtils.loadImageIcon ( resource ) );
-    }
+        // Calculating width for temporary image
+        final int inner = Math.max ( shadeWidth, round );
+        final int w = shadeWidth * 2 + inner * 2;
 
-    /**
-     * Returns NinePatchStatePainter which is read from the source.
-     *
-     * @param source one of possible sources: URL, String, File, Reader, InputStream
-     * @return NinePatchStatePainter
-     */
-    public static NinePatchStatePainter loadNinePatchStatePainter ( final Object source )
-    {
-        return loadNinePatchStatePainter ( XmlUtils.loadResourceMap ( source ) );
-    }
+        // Creating shade image
+        final Shape shape = new RoundRectangle2D.Double ( shadeWidth, shadeWidth, w - shadeWidth * 2, w - shadeWidth * 2, r, r );
+        final BufferedImage shade = ImageUtils.createShadowImage ( w, w, shape, shadeWidth, shadeOpacity, true );
 
-    /**
-     * Returns NinePatchStatePainter which is read from specified ResourceMap.
-     *
-     * @param resourceMap ResourceFile map
-     * @return NinePatchStatePainter
-     */
-    public static NinePatchStatePainter loadNinePatchStatePainter ( final ResourceMap resourceMap )
-    {
-        final NinePatchStatePainter sbp = new NinePatchStatePainter ();
-        for ( final String key : resourceMap.getStates ().keySet () )
-        {
-            sbp.addStateIcon ( key, loadNinePatchIcon ( resourceMap.getState ( key ) ) );
-        }
-        return sbp;
-    }
-
-    /**
-     * Returns NinePatchIconPainter which is read from the source.
-     *
-     * @param source one of possible sources: URL, String, File, Reader, InputStream
-     * @return NinePatchIconPainter
-     */
-    public static NinePatchIconPainter loadNinePatchIconPainter ( final Object source )
-    {
-        return loadNinePatchIconPainter ( XmlUtils.loadResourceFile ( source ) );
-    }
-
-    /**
-     * Returns NinePatchIconPainter which is read from specified ResourceFile.
-     *
-     * @param resource file description
-     * @return NinePatchIconPainter
-     */
-    public static NinePatchIconPainter loadNinePatchIconPainter ( final ResourceFile resource )
-    {
-        return new NinePatchIconPainter ( loadNinePatchIcon ( resource ) );
+        // Creating nine-patch icon based on shade image
+        final NinePatchIcon ninePatchIcon = NinePatchIcon.create ( shade );
+        ninePatchIcon.addHorizontalStretch ( 0, shadeWidth + inner, true );
+        ninePatchIcon.addHorizontalStretch ( shadeWidth + inner + 1, w - shadeWidth - inner - 1, false );
+        ninePatchIcon.addHorizontalStretch ( w - shadeWidth - inner, w, true );
+        ninePatchIcon.addVerticalStretch ( 0, shadeWidth + inner, true );
+        ninePatchIcon.addVerticalStretch ( shadeWidth + inner + 1, w - shadeWidth - inner - 1, false );
+        ninePatchIcon.addVerticalStretch ( w - shadeWidth - inner, w, true );
+        ninePatchIcon.setMargin ( shadeWidth );
+        return ninePatchIcon;
     }
 }

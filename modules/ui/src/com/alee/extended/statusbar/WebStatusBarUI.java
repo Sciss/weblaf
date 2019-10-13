@@ -17,23 +17,25 @@
 
 package com.alee.extended.statusbar;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.managers.style.*;
 import com.alee.painter.DefaultPainter;
 import com.alee.painter.Painter;
 import com.alee.painter.PainterSupport;
-import com.alee.utils.swing.DataRunnable;
+import com.alee.api.jdk.Consumer;
 
 import javax.swing.*;
 import javax.swing.plaf.ComponentUI;
 import java.awt.*;
 
 /**
- * Custom UI for WebStatusBar component.
+ * Custom UI for {@link WebStatusBar} component.
  *
+ * @param <C> component type
  * @author Mikle Garin
  */
-
-public class WebStatusBarUI extends StatusBarUI implements Styleable, ShapeProvider, MarginSupport, PaddingSupport
+public class WebStatusBarUI<C extends WebStatusBar> extends WStatusBarUI<C> implements ShapeSupport, MarginSupport, PaddingSupport
 {
     /**
      * Component painter.
@@ -42,102 +44,80 @@ public class WebStatusBarUI extends StatusBarUI implements Styleable, ShapeProvi
     protected IStatusBarPainter painter;
 
     /**
-     * Runtime variables.
-     */
-    protected WebStatusBar statusBar;
-    protected Insets margin = null;
-    protected Insets padding = null;
-
-    /**
-     * Returns an instance of the WebStatusBarUI for the specified component.
-     * This tricky method is used by UIManager to create component UIs when needed.
+     * Returns an instance of the {@link WebStatusBarUI} for the specified component.
+     * This tricky method is used by {@link UIManager} to create component UIs when needed.
      *
      * @param c component that will use UI instance
-     * @return instance of the WebStatusBarUI
+     * @return instance of the {@link WebStatusBarUI}
      */
-    @SuppressWarnings ("UnusedParameters")
     public static ComponentUI createUI ( final JComponent c )
     {
         return new WebStatusBarUI ();
     }
 
-    /**
-     * Installs UI in the specified component.
-     *
-     * @param c component for this UI
-     */
     @Override
-    public void installUI ( final JComponent c )
+    public void installUI ( @NotNull final JComponent c )
     {
+        // Installing UI
         super.installUI ( c );
-
-        // Saving statusbar reference
-        statusBar = ( WebStatusBar ) c;
 
         // Applying skin
         StyleManager.installSkin ( statusBar );
     }
 
-    /**
-     * Uninstalls UI from the specified component.
-     *
-     * @param c component with this UI
-     */
     @Override
-    public void uninstallUI ( final JComponent c )
+    public void uninstallUI ( @NotNull final JComponent c )
     {
         // Uninstalling applied skin
         StyleManager.uninstallSkin ( statusBar );
-
-        // Removing statusbar reference
-        statusBar = null;
 
         // Uninstalling UI
         super.uninstallUI ( c );
     }
 
+    @NotNull
     @Override
-    public StyleId getStyleId ()
-    {
-        return StyleManager.getStyleId ( statusBar );
-    }
-
-    @Override
-    public StyleId setStyleId ( final StyleId id )
-    {
-        return StyleManager.setStyleId ( statusBar, id );
-    }
-
-    @Override
-    public Shape provideShape ()
+    public Shape getShape ()
     {
         return PainterSupport.getShape ( statusBar, painter );
     }
 
     @Override
-    public Insets getMargin ()
+    public boolean isShapeDetectionEnabled ()
     {
-        return margin;
+        return PainterSupport.isShapeDetectionEnabled ( statusBar, painter );
     }
 
     @Override
-    public void setMargin ( final Insets margin )
+    public void setShapeDetectionEnabled ( final boolean enabled )
     {
-        this.margin = margin;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setShapeDetectionEnabled ( statusBar, painter, enabled );
     }
 
+    @Nullable
+    @Override
+    public Insets getMargin ()
+    {
+        return PainterSupport.getMargin ( statusBar );
+    }
+
+    @Override
+    public void setMargin ( @Nullable final Insets margin )
+    {
+        PainterSupport.setMargin ( statusBar, margin );
+    }
+
+    @Nullable
     @Override
     public Insets getPadding ()
     {
-        return padding;
+        return PainterSupport.getPadding ( statusBar );
     }
 
     @Override
-    public void setPadding ( final Insets padding )
+    public void setPadding ( @Nullable final Insets padding )
     {
-        this.padding = padding;
-        PainterSupport.updateBorder ( getPainter () );
+        PainterSupport.setPadding ( statusBar, padding );
     }
 
     /**
@@ -147,7 +127,7 @@ public class WebStatusBarUI extends StatusBarUI implements Styleable, ShapeProvi
      */
     public Painter getPainter ()
     {
-        return PainterSupport.getAdaptedPainter ( painter );
+        return PainterSupport.getPainter ( painter );
     }
 
     /**
@@ -158,10 +138,10 @@ public class WebStatusBarUI extends StatusBarUI implements Styleable, ShapeProvi
      */
     public void setPainter ( final Painter painter )
     {
-        PainterSupport.setPainter ( statusBar, new DataRunnable<IStatusBarPainter> ()
+        PainterSupport.setPainter ( statusBar, this, new Consumer<IStatusBarPainter> ()
         {
             @Override
-            public void run ( final IStatusBarPainter newPainter )
+            public void accept ( final IStatusBarPainter newPainter )
             {
                 WebStatusBarUI.this.painter = newPainter;
             }
@@ -169,11 +149,29 @@ public class WebStatusBarUI extends StatusBarUI implements Styleable, ShapeProvi
     }
 
     @Override
+    public boolean contains ( final JComponent c, final int x, final int y )
+    {
+        return PainterSupport.contains ( c, this, painter, x, y );
+    }
+
+    @Override
+    public int getBaseline ( final JComponent c, final int width, final int height )
+    {
+        return PainterSupport.getBaseline ( c, this, painter, width, height );
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final JComponent c )
+    {
+        return PainterSupport.getBaselineResizeBehavior ( c, this, painter );
+    }
+
+    @Override
     public void paint ( final Graphics g, final JComponent c )
     {
         if ( painter != null )
         {
-            painter.paint ( ( Graphics2D ) g, Bounds.component.of ( c ), c, this );
+            painter.paint ( ( Graphics2D ) g, c, this, new Bounds ( c ) );
         }
     }
 

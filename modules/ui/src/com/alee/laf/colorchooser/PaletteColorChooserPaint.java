@@ -31,7 +31,6 @@ import java.util.Map;
 /**
  * @author Mikle Garin
  */
-
 public class PaletteColorChooserPaint implements Paint
 {
     private Color cornerColor = Color.RED;
@@ -156,7 +155,7 @@ public class PaletteColorChooserPaint implements Paint
     {
         if ( webSafe )
         {
-            color = ColorUtils.getWebSafeValue ( color );
+            color = ColorUtils.webSafe ( color );
         }
         if ( color < 0 )
         {

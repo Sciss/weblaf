@@ -17,12 +17,16 @@
 
 package com.alee.laf.filechooser;
 
+import com.alee.utils.FileUtils;
+
 import javax.swing.*;
+import java.io.File;
 
 /**
+ * This enumerations represents different types file selection options for {@link JFileChooser}.
+ *
  * @author Mikle Garin
  */
-
 public enum FileSelectionMode
 {
     /**
@@ -63,6 +67,31 @@ public enum FileSelectionMode
     public int getModeId ()
     {
         return modeId;
+    }
+
+    /**
+     * Returns whether or not this mode accepts specified file.
+     *
+     * @param file {@link File} to check
+     * @return {@code true} if this mode accepts specified file, {@code false} otherwise
+     */
+    public boolean accept ( final File file )
+    {
+        switch ( this )
+        {
+            case filesOnly:
+            {
+                return !file.exists () || FileUtils.isFile ( file );
+            }
+            case directoriesOnly:
+            {
+                return !file.exists () || FileUtils.isDirectory ( file );
+            }
+            default:
+            {
+                return true;
+            }
+        }
     }
 
     /**

@@ -17,7 +17,8 @@
 
 package com.alee.laf.radiobutton;
 
-import com.alee.painter.decoration.DecorationState;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.painter.decoration.IDecoration;
 import com.alee.painter.decoration.content.AbstractContent;
 import com.alee.utils.GraphicsUtils;
@@ -29,57 +30,69 @@ import java.awt.*;
 import java.awt.geom.Ellipse2D;
 
 /**
- * Checked state icon content for {@link javax.swing.JRadioButton} component.
+ * Checked state icon content for {@link AbstractButton} component.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <D> decoration type
  * @param <I> content type
  * @author Mikle Garin
  */
-
 @XStreamAlias ( "RadioIcon" )
-public class RadioIcon<E extends JRadioButton, D extends IDecoration<E, D>, I extends RadioIcon<E, D, I>> extends AbstractContent<E, D, I>
+public class RadioIcon<C extends AbstractButton, D extends IDecoration<C, D>, I extends RadioIcon<C, D, I>> extends AbstractContent<C, D, I>
 {
+    /**
+     * Preferred icon size.
+     */
+    @XStreamAsAttribute
+    protected Dimension size;
+
+    /**
+     * Left side background color.
+     */
     @XStreamAsAttribute
     protected Color leftColor;
 
+    /**
+     * Right side background color.
+     */
     @XStreamAsAttribute
     protected Color rightColor;
 
+    @Nullable
     @Override
     public String getId ()
     {
-        return DecorationState.selected;
+        return id != null ? id : "radio";
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final D d )
+    public boolean isEmpty ( final C c, final D d )
     {
-        final int x = bounds.x + 2;
-        final int y = bounds.y + 2;
-        final int w = bounds.width - 4;
-        final int h = bounds.height - 4;
-        final Ellipse2D.Double shape = new Ellipse2D.Double ( x, y, w, h );
+        return false;
+    }
 
+    @Override
+    protected void paintContent ( final Graphics2D g2d, final C c, final D d, final Rectangle bounds )
+    {
+        final int x = bounds.x;
+        final int y = bounds.y;
+        final int w = bounds.width;
+        final int h = bounds.height;
+
+        // Configuring graphics
         final GradientPaint paint = new GradientPaint ( x, 0, leftColor, x + w, 0, rightColor );
         final Paint op = GraphicsUtils.setupPaint ( g2d, paint );
 
-        g2d.fill ( shape );
+        // Filling content shape
+        g2d.fill ( new Ellipse2D.Double ( x, y, w, h ) );
 
+        // Restoring graphics settings
         GraphicsUtils.restorePaint ( g2d, op );
     }
 
     @Override
-    public I merge ( final I icon )
+    protected Dimension getContentPreferredSize ( final C c, final D d, final Dimension available )
     {
-        if ( icon.leftColor != null )
-        {
-            leftColor = icon.leftColor;
-        }
-        if ( icon.rightColor != null )
-        {
-            rightColor = icon.rightColor;
-        }
-        return ( I ) this;
+        return size != null ? new Dimension ( size ) : new Dimension ( 0, 0 );
     }
 }

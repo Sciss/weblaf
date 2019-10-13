@@ -17,21 +17,24 @@
 
 package com.alee.laf.tree;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.api.jdk.Predicate;
-import com.alee.utils.swing.SwingMethods;
+import com.alee.utils.swing.extensions.MethodExtension;
 
-import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.MutableTreeNode;
 import java.awt.event.MouseAdapter;
 
 /**
  * This interface provides a set of methods that should be added into components that supports custom WebLaF events.
  * Basically all these methods are already implemented in EventUtils but it is much easier to call them directly from component.
  *
+ * @param <N> node type
  * @author Mikle Garin
- * @see com.alee.utils.EventUtils
+ * @see com.alee.utils.swing.extensions.MethodExtension
+ * @see com.alee.laf.tree.TreeEventMethodsImpl
  */
-
-public interface TreeEventMethods<E extends DefaultMutableTreeNode> extends SwingMethods
+public interface TreeEventMethods<N extends MutableTreeNode> extends MethodExtension
 {
     /**
      * Shortcut method for double-click mouse event on specific tree node.
@@ -39,8 +42,7 @@ public interface TreeEventMethods<E extends DefaultMutableTreeNode> extends Swin
      * @param runnable mouse event runnable
      * @return used mouse adapter
      */
-    public MouseAdapter onNodeDoubleClick ( TreeNodeEventRunnable<E> runnable );
-
+    public MouseAdapter onNodeDoubleClick ( @NotNull TreeNodeEventRunnable<N> runnable );
 
     /**
      * Shortcut method for double-click mouse event on specific tree node with condition.
@@ -49,5 +51,5 @@ public interface TreeEventMethods<E extends DefaultMutableTreeNode> extends Swin
      * @param runnable  tree node event runnable
      * @return used mouse adapter
      */
-    public MouseAdapter onNodeDoubleClick ( final Predicate<E> condition, final TreeNodeEventRunnable<E> runnable );
+    public MouseAdapter onNodeDoubleClick ( @Nullable Predicate<N> condition, @NotNull TreeNodeEventRunnable<N> runnable );
 }

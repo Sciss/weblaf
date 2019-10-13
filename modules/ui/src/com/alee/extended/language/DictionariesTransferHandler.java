@@ -17,7 +17,11 @@
 
 package com.alee.extended.language;
 
-import com.alee.managers.language.data.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.managers.language.data.Dictionary;
+import com.alee.managers.language.data.Record;
+import com.alee.managers.language.data.Text;
+import com.alee.managers.language.data.Value;
 import com.alee.utils.SwingUtils;
 import com.alee.utils.XmlUtils;
 
@@ -30,17 +34,15 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.IOException;
 
 /**
  * @author Mikle Garin
  */
-
 public class DictionariesTransferHandler extends TransferHandler
 {
     private final DataFlavor[] flavors = new DataFlavor[]{ DataFlavor.stringFlavor };
 
-    private DictionariesTree tree;
+    private final DictionariesTree tree;
 
     public static void install ( final DictionariesTree tree )
     {
@@ -80,41 +82,46 @@ public class DictionariesTransferHandler extends TransferHandler
     @Override
     protected Transferable createTransferable ( final JComponent c )
     {
+        final Transferable transferable;
         final Object object = tree.getSelectedValue ();
-        if ( object == null )
+        if ( object != null )
         {
-            return null;
+            final String xml = XmlUtils.toXML ( object );
+            transferable = new Transferable ()
+            {
+
+                @Override
+                public DataFlavor[] getTransferDataFlavors ()
+                {
+                    return flavors;
+                }
+
+                @Override
+                public boolean isDataFlavorSupported ( final DataFlavor flavor )
+                {
+                    return flavor.equals ( DataFlavor.stringFlavor );
+                }
+
+                @NotNull
+                @Override
+                public Object getTransferData ( final DataFlavor flavor ) throws UnsupportedFlavorException
+                {
+                    if ( isDataFlavorSupported ( flavor ) )
+                    {
+                        return xml;
+                    }
+                    else
+                    {
+                        throw new UnsupportedFlavorException ( flavor );
+                    }
+                }
+            };
         }
-
-        final String xml = XmlUtils.toXML ( object );
-        return new Transferable ()
+        else
         {
-
-            @Override
-            public DataFlavor[] getTransferDataFlavors ()
-            {
-                return flavors;
-            }
-
-            @Override
-            public boolean isDataFlavorSupported ( final DataFlavor flavor )
-            {
-                return flavor.equals ( DataFlavor.stringFlavor );
-            }
-
-            @Override
-            public Object getTransferData ( final DataFlavor flavor ) throws UnsupportedFlavorException, IOException
-            {
-                if ( isDataFlavorSupported ( flavor ) )
-                {
-                    return xml;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-        };
+            transferable = null;
+        }
+        return transferable;
     }
 
     @Override
@@ -148,14 +155,14 @@ public class DictionariesTransferHandler extends TransferHandler
                 // Drop Value into Record
                 return true;
             }
-            else if ( dlo instanceof Value && ( droppedObject instanceof Text || droppedObject instanceof Tooltip ) )
+            else if ( dlo instanceof Value && droppedObject instanceof Text )
             {
                 // Drop Text or Tooltip into Value
                 return true;
             }
             return false;
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
             return false;
         }
@@ -183,7 +190,6 @@ public class DictionariesTransferHandler extends TransferHandler
                 if ( droppedObject instanceof Dictionary )
                 {
                     final Dictionary dictionary = ( Dictionary ) droppedObject;
-                    dictionary.setId ();
                     final DefaultMutableTreeNode dn = tree.createDictionaryNode ( dictionary );
                     tree.getActualModel ().insertNodeInto ( dn, dropLocation, dropLocation.getChildCount () );
                     tree.selectAndShow ( dn );
@@ -194,15 +200,14 @@ public class DictionariesTransferHandler extends TransferHandler
                     return false;
                 }
             }
-            if ( dlo instanceof Dictionary )
+            else if ( dlo instanceof Dictionary )
             {
                 // Drop Dictionary or Record into Dictionary
                 final Dictionary dropTo = ( Dictionary ) dlo;
                 if ( droppedObject instanceof Dictionary )
                 {
                     final Dictionary dictionary = ( Dictionary ) droppedObject;
-                    dictionary.setId ();
-                    dropTo.addSubDictionary ( dictionary );
+                    dropTo.addDictionary ( dictionary );
                     final DefaultMutableTreeNode dn = tree.createDictionaryNode ( dictionary );
                     tree.getActualModel ().insertNodeInto ( dn, dropLocation, dropLocation.getChildCount () );
                     tree.selectAndShow ( dn );
@@ -210,8 +215,8 @@ public class DictionariesTransferHandler extends TransferHandler
                 }
                 else if ( droppedObject instanceof Record )
                 {
-                    Record record = ( Record ) droppedObject;
-                    record = dropTo.addRecord ( record );
+                    final Record record = ( Record ) droppedObject;
+                    dropTo.addRecord ( record );
                     final DefaultMutableTreeNode rn = tree.createRecordNode ( record );
                     tree.getActualModel ().insertNodeInto ( rn, dropLocation, dropLocation.getChildCount () );
                     tree.selectAndShow ( rn );
@@ -227,8 +232,8 @@ public class DictionariesTransferHandler extends TransferHandler
                 // Drop Value into Record
                 if ( droppedObject instanceof Value )
                 {
-                    Value value = ( Value ) droppedObject;
-                    value = ( ( Record ) dlo ).addValue ( value );
+                    final Value value = ( Value ) droppedObject;
+                    ( ( Record ) dlo ).addValue ( value );
                     final DefaultMutableTreeNode vn = tree.createValueNode ( value );
                     tree.getActualModel ().insertNodeInto ( vn, dropLocation, dropLocation.getChildCount () );
                     tree.selectAndShow ( vn );
@@ -245,18 +250,9 @@ public class DictionariesTransferHandler extends TransferHandler
                 final Value dropTo = ( Value ) dlo;
                 if ( droppedObject instanceof Text )
                 {
-                    Text text = ( Text ) droppedObject;
-                    text = dropTo.addText ( text );
+                    final Text text = ( Text ) droppedObject;
+                    dropTo.addText ( text );
                     final DefaultMutableTreeNode tn = tree.createTextNode ( text );
-                    tree.getActualModel ().insertNodeInto ( tn, dropLocation, dropLocation.getChildCount () );
-                    tree.selectAndShow ( tn );
-                    return true;
-                }
-                else if ( droppedObject instanceof Tooltip )
-                {
-                    Tooltip tooltip = ( Tooltip ) droppedObject;
-                    tooltip = dropTo.addTooltip ( tooltip );
-                    final DefaultMutableTreeNode tn = tree.createTooltipNode ( tooltip );
                     tree.getActualModel ().insertNodeInto ( tn, dropLocation, dropLocation.getChildCount () );
                     tree.selectAndShow ( tn );
                     return true;
@@ -271,7 +267,7 @@ public class DictionariesTransferHandler extends TransferHandler
                 return false;
             }
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
             return false;
         }

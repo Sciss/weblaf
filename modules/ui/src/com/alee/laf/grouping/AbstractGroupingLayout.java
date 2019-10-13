@@ -17,6 +17,8 @@
 
 package com.alee.laf.grouping;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.extended.layout.AbstractLayoutManager;
 import com.alee.painter.decoration.DecorationUtils;
 import com.alee.utils.SwingUtils;
@@ -27,13 +29,17 @@ import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 /**
+ * Abstract {@link com.alee.laf.grouping.GroupingLayout} that contains most basic features for any final implementation.
+ *
  * @author Mikle Garin
+ * @see com.alee.laf.grouping.GroupPaneLayout
+ * @see com.alee.extended.accordion.AccordionLayout
+ * @see com.alee.extended.dock.WebDockablePaneModel
  */
-
 public abstract class AbstractGroupingLayout extends AbstractLayoutManager implements GroupingLayout
 {
     /**
@@ -50,6 +56,12 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
      */
     @XStreamAsAttribute
     protected Boolean groupButtons;
+
+    /**
+     * Whether or not this button group should allow empty selection state.
+     */
+    @XStreamAsAttribute
+    protected Boolean unselectableGrouping;
 
     /**
      * Displayed children decoration sides.
@@ -114,13 +126,37 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
     }
 
     /**
+     * Returns whether or not this button group should allow empty selection state.
+     *
+     * @return true if this button group should allow empty selection state, false otherwise
+     */
+    public boolean isUnselectableGrouping ()
+    {
+        return unselectableGrouping != null && unselectableGrouping;
+    }
+
+    /**
+     * Sets whether or not this button group should allow empty selection state.
+     *
+     * @param unselectable whether or not this button group should allow empty selection state
+     */
+    public void setUnselectableGrouping ( final boolean unselectable )
+    {
+        if ( isUnselectableGrouping () != unselectableGrouping )
+        {
+            this.unselectableGrouping = unselectable;
+            updateButtonGrouping ();
+        }
+    }
+
+    /**
      * Returns newly created button group.
      *
      * @return newly created button group
      */
     protected UnselectableButtonGroup createButtonGroup ()
     {
-        return new UnselectableButtonGroup ( false );
+        return new UnselectableButtonGroup ( isUnselectableGrouping () );
     }
 
     /**
@@ -167,13 +203,11 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
      * @param component component to process
      * @return true if specified component is a groupable button, false otherwise
      */
-    protected boolean isGroupable ( final Component component )
+    protected boolean isGroupable ( @NotNull final Component component )
     {
-        return component != null && ( component instanceof JToggleButton ||
-                component instanceof JCheckBox ||
+        return component instanceof JToggleButton ||
                 component instanceof JCheckBoxMenuItem ||
-                component instanceof JRadioButton ||
-                component instanceof JRadioButtonMenuItem );
+                component instanceof JRadioButtonMenuItem;
     }
 
     /**
@@ -187,10 +221,11 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
     }
 
     /**
-     * Returns non-null sides decriptor.
+     * Returns sides decriptor.
      *
-     * @return non-null sides decriptor
+     * @return sides decriptor
      */
+    @NotNull
     protected String sides ()
     {
         return sides != null ? sides : ( sides = "1,1,1,1" );
@@ -295,12 +330,12 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
     }
 
     @Override
-    public void addComponent ( final Component component, final Object constraints )
+    public void addComponent ( @NotNull final Component component, @Nullable final Object constraints )
     {
         // Saving child reference
         if ( children == null )
         {
-            children = new WeakHashMap<Component, Pair<String, String>> ( 3 );
+            children = new HashMap<Component, Pair<String, String>> ( 3 );
         }
         children.put ( component, new Pair<String, String> () );
 
@@ -315,7 +350,7 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
     }
 
     @Override
-    public void removeComponent ( final Component component )
+    public void removeComponent ( @NotNull final Component component )
     {
         // Removing child reference
         if ( children != null )
@@ -334,24 +369,25 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
     }
 
     @Override
-    public final String getSides ( final Component component )
+    public final String getSides ( @NotNull final Component component )
     {
         return children != null ? getDescriptors ( component ).getKey () : null;
     }
 
     @Override
-    public final String getLines ( final Component component )
+    public final String getLines ( @NotNull final Component component )
     {
         return children != null ? getDescriptors ( component ).getValue () : null;
     }
 
     /**
-     * Returns descriptors for painted component sides and lines.
+     * Returns descriptors for painted {@link Component} sides and lines.
      *
-     * @param component painted component
-     * @return descriptors for painted component sides and lines
+     * @param component painted {@link Component}
+     * @return descriptors for painted {@link Component} sides and lines
      */
-    private Pair<String, String> getDescriptors ( final Component component )
+    @NotNull
+    protected Pair<String, String> getDescriptors ( @NotNull final Component component )
     {
         Pair<String, String> pair = children.get ( component );
         if ( pair == null || pair.getKey () == null )
@@ -371,15 +407,16 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
     }
 
     /**
-     * Returns descriptors for painted component sides and lines.
+     * Returns descriptors for painted {@link Component} sides and lines.
      * It is requested only if grouping is actually enabled.
      *
-     * @param parent    component container
-     * @param component painted component
-     * @param index     component z-index in container
-     * @return descriptors for painted component sides and lines
+     * @param container {@link Container} of the {@link Component}
+     * @param component painter {@link Component}
+     * @param index     {@link Component} z-index in {@link Container}
+     * @return descriptors for painted {@link Component} sides and lines
      */
-    protected abstract Pair<String, String> getDescriptors ( Container parent, Component component, int index );
+    @NotNull
+    public abstract Pair<String, String> getDescriptors ( @NotNull Container container, @NotNull Component component, int index );
 
     /**
      * Resets cached sides and lines descriptors.
@@ -391,6 +428,7 @@ public abstract class AbstractGroupingLayout extends AbstractLayoutManager imple
             for ( final Map.Entry<Component, Pair<String, String>> entry : children.entrySet () )
             {
                 entry.setValue ( new Pair<String, String> () );
+                DecorationUtils.fireBorderChanged ( entry.getKey () );
             }
         }
     }

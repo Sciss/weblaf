@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.button;
 
-import com.alee.demo.api.AbstractExampleGroup;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.AbstractExampleGroup;
 import com.alee.utils.CollectionUtils;
 
 import java.util.List;
@@ -25,9 +26,9 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
 public class ButtonsGroup extends AbstractExampleGroup
 {
+    @NotNull
     @Override
     public String getId ()
     {
@@ -37,7 +38,14 @@ public class ButtonsGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleClasses ()
     {
-        return CollectionUtils
-                .<Class>asList ( JButtonExample.class, JToggleButtonExample.class, WebSplitButtonExample.class, WebSwitchExample.class );
+        return CollectionUtils.<Class>asList (
+                JButtonExample.class,
+                JToggleButtonExample.class,
+                JCheckBoxExample.class,
+                WebTristateCheckBoxExample.class,
+                JRadioButtonExample.class,
+                WebSplitButtonExample.class,
+                WebSwitchExample.class
+        );
     }
 }

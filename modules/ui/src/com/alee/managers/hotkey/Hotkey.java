@@ -25,8 +25,9 @@ import java.awt.event.KeyEvent;
  * powerful and useful in various situations.
  *
  * @author Mikle Garin
+ * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-HotkeyManager">How to use HotkeyManager</a>
+ * @see HotkeyManager
  */
-
 public final class Hotkey
 {
     /**
@@ -211,4 +212,6 @@ public final class Hotkey
     public static final HotkeyData CTRL_SHIFT_Z = new HotkeyData ( true, false, true, KeyEvent.VK_Z );
     public static final HotkeyData CTRL_SHIFT_V = new HotkeyData ( true, false, true, KeyEvent.VK_V );
     public static final HotkeyData CTRL_SHIFT_N = new HotkeyData ( true, false, true, KeyEvent.VK_N );
+    public static final HotkeyData CTRL_SHIFT_D = new HotkeyData ( true, false, true, KeyEvent.VK_D );
+    public static final HotkeyData CTRL_SHIFT_X = new HotkeyData ( true, false, true, KeyEvent.VK_X );
 }

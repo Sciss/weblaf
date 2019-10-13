@@ -20,16 +20,17 @@ package com.alee.laf.label;
 import com.alee.painter.SpecificPainter;
 
 import javax.swing.*;
-import javax.swing.plaf.basic.BasicLabelUI;
 
 /**
  * Base interface for various label painters.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @author Mikle Garin
  */
-
-public interface IAbstractLabelPainter<E extends JLabel, U extends BasicLabelUI> extends SpecificPainter<E, U>
+public interface IAbstractLabelPainter<C extends JLabel, U extends WLabelUI> extends SpecificPainter<C, U>
 {
+    /**
+     * This interface doesn't offer any additional methods to implement.
+     */
 }

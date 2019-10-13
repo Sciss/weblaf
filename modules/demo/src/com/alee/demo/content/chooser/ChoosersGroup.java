@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.chooser;
 
-import com.alee.demo.api.AbstractExampleGroup;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.AbstractExampleGroup;
 import com.alee.demo.content.chooser.dialog.DialogChoosersGroup;
 import com.alee.demo.content.chooser.field.FieldChoosersGroup;
 import com.alee.utils.CollectionUtils;
@@ -27,9 +28,9 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
 public class ChoosersGroup extends AbstractExampleGroup
 {
+    @NotNull
     @Override
     public String getId ()
     {
@@ -39,6 +40,9 @@ public class ChoosersGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleGroupClasses ()
     {
-        return CollectionUtils.<Class>asList ( DialogChoosersGroup.class, FieldChoosersGroup.class );
+        return CollectionUtils.<Class>asList (
+                DialogChoosersGroup.class,
+                FieldChoosersGroup.class
+        );
     }
 }

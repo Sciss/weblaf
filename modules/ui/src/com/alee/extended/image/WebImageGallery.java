@@ -17,14 +17,12 @@
 
 package com.alee.extended.image;
 
-import com.alee.global.StyleConstants;
-import com.alee.managers.style.StyleId;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.hotkey.Hotkey;
-import com.alee.utils.GraphicsUtils;
-import com.alee.utils.ImageUtils;
-import com.alee.utils.LafUtils;
-import com.alee.utils.SwingUtils;
+import com.alee.managers.style.StyleId;
+import com.alee.utils.*;
 import com.alee.utils.swing.WebTimer;
 
 import javax.swing.*;
@@ -39,7 +37,6 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
 public class WebImageGallery extends JComponent
 {
     private final int spacing = 20;
@@ -69,6 +66,12 @@ public class WebImageGallery extends JComponent
     private WebTimer reflectionMover = null;
 
     private WebScrollPane view;
+
+    /**
+     * Thread used for smooth component scrolling.
+     */
+    @Nullable
+    private static Thread scrollThread;
 
     public WebImageGallery ()
     {
@@ -181,6 +184,7 @@ public class WebImageGallery extends JComponent
         {
             view = new WebScrollPane ( scrollStyleId, WebImageGallery.this )
             {
+                @NotNull
                 @Override
                 public Dimension getPreferredSize ()
                 {
@@ -241,9 +245,90 @@ public class WebImageGallery extends JComponent
         if ( scrollOnSelection )
         {
             final Rectangle rect = getImageRect ( selectedIndex );
-            SwingUtils.scrollSmoothly ( getView (), rect.x + rect.width / 2 - WebImageGallery.this.getVisibleRect ().width / 2, rect.y );
+            scrollSmoothly ( getView (), rect.x + rect.width / 2 - WebImageGallery.this.getVisibleRect ().width / 2, rect.y );
         }
         moveReflection ();
+    }
+
+    /**
+     * Scrolls scroll pane visible area smoothly to destination values.
+     *
+     * @param scrollPane scroll pane to scroll through
+     * @param xValue     horizontal scroll bar value
+     * @param yValue     vertical scroll bar value
+     * @deprecated replace this implementation with a separate feature
+     */
+    private static void scrollSmoothly ( @NotNull final JScrollPane scrollPane, int xValue, int yValue )
+    {
+        // todo 1. Replace this method with a separate behavior or class to allow its parallel usage on multiple components
+        // todo 2. Use timer instead of thread
+
+        final JScrollBar hor = scrollPane.getHorizontalScrollBar ();
+        final JScrollBar ver = scrollPane.getVerticalScrollBar ();
+
+        final Dimension viewportSize = scrollPane.getViewport ().getSize ();
+        xValue = xValue > hor.getMaximum () - viewportSize.width ? hor.getMaximum () - viewportSize.width : xValue;
+        yValue = yValue > ver.getMaximum () - viewportSize.height ? ver.getMaximum () - viewportSize.height : yValue;
+        final int x = xValue < 0 ? 0 : xValue;
+        final int y = yValue < 0 ? 0 : yValue;
+
+        final int xSign = hor.getValue () > x ? -1 : 1;
+        final int ySign = ver.getValue () > y ? -1 : 1;
+
+        final Thread scroller = new Thread ( new Runnable ()
+        {
+            @Override
+            public void run ()
+            {
+                scrollThread = Thread.currentThread ();
+                int lastHorValue = hor.getValue ();
+                int lastVerValue = ver.getValue ();
+                while ( lastHorValue != x || lastVerValue != y )
+                {
+                    if ( scrollThread != Thread.currentThread () )
+                    {
+                        Thread.currentThread ().interrupt ();
+                    }
+                    if ( lastHorValue != x )
+                    {
+                        final int value = lastHorValue + xSign * Math.max ( Math.abs ( lastHorValue - x ) / 4, 1 );
+                        lastHorValue = value;
+                        CoreSwingUtils.invokeLater ( new Runnable ()
+                        {
+                            @Override
+                            public void run ()
+                            {
+                                hor.setValue ( value );
+                            }
+                        } );
+                        if ( xSign < 0 && value == hor.getMinimum () || xSign > 0 && value == hor.getMaximum () )
+                        {
+                            break;
+                        }
+                    }
+                    if ( lastVerValue != y )
+                    {
+                        final int value = lastVerValue + ySign * Math.max ( Math.abs ( lastVerValue - y ) / 4, 1 );
+                        lastVerValue = value;
+                        CoreSwingUtils.invokeLater ( new Runnable ()
+                        {
+                            @Override
+                            public void run ()
+                            {
+                                ver.setValue ( value );
+                            }
+                        } );
+                        if ( ySign < 0 && value == ver.getMinimum () || ySign > 0 && value == ver.getMaximum () )
+                        {
+                            break;
+                        }
+                    }
+                    ThreadUtils.sleepSafely ( 25 );
+                }
+            }
+        } );
+        scroller.setDaemon ( true );
+        scroller.start ();
     }
 
     private void moveReflection ()
@@ -254,7 +339,7 @@ public class WebImageGallery extends JComponent
         }
 
         progress = 0f;
-        reflectionMover = new WebTimer ( "WebImageGallery.reflectionMoveTimer", StyleConstants.fps48, new ActionListener ()
+        reflectionMover = new WebTimer ( "WebImageGallery.reflectionMoveTimer", SwingUtils.frameRateDelay ( 48 ), new ActionListener ()
         {
             @Override
             public void actionPerformed ( final ActionEvent e )
@@ -312,9 +397,9 @@ public class WebImageGallery extends JComponent
             descriptions.add ( index, image.getIconWidth () + " x " + image.getIconHeight () + " px" );
             reflections.add ( index, reflection );
         }
-        catch ( final Throwable e )
+        catch ( final Exception e )
         {
-            // todo Handle out of memory
+            // todo Handle out of memory?
         }
 
         recalculateMaxSizes ();

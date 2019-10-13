@@ -17,24 +17,28 @@
 
 package com.alee.managers.style;
 
+import com.alee.api.annotations.NotNull;
+
 import java.awt.*;
 
 /**
  * This interface provides a single method for requesting painted component shape.
  * This can be used by painters to provide their shape for various usage cases.
  *
- * @param <E> component type
+ * @param <C> component type
  * @author Mikle Garin
+ * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-StyleManager">How to use StyleManager</a>
+ * @see StyleManager
  */
-
-public interface PainterShapeProvider<E extends Component>
+public interface PainterShapeProvider<C extends Component>
 {
     /**
      * Returns painted component shape.
      *
      * @param component component to process
-     * @param bounds    bounds for painter visual data
+     * @param bounds    bounds for painter view
      * @return painted component shape
      */
-    public Shape provideShape ( final E component, final Rectangle bounds );
+    @NotNull
+    public Shape provideShape ( @NotNull C component, @NotNull Rectangle bounds );
 }

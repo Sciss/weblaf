@@ -4,17 +4,18 @@ import com.alee.painter.AdaptivePainter;
 import com.alee.painter.Painter;
 
 /**
- * Simple SplitButtonPainter adapter class.
- * It is used to install simple non-specific painters into WebSplitButtonUI.
+ * Simple {@link SplitButtonPainter} adapter class.
+ * It is used to install simple non-specific painters into {@link WSplitButtonUI}.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Mikle Garin
  */
-
-public final class AdaptiveSplitButtonPainter<E extends WebSplitButton, U extends WebSplitButtonUI> extends AdaptivePainter<E, U>
-        implements ISplitButtonPainter<E, U>
+public final class AdaptiveSplitButtonPainter<C extends WebSplitButton, U extends WSplitButtonUI> extends AdaptivePainter<C, U>
+        implements ISplitButtonPainter<C, U>
 {
     /**
-     * Constructs new AdaptiveSplitButtonPainter for the specified painter.
+     * Constructs new {@link AdaptiveSplitButtonPainter} for the specified painter.
      *
      * @param painter painter to adapt
      */
@@ -24,7 +25,7 @@ public final class AdaptiveSplitButtonPainter<E extends WebSplitButton, U extend
     }
 
     @Override
-    public boolean isOnSplit ()
+    public boolean isOnMenu ()
     {
         return false;
     }

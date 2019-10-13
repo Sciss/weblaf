@@ -17,9 +17,14 @@
 
 package com.alee.painter.decoration;
 
-import com.alee.utils.MergeUtils;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.api.merge.behavior.OverwriteOnMerge;
+import com.alee.managers.style.Bounds;
+import com.alee.utils.CollectionUtils;
 import com.alee.utils.ReflectUtils;
 import com.alee.utils.TextUtils;
+import com.alee.utils.swing.CursorType;
 import com.alee.utils.xml.ListToStringConverter;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 import com.thoughtworks.xstream.annotations.XStreamConverter;
@@ -31,12 +36,11 @@ import java.util.List;
 /**
  * Abstract component state decoration providing basic settings.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <I> decoration type
  * @author Mikle Garin
  */
-
-public abstract class AbstractDecoration<E extends JComponent, I extends AbstractDecoration<E, I>> implements IDecoration<E, I>
+public abstract class AbstractDecoration<C extends JComponent, I extends AbstractDecoration<C, I>> implements IDecoration<C, I>
 {
     /**
      * Default component state ID.
@@ -50,7 +54,14 @@ public abstract class AbstractDecoration<E extends JComponent, I extends Abstrac
      */
     @XStreamAsAttribute
     @XStreamConverter ( ListToStringConverter.class )
+    @OverwriteOnMerge
     protected List<String> states;
+
+    /**
+     * Whether or not this decoration should overwrite another one when merged.
+     */
+    @XStreamAsAttribute
+    protected Boolean overwrite;
 
     /**
      * Whether or not decoration should be displayed.
@@ -58,7 +69,7 @@ public abstract class AbstractDecoration<E extends JComponent, I extends Abstrac
      * In case this decoration is used by {@link com.alee.painter.SectionPainter} this only affects section visibility.
      */
     @XStreamAsAttribute
-    protected Boolean visible = true;
+    protected Boolean visible;
 
     /**
      * Decoration size.
@@ -76,11 +87,24 @@ public abstract class AbstractDecoration<E extends JComponent, I extends Abstrac
     protected Float opacity;
 
     /**
+     * Custom component cursor for this decoration state.
+     */
+    @XStreamAsAttribute
+    protected CursorType cursor;
+
+    /**
      * Whether or not this decoration is applied only to a section of the component.
      * Provided explicitely by the painted using this decoration.
      */
     protected transient Boolean section;
 
+    /**
+     * Previously set cursor.
+     * Saved to avoid default component cursor removal.
+     */
+    protected transient Cursor previousCursor;
+
+    @Nullable
     @Override
     public String getId ()
     {
@@ -88,9 +112,69 @@ public abstract class AbstractDecoration<E extends JComponent, I extends Abstrac
     }
 
     @Override
+    public void activate ( final C c )
+    {
+        final Cursor customCursor = getCursor ();
+        if ( customCursor != null )
+        {
+            previousCursor = c.getCursor ();
+            c.setCursor ( customCursor );
+        }
+    }
+
+    @Override
+    public void deactivate ( final C c )
+    {
+        final Cursor customCursor = getCursor ();
+        if ( customCursor != null )
+        {
+            c.setCursor ( previousCursor );
+            previousCursor = null;
+        }
+    }
+
+    @Override
     public List<String> getStates ()
     {
         return states;
+    }
+
+    @Override
+    public boolean usesState ( final String state )
+    {
+        // Possible enhancement: Add negation syntax usage [ #387 ]
+        return states != null && states.contains ( state );
+    }
+
+    @Override
+    public boolean isApplicableTo ( @NotNull final List<String> states )
+    {
+        boolean applicable = true;
+        if ( !CollectionUtils.isEmpty ( this.states ) )
+        {
+            if ( CollectionUtils.isEmpty ( states ) )
+            {
+                applicable = false;
+            }
+            else
+            {
+                for ( final String state : this.states )
+                {
+                    if ( !states.contains ( state ) )
+                    {
+                        applicable = false;
+                        break;
+                    }
+                }
+            }
+        }
+        return applicable;
+    }
+
+    @Override
+    public boolean isOverwrite ()
+    {
+        return overwrite != null && overwrite;
     }
 
     @Override
@@ -121,34 +205,44 @@ public abstract class AbstractDecoration<E extends JComponent, I extends Abstrac
         return opacity != null ? opacity : 1f;
     }
 
-    @Override
-    public Dimension getPreferredSize ()
+    /**
+     * Returns custom component cursor for this decoration state or {@code null} if none provided.
+     *
+     * @return custom component cursor for this decoration state or {@code null} if none provided
+     */
+    public Cursor getCursor ()
     {
-        return size != null ? size : null;
+        return cursor != null ? cursor.getCursor () : null;
     }
 
     @Override
-    public I merge ( final I state )
+    public Insets getBorderInsets ( final C c )
     {
-        if ( state.visible != null )
-        {
-            visible = state.visible;
-        }
-        if ( state.size != null )
-        {
-            size = state.size;
-        }
-        if ( state.opacity != null )
-        {
-            opacity = state.opacity;
-        }
-        return ( I ) this;
+        return new Insets ( 0, 0, 0, 0 );
     }
 
     @Override
-    public I clone ()
+    public boolean contains ( final C c, final Bounds bounds, final int x, final int y )
     {
-        return ( I ) MergeUtils.cloneByFieldsSafely ( this );
+        return bounds.get ().contains ( x, y );
+    }
+
+    @Override
+    public int getBaseline ( final C c, final Bounds bounds )
+    {
+        return -1;
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( final C c )
+    {
+        return Component.BaselineResizeBehavior.OTHER;
+    }
+
+    @Override
+    public Dimension getPreferredSize ( final C c )
+    {
+        return size;
     }
 
     @Override

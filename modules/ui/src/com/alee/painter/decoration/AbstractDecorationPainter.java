@@ -17,55 +17,74 @@
 
 package com.alee.painter.decoration;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.api.clone.Clone;
+import com.alee.api.jdk.Objects;
+import com.alee.api.merge.Merge;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.grouping.GroupingLayout;
 import com.alee.managers.focus.DefaultFocusTracker;
 import com.alee.managers.focus.FocusManager;
 import com.alee.managers.focus.FocusTracker;
+import com.alee.managers.focus.GlobalFocusListener;
+import com.alee.managers.hover.DefaultHoverTracker;
+import com.alee.managers.hover.GlobalHoverListener;
+import com.alee.managers.hover.HoverManager;
+import com.alee.managers.hover.HoverTracker;
 import com.alee.managers.style.Bounds;
+import com.alee.managers.style.BoundsType;
 import com.alee.managers.style.PainterShapeProvider;
+import com.alee.managers.style.StyleManager;
 import com.alee.painter.AbstractPainter;
 import com.alee.painter.SectionPainter;
 import com.alee.utils.*;
-import com.alee.utils.swing.AbstractHoverBehavior;
 
 import javax.swing.*;
+import javax.swing.event.AncestorEvent;
+import javax.swing.event.AncestorListener;
 import javax.swing.plaf.ComponentUI;
 import java.awt.*;
 import java.awt.event.ContainerEvent;
 import java.awt.event.ContainerListener;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
 /**
  * Abstract decoration painter that can be used by any custom and specific painter.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @param <D> decoration type
  * @author Mikle Garin
  */
-
-public abstract class AbstractDecorationPainter<E extends JComponent, U extends ComponentUI, D extends IDecoration<E, D>>
-        extends AbstractPainter<E, U> implements PainterShapeProvider<E>
+public abstract class AbstractDecorationPainter<C extends JComponent, U extends ComponentUI, D extends IDecoration<C, D>>
+        extends AbstractPainter<C, U> implements IDecorationPainter<C, U, D>, PainterShapeProvider<C>
 {
     /**
      * Decoratable states property.
      */
     public static final String DECORATION_STATES_PROPERTY = "decorationStates";
+    public static final String DECORATION_BORDER_PROPERTY = "decorationBorder";
 
     /**
-     * Decoration states.
+     * Available decorations.
+     * Each decoration provides a visual representation of specific component state.
      */
-    protected List<D> decorations;
+    protected Decorations<C, D> decorations;
 
     /**
      * Listeners.
      */
+    protected transient ContainerListener containerListener;
     protected transient FocusTracker focusStateTracker;
-    protected transient AbstractHoverBehavior<E> hoverStateTracker;
+    protected transient GlobalFocusListener inFocusedParentTracker;
+    protected transient AncestorListener inFocusedParentAncestorListener;
+    protected transient HoverTracker hoverStateTracker;
+    protected transient GlobalHoverListener inHoveredParentTracker;
+    protected transient AncestorListener inHoveredParentAncestorListener;
     protected transient HierarchyListener hierarchyTracker;
     protected transient ContainerListener neighboursTracker;
 
@@ -73,60 +92,118 @@ public abstract class AbstractDecorationPainter<E extends JComponent, U extends 
      * Runtime variables.
      */
     protected transient List<String> states;
+    protected transient Map<String, D> stateDecorationCache;
     protected transient Map<String, D> decorationCache;
-    protected transient boolean focused = false;
-    protected transient boolean hover = false;
+    protected transient String current;
+    protected transient boolean focused;
+    protected transient boolean inFocusedParent;
+    protected transient boolean hover;
+    protected transient boolean inHoveredParent;
     protected transient Container ancestor;
 
     @Override
-    public void install ( final E c, final U ui )
+    protected void afterInstall ()
     {
-        super.install ( c, ui );
-
-        // Determining initial decoration state
+        /**
+         * Determining initial decoration states.
+         * We should always update states last to ensure initial values are correct.
+         * Although we still do it before updating border in {@link super#afterInstall()}.
+         */
         this.states = collectDecorationStates ();
 
-        // Installing listeners
-        installFocusListener ();
-        installHoverListener ();
-        installHierarchyListener ();
+        /**
+         * Performing basic actions after installation ends.
+         */
+        super.afterInstall ();
     }
 
     @Override
-    public void uninstall ( final E c, final U ui )
+    protected void beforeUninstall ()
     {
-        // Uninstalling listeners
-        uninstallHierarchyListener ();
-        uninstallHoverListener ();
-        uninstallFocusListener ();
+        /**
+         * Performing basic actions before uninstallation starts.
+         */
+        super.beforeUninstall ();
 
-        // Cleaning up variables
+        /**
+         * Making sure last used decoration is properly deactivated.
+         * If we don't deactivate last decoration it will stay active and will keep recieving component updates.
+         */
+        deactivateLastDecoration ( component );
+    }
+
+    @Override
+    protected void afterUninstall ()
+    {
+        /**
+         * Cleaning up decoration caches.
+         */
+        this.stateDecorationCache = null;
         this.decorationCache = null;
         this.states = null;
 
-        super.uninstall ( c, ui );
+        /**
+         * Performing basic actions after uninstallation ends.
+         */
+        super.afterUninstall ();
     }
 
     @Override
-    protected void propertyChange ( final String property, final Object oldValue, final Object newValue )
+    protected void installPropertiesAndListeners ()
+    {
+        super.installPropertiesAndListeners ();
+
+        // Installing various extra listeners
+        installChildrenListeners ();
+        installFocusListeners ();
+        installInFocusedParentListeners ();
+        installHoverListeners ();
+        installInHoveredParentListeners ();
+        installBorderListeners ();
+    }
+
+    @Override
+    protected void uninstallPropertiesAndListeners ()
+    {
+        // Uninstalling various extra listeners
+        uninstallBorderListeners ();
+        uninstallInHoveredParentListeners ();
+        uninstallHoverListeners ();
+        uninstallInFocusedParentListeners ();
+        uninstallFocusListeners ();
+        uninstallChildrenListeners ();
+
+        super.uninstallPropertiesAndListeners ();
+    }
+
+    @Override
+    protected void propertyChanged ( @NotNull final String property, @Nullable final Object oldValue, @Nullable final Object newValue )
     {
         // Perform basic actions on property changes
-        super.propertyChange ( property, oldValue, newValue );
+        super.propertyChanged ( property, oldValue, newValue );
 
-        // Updating decoration state
-        if ( isSettingsUpdateAllowed () )
+        // Updating focus listener
+        if ( Objects.equals ( property, WebLookAndFeel.FOCUSABLE_PROPERTY ) )
         {
-            // Updating enabled state
-            if ( CompareUtils.equals ( property, WebLookAndFeel.ENABLED_PROPERTY ) )
-            {
-                if ( usesState ( DecorationState.enabled ) || usesState ( DecorationState.disabled ) )
-                {
-                    updateDecorationState ();
-                }
-            }
+            updateFocusListeners ();
+        }
 
-            // Updating custom decoration states
-            if ( CompareUtils.equals ( property, DECORATION_STATES_PROPERTY ) )
+        // Updating custom decoration states
+        if ( Objects.equals ( property, DECORATION_STATES_PROPERTY ) )
+        {
+            updateDecorationState ();
+        }
+
+        // Updating border
+        if ( Objects.equals ( property, DECORATION_BORDER_PROPERTY ) )
+        {
+            updateBorder ();
+        }
+
+        // Updating enabled state
+        if ( Objects.equals ( property, WebLookAndFeel.ENABLED_PROPERTY ) )
+        {
+            if ( usesState ( DecorationState.enabled ) || usesState ( DecorationState.disabled ) )
             {
                 updateDecorationState ();
             }
@@ -134,40 +211,127 @@ public abstract class AbstractDecorationPainter<E extends JComponent, U extends 
     }
 
     /**
-     * Installs listener that will perform decoration updates on focus state change.
+     * Overridden to provide decoration states update instead of simple view updates.
      */
-    protected void installFocusListener ()
+    @Override
+    protected void orientationChange ()
     {
-        if ( usesState ( DecorationState.focused ) )
+        // Saving new orientation
+        saveOrientation ();
+
+        // Updating decoration states
+        updateDecorationState ();
+    }
+
+    /**
+     * Returns whether or not component has distinct container view.
+     * todo Replace with {@link #usesState(String)} override
+     *
+     * @return {@code true} if component has distinct container view, {@code false} otherwise
+     */
+    protected boolean usesContainerView ()
+    {
+        return usesState ( DecorationState.hasChildren ) || usesState ( DecorationState.hasNoChildren );
+    }
+
+    /**
+     * Installs {@link ContainerListener} that will perform decoration updates on children change.
+     */
+    protected void installChildrenListeners ()
+    {
+        if ( usesContainerView () )
         {
-            focusStateTracker = new DefaultFocusTracker ()
+            containerListener = new ContainerListener ()
             {
                 @Override
-                public void focusChanged ( final boolean focused )
+                public void componentAdded ( @NotNull final ContainerEvent event )
                 {
-                    // Updating focus state
-                    AbstractDecorationPainter.this.focused = focused;
+                    AbstractDecorationPainter.this.childrenChanged ( event );
+                }
 
-                    // Updating decoration
-                    if ( isSettingsUpdateAllowed () )
-                    {
-                        updateDecorationState ();
-                    }
+                @Override
+                public void componentRemoved ( @NotNull final ContainerEvent event )
+                {
+                    AbstractDecorationPainter.this.childrenChanged ( event );
                 }
             };
-            FocusManager.addFocusTracker ( component, focusStateTracker );
+            component.addContainerListener ( containerListener );
         }
     }
 
     /**
-     * Uninstalls listener that performs decoration updates on focus state change.
+     * Informs about {@link Container} children change.
+     *
+     * @param event {@link ContainerEvent}
      */
-    protected void uninstallFocusListener ()
+    protected void childrenChanged ( @NotNull final ContainerEvent event )
     {
-        if ( focusStateTracker != null )
+        updateDecorationState ();
+    }
+
+    /**
+     * Uninstalls {@link ContainerListener}.
+     */
+    protected void uninstallChildrenListeners ()
+    {
+        if ( containerListener != null )
         {
-            FocusManager.removeFocusTracker ( focusStateTracker );
-            focusStateTracker = null;
+            component.removeContainerListener ( containerListener );
+            containerListener = null;
+        }
+    }
+
+
+    /**
+     * Returns whether or not component has distinct focused view.
+     * Note that this is exactly distinct view and not state, distinct focused state might actually be missing.
+     * todo Replace with {@link #usesState(String)} override
+     *
+     * @return {@code true} if component has distinct focused view, {@code false} otherwise
+     */
+    protected boolean usesFocusedView ()
+    {
+        return component.isFocusable () && usesState ( DecorationState.focused );
+    }
+
+    /**
+     * Installs listener that will perform decoration updates on focus state change.
+     */
+    protected void installFocusListeners ()
+    {
+        if ( usesFocusedView () )
+        {
+            focusStateTracker = new DefaultFocusTracker ( component, true )
+            {
+                @Override
+                public void focusChanged ( final boolean focused )
+                {
+                    AbstractDecorationPainter.this.focusChanged ( focused );
+                }
+            };
+            FocusManager.addFocusTracker ( component, focusStateTracker );
+            this.focused = focusStateTracker.isFocused ();
+        }
+        else
+        {
+            this.focused = false;
+        }
+    }
+
+    /**
+     * Informs about focus state changes.
+     * Note that this method will only be fired when component {@link #usesFocusedView()}.
+     *
+     * @param focused whether or not component has focus
+     */
+    protected void focusChanged ( final boolean focused )
+    {
+        // Ensure component is still available
+        // This might happen if painter is replaced from another FocusTracker
+        if ( AbstractDecorationPainter.this.component != null )
+        {
+            this.focused = focused;
+            updateDecorationState ();
         }
     }
 
@@ -182,120 +346,228 @@ public abstract class AbstractDecorationPainter<E extends JComponent, U extends 
     }
 
     /**
+     * Uninstalls focus listener.
+     */
+    protected void uninstallFocusListeners ()
+    {
+        if ( focusStateTracker != null )
+        {
+            FocusManager.removeFocusTracker ( component, focusStateTracker );
+            focusStateTracker = null;
+            focused = false;
+        }
+    }
+
+    /**
+     * Updates focus listener usage.
+     */
+    protected void updateFocusListeners ()
+    {
+        if ( usesFocusedView () )
+        {
+            installFocusListeners ();
+        }
+        else
+        {
+            uninstallFocusListeners ();
+        }
+    }
+
+    /**
+     * Returns whether or not component has distinct in-focused-parent view.
+     * Note that this is exactly distinct view and not state, distinct in-focused-parent state might actually be missing.
+     * todo Replace with {@link #usesState(String)} override
+     *
+     * @return {@code true} if component has distinct in-focused-parent view, {@code false} otherwise
+     */
+    protected boolean usesInFocusedParentView ()
+    {
+        return usesState ( DecorationState.inFocusedParent );
+    }
+
+    /**
+     * Installs listener that performs decoration updates on focused parent appearance and disappearance.
+     */
+    protected void installInFocusedParentListeners ()
+    {
+        if ( usesInFocusedParentView () )
+        {
+            inFocusedParent = updateInFocusedParent ();
+            inFocusedParentTracker = new GlobalFocusListener ()
+            {
+                @Override
+                public void focusChanged ( @Nullable final Component oldFocus, @Nullable final Component newFocus )
+                {
+                    AbstractDecorationPainter.this.updateInFocusedParent ();
+                }
+            };
+            FocusManager.registerGlobalFocusListener ( component, inFocusedParentTracker );
+            inFocusedParentAncestorListener = new AncestorListener ()
+            {
+                @Override
+                public void ancestorAdded ( @NotNull final AncestorEvent event )
+                {
+                    AbstractDecorationPainter.this.updateInFocusedParent ();
+                }
+
+                @Override
+                public void ancestorRemoved ( @NotNull final AncestorEvent event )
+                {
+                    AbstractDecorationPainter.this.updateInFocusedParent ();
+                }
+
+                @Override
+                public void ancestorMoved ( @NotNull final AncestorEvent event )
+                {
+                    AbstractDecorationPainter.this.updateInFocusedParent ();
+                }
+            };
+            component.addAncestorListener ( inFocusedParentAncestorListener );
+        }
+        else
+        {
+            inFocusedParent = false;
+        }
+    }
+
+    /**
+     * Updates {@link #inFocusedParent} state.
+     * For that we are checking whether or not any related component gained or lost focus.
+     * Note that this method will only be fired when component {@link #usesInFocusedParentView()}.
+     * It is not recommended to use this state unless component's direct or close parent uses {@code 'focused'} state.
+     *
+     * @return {@code true} if component is placed within focused parent, {@code false} otherwise
+     */
+    protected boolean updateInFocusedParent ()
+    {
+        // Ensure component is still available
+        // This might happen if painter is replaced from another GlobalFocusListener
+        if ( AbstractDecorationPainter.this.component != null )
+        {
+            final boolean old = inFocusedParent;
+            inFocusedParent = false;
+            Container current = component;
+            while ( current != null )
+            {
+                if ( current.isFocusOwner () )
+                {
+                    // Directly in a focused parent
+                    inFocusedParent = true;
+                    break;
+                }
+                else if ( current != component && current instanceof JComponent )
+                {
+                    // Ensure that component supports styling
+                    final JComponent jComponent = ( JComponent ) current;
+                    if ( LafUtils.hasWebLafUI ( jComponent ) )
+                    {
+                        // In a parent that tracks children focus and visually displays it
+                        // This case is not obvious but really important for correct visual representation of the state
+                        final ComponentUI ui = LafUtils.getUI ( jComponent );
+                        if ( ui != null )
+                        {
+                            // todo Replace with proper painter retrieval upon Paintable interface implementation
+                            final Object painter = ReflectUtils.getFieldValueSafely ( ui, "painter" );
+                            if ( painter != null && painter instanceof AbstractDecorationPainter )
+                            {
+                                final AbstractDecorationPainter dp = ( AbstractDecorationPainter ) painter;
+                                if ( dp.usesFocusedView () )
+                                {
+                                    inFocusedParent = dp.isFocused ();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                current = current.getParent ();
+            }
+            if ( Objects.notEquals ( old, inFocusedParent ) )
+            {
+                updateDecorationState ();
+            }
+        }
+        return inFocusedParent;
+    }
+
+    /**
+     * Returns whether or not one of this component parents displays focused state.
+     * Returns {@code true} if one of parents owns focus directly or indirectly due to one of its children being focused.
+     * Indirect focus ownership is only accepted from parents which use {@link DecorationState#focused} decoration state.
+     *
+     * @return {@code true} if one of this component parents displays focused state, {@code false} otherwise
+     */
+    protected boolean isInFocusedParent ()
+    {
+        return inFocusedParent;
+    }
+
+    /**
+     * Uninstalls global focus listener.
+     */
+    protected void uninstallInFocusedParentListeners ()
+    {
+        if ( inFocusedParentTracker != null )
+        {
+            component.removeAncestorListener ( inFocusedParentAncestorListener );
+            inFocusedParentAncestorListener = null;
+            FocusManager.unregisterGlobalFocusListener ( component, inFocusedParentTracker );
+            inFocusedParentTracker = null;
+            inFocusedParent = false;
+        }
+    }
+
+    /**
+     * Returns whether or not component has distinct hover view.
+     * Note that this is exactly distinct view and not state, distinct hover state might actually be missing.
+     * todo Replace with {@link #usesState(String)} override
+     *
+     * @return {@code true} if component has distinct hover view, {@code false} otherwise
+     */
+    protected boolean usesHoverView ()
+    {
+        return usesState ( DecorationState.hover );
+    }
+
+    /**
      * Installs listener that will perform decoration updates on hover state change.
      */
-    protected void installHoverListener ()
+    protected void installHoverListeners ()
     {
-        if ( usesState ( DecorationState.hover ) )
+        if ( usesHoverView () )
         {
-            hoverStateTracker = new AbstractHoverBehavior<E> ( component, false )
+            hoverStateTracker = new DefaultHoverTracker ( component, false )
             {
                 @Override
                 public void hoverChanged ( final boolean hover )
                 {
-                    // Updating hover state
-                    AbstractDecorationPainter.this.hover = hover;
-
-                    // Updating decoration
-                    if ( isSettingsUpdateAllowed () )
-                    {
-                        updateDecorationState ();
-                    }
+                    AbstractDecorationPainter.this.hoverChanged ( hover );
                 }
             };
-            hoverStateTracker.install ();
+            HoverManager.addHoverTracker ( component, hoverStateTracker );
+            this.hover = hoverStateTracker.isHovered ();
+        }
+        else
+        {
+            hover = false;
         }
     }
 
     /**
-     * Uninstalls listener that performs decoration updates on hover state change.
+     * Informs about hover state changes.
+     * Note that this method will only be fired when component {@link #usesHoverView()}.
+     *
+     * @param hover whether or not mouse is on the component
      */
-    protected void uninstallHoverListener ()
+    protected void hoverChanged ( final boolean hover )
     {
-        if ( hoverStateTracker != null )
+        // Ensure component is still available
+        // This might happen if painter is replaced from another DefaultHoverTracker
+        if ( AbstractDecorationPainter.this.component != null )
         {
-            hoverStateTracker.uninstall ();
-            hoverStateTracker = null;
+            this.hover = hover;
+            updateDecorationState ();
         }
-    }
-
-    /**
-     * Installs listener that will perform border updates on component hierarchy changes.
-     * This is required to properly update decoration borders in case it was moved from or into container with grouping layout.
-     * It also tracks neighbour components addition and removal to update this component border accordingly.
-     */
-    protected void installHierarchyListener ()
-    {
-        neighboursTracker = new ContainerListener ()
-        {
-            @Override
-            public void componentAdded ( final ContainerEvent e )
-            {
-                // Updating border when a child was added nearby
-                if ( ancestor != null && ancestor.getLayout () instanceof GroupingLayout && e.getChild () != component )
-                {
-                    updateBorder ();
-                }
-            }
-
-            @Override
-            public void componentRemoved ( final ContainerEvent e )
-            {
-                // Updating border when a child was removed nearby
-                if ( ancestor != null && ancestor.getLayout () instanceof GroupingLayout && e.getChild () != component )
-                {
-                    updateBorder ();
-                }
-            }
-        };
-        hierarchyTracker = new HierarchyListener ()
-        {
-            @Override
-            public void hierarchyChanged ( final HierarchyEvent e )
-            {
-                // Listening only for parent change event
-                // It will inform us when parent container for this component changes
-                // Ancestor listener is not really reliable because it might inform about consequent parent changes
-                if ( ( e.getChangeFlags () & HierarchyEvent.PARENT_CHANGED ) == HierarchyEvent.PARENT_CHANGED )
-                {
-                    // If there was a previous container...
-                    if ( ancestor != null )
-                    {
-                        // Stop tracking neighbours
-                        ancestor.removeContainerListener ( neighboursTracker );
-                    }
-
-                    // Updating ancestor
-                    ancestor = component.getParent ();
-
-                    // If there is a new container...
-                    if ( ancestor != null )
-                    {
-                        // Start tracking neighbours
-                        ancestor.addContainerListener ( neighboursTracker );
-
-                        // Updating border
-                        updateBorder ();
-                    }
-                }
-            }
-        };
-        component.addHierarchyListener ( hierarchyTracker );
-    }
-
-    /**
-     * Uninstalls listener that performs border updates on component hierarchy changes.
-     */
-    protected void uninstallHierarchyListener ()
-    {
-        component.removeHierarchyListener ( hierarchyTracker );
-        hierarchyTracker = null;
-        if ( ancestor != null )
-        {
-            ancestor.removeContainerListener ( neighboursTracker );
-            ancestor = null;
-        }
-        neighboursTracker = null;
     }
 
     /**
@@ -309,48 +581,308 @@ public abstract class AbstractDecorationPainter<E extends JComponent, U extends 
     }
 
     /**
-     * Returns section painters used within this painter.
-     * Might also return {@code null} in case no section painters are used within this one.
-     * This method is used for various internal update mechanisms involving section painters.
-     *
-     * @return section painters used within this painter
+     * Uninstalls hover listener.
      */
-    protected List<SectionPainter<E, U>> getSectionPainters ()
+    protected void uninstallHoverListeners ()
     {
-        return null;
+        if ( hoverStateTracker != null )
+        {
+            HoverManager.removeHoverTracker ( component, hoverStateTracker );
+            hoverStateTracker = null;
+            hover = false;
+        }
     }
 
     /**
-     * Returns section painters list in a most optimal way.
-     * Utility method for usage inside of classed extending this one.
-     *
-     * @param sections section painters, some or all of them can be {@code null}
-     * @return section painters list in a most optimal way
+     * Updates hover listener usage.
      */
-    protected final List<SectionPainter<E, U>> asList ( final SectionPainter<E, U>... sections )
+    protected void updateHoverListeners ()
     {
-        ArrayList<SectionPainter<E, U>> list = null;
-        if ( sections != null )
+        if ( usesHoverView () )
         {
-            for ( final SectionPainter<E, U> section : sections )
+            installHoverListeners ();
+        }
+        else
+        {
+            uninstallHoverListeners ();
+        }
+    }
+
+    /**
+     * Returns whether or not component has distinct in-hovered-parent view.
+     * Note that this is exactly distinct view and not state, distinct in-hovered-parent state might actually be missing.
+     * todo Replace with {@link #usesState(String)} override
+     *
+     * @return {@code true} if component has distinct in-hovered-parent view, {@code false} otherwise
+     */
+    protected boolean usesInHoveredParentView ()
+    {
+        return usesState ( DecorationState.inHoveredParent );
+    }
+
+    /**
+     * Installs listener that performs decoration updates on hovered parent appearance and disappearance.
+     */
+    protected void installInHoveredParentListeners ()
+    {
+        if ( usesInHoveredParentView () )
+        {
+            inHoveredParent = updateInHoveredParent ();
+            inHoveredParentTracker = new GlobalHoverListener ()
             {
-                if ( section != null )
+                @Override
+                public void hoverChanged ( @Nullable final Component oldHover, @Nullable final Component newHover )
                 {
-                    if ( list == null )
+                    AbstractDecorationPainter.this.updateInHoveredParent ();
+                }
+            };
+            HoverManager.registerGlobalHoverListener ( component, inHoveredParentTracker );
+            inHoveredParentAncestorListener = new AncestorListener ()
+            {
+                @Override
+                public void ancestorAdded ( @NotNull final AncestorEvent event )
+                {
+                    AbstractDecorationPainter.this.updateInHoveredParent ();
+                }
+
+                @Override
+                public void ancestorRemoved ( @NotNull final AncestorEvent event )
+                {
+                    AbstractDecorationPainter.this.updateInHoveredParent ();
+                }
+
+                @Override
+                public void ancestorMoved ( @NotNull final AncestorEvent event )
+                {
+                    AbstractDecorationPainter.this.updateInHoveredParent ();
+                }
+            };
+            component.addAncestorListener ( inHoveredParentAncestorListener );
+        }
+        else
+        {
+            inHoveredParent = false;
+        }
+    }
+
+    /**
+     * Updates {@link #inHoveredParent} mark.
+     * For that we check whether or not any related component gained or lost hover.
+     * Note that this method will only be fired when component {@link #usesInHoveredParentView()}.
+     * It is not recommended to use this state unless component's direct or close parent uses {@code 'hover'} state.
+     *
+     * @return {@code true} if component is placed within hovered parent, {@code false} otherwise
+     */
+    protected boolean updateInHoveredParent ()
+    {
+        // Ensure component is still available
+        // This might happen if painter is replaced from another GlobalHoverListener
+        if ( component != null )
+        {
+            final boolean old = inHoveredParent;
+            inHoveredParent = false;
+            Container current = component;
+            while ( current != null )
+            {
+                if ( current == HoverManager.getHoverOwner () )
+                {
+                    // Directly in a hovered parent
+                    inHoveredParent = true;
+                    break;
+                }
+                else if ( current != component && current instanceof JComponent )
+                {
+                    // Ensure that component supports styling
+                    final JComponent jComponent = ( JComponent ) current;
+                    if ( LafUtils.hasWebLafUI ( jComponent ) )
                     {
-                        list = new ArrayList<SectionPainter<E, U>> ( sections.length );
+                        // In a parent that tracks children hover and visually displays it
+                        // This case is not obvious but really important for correct visual representation of the state
+                        final ComponentUI ui = LafUtils.getUI ( jComponent );
+                        if ( ui != null )
+                        {
+                            // todo Replace with proper painter retrieval upon Paintable interface implementation
+                            final Object painter = ReflectUtils.getFieldValueSafely ( ui, "painter" );
+                            if ( painter != null && painter instanceof AbstractDecorationPainter )
+                            {
+                                final AbstractDecorationPainter dp = ( AbstractDecorationPainter ) painter;
+                                if ( dp.usesHoverView () )
+                                {
+                                    inHoveredParent = dp.isHover ();
+                                    break;
+                                }
+                            }
+                        }
                     }
-                    list.add ( section );
+                }
+                current = current.getParent ();
+            }
+            if ( Objects.notEquals ( old, inHoveredParent ) )
+            {
+                updateDecorationState ();
+            }
+        }
+        return inHoveredParent;
+    }
+
+    /**
+     * Returns whether or not one of this component parents displays hover state.
+     * Returns {@code true} if one of parents owns hover directly or indirectly due to one of its children being hover.
+     * Indirect hover ownership is only accepted from parents which use {@link DecorationState#hover} decoration state.
+     *
+     * @return {@code true} if one of this component parents displays hover state, {@code false} otherwise
+     */
+    protected boolean isInHoveredParent ()
+    {
+        return inHoveredParent;
+    }
+
+    /**
+     * Uninstalls global hover listener.
+     */
+    protected void uninstallInHoveredParentListeners ()
+    {
+        if ( inHoveredParentTracker != null )
+        {
+            component.removeAncestorListener ( inHoveredParentAncestorListener );
+            inHoveredParentAncestorListener = null;
+            HoverManager.unregisterGlobalHoverListener ( component, inHoveredParentTracker );
+            inHoveredParentTracker = null;
+            inHoveredParent = false;
+        }
+    }
+
+    /**
+     * Returns whether or not component has distinct hierarchy-based view.
+     *
+     * @return {@code true} if component has distinct hierarchy-based view, {@code false} otherwise
+     */
+    protected boolean usesHierarchyBasedView ()
+    {
+        return true;
+    }
+
+    /**
+     * Installs listener that will perform border updates on component hierarchy changes.
+     * This is required to properly update decoration borders in case it was moved from or into container with grouping layout.
+     * It also tracks neighbour components addition and removal to update this component border accordingly.
+     */
+    protected void installBorderListeners ()
+    {
+        if ( usesHierarchyBasedView () )
+        {
+            neighboursTracker = new ContainerListener ()
+            {
+                @Override
+                public void componentAdded ( @NotNull final ContainerEvent event )
+                {
+                    // Ensure component is still available
+                    // This might happen if painter is replaced from another ContainerListener
+                    if ( AbstractDecorationPainter.this.component != null )
+                    {
+                        // Updating border when a child was added nearby
+                        if ( ancestor != null && ancestor.getLayout () instanceof GroupingLayout &&
+                                event.getChild () != AbstractDecorationPainter.this.component )
+                        {
+                            AbstractDecorationPainter.this.updateBorder ();
+                        }
+                    }
+                }
+
+                @Override
+                public void componentRemoved ( @NotNull final ContainerEvent event )
+                {
+                    // Ensure component is still available
+                    // This might happen if painter is replaced from another ContainerListener
+                    if ( AbstractDecorationPainter.this.component != null )
+                    {
+                        // Updating border when a child was removed nearby
+                        if ( ancestor != null && ancestor.getLayout () instanceof GroupingLayout &&
+                                event.getChild () != AbstractDecorationPainter.this.component )
+                        {
+                            AbstractDecorationPainter.this.updateBorder ();
+                        }
+                    }
+                }
+            };
+            hierarchyTracker = new HierarchyListener ()
+            {
+                @Override
+                public void hierarchyChanged ( @NotNull final HierarchyEvent event )
+                {
+                    AbstractDecorationPainter.this.hierarchyChanged ( event );
+                }
+            };
+            component.addHierarchyListener ( hierarchyTracker );
+        }
+        else
+        {
+            ancestor = null;
+        }
+    }
+
+    /**
+     * Informs about hierarchy changes.
+     * Note that this method will only be fired when component {@link #usesHierarchyBasedView()}.
+     *
+     * @param event {@link HierarchyEvent}
+     */
+    protected void hierarchyChanged ( @NotNull final HierarchyEvent event )
+    {
+        // Ensure component is still available
+        // This might happen if painter is replaced from another HierarchyListener
+        if ( AbstractDecorationPainter.this.component != null )
+        {
+            // Listening only for parent change event
+            // It will inform us when parent container for this component changes
+            // Ancestor listener is not really reliable because it might inform about consequent parent changes
+            if ( ( event.getChangeFlags () & HierarchyEvent.PARENT_CHANGED ) == HierarchyEvent.PARENT_CHANGED )
+            {
+                // If there was a previous container...
+                if ( ancestor != null )
+                {
+                    // Stop tracking neighbours
+                    ancestor.removeContainerListener ( neighboursTracker );
+                }
+
+                // Updating ancestor
+                ancestor = AbstractDecorationPainter.this.component.getParent ();
+
+                // If there is a new container...
+                if ( ancestor != null )
+                {
+                    // Start tracking neighbours
+                    ancestor.addContainerListener ( neighboursTracker );
+
+                    // Updating border
+                    updateBorder ();
                 }
             }
         }
-        return list;
+    }
+
+    /**
+     * Uninstalls hierarchy listener.
+     */
+    protected void uninstallBorderListeners ()
+    {
+        if ( hierarchyTracker != null )
+        {
+            component.removeHierarchyListener ( hierarchyTracker );
+            hierarchyTracker = null;
+            if ( ancestor != null )
+            {
+                ancestor.removeContainerListener ( neighboursTracker );
+                ancestor = null;
+            }
+            neighboursTracker = null;
+        }
     }
 
     /**
      * Returns whether or not component is in enabled state.
      *
-     * @return true if component is in enabled state, false otherwise
+     * @return {@code true} if component is in enabled state, {@code false} otherwise
      */
     protected boolean isEnabled ()
     {
@@ -362,30 +894,20 @@ public abstract class AbstractDecorationPainter<E extends JComponent, U extends 
      *
      * @return properly sorted current component decoration states
      */
+    @NotNull
     protected final List<String> collectDecorationStates ()
     {
         // Retrieving current decoration states
         final List<String> states = getDecorationStates ();
 
+        // Adding custom Skin decoration states
+        states.addAll ( DecorationUtils.getExtraStates ( StyleManager.getSkin ( component ) ) );
+
         // Adding custom UI decoration states
-        if ( ui instanceof Stateful )
-        {
-            final List<String> uiStates = ( ( Stateful ) ui ).getStates ();
-            if ( !CollectionUtils.isEmpty ( uiStates ) )
-            {
-                states.addAll ( uiStates );
-            }
-        }
+        states.addAll ( DecorationUtils.getExtraStates ( ui ) );
 
         // Adding custom component decoration states
-        if ( component instanceof Stateful )
-        {
-            final List<String> componentStates = ( ( Stateful ) component ).getStates ();
-            if ( !CollectionUtils.isEmpty ( componentStates ) )
-            {
-                states.addAll ( componentStates );
-            }
-        }
+        states.addAll ( DecorationUtils.getExtraStates ( component ) );
 
         // Sorting states to always keep the same order
         Collections.sort ( states );
@@ -393,34 +915,36 @@ public abstract class AbstractDecorationPainter<E extends JComponent, U extends 
         return states;
     }
 
-    /**
-     * Returns current component decoration states.
-     *
-     * @return current component decoration states
-     */
-    protected List<String> getDecorationStates ()
+    @NotNull
+    @Override
+    public List<String> getDecorationStates ()
     {
-        final List<String> states = new ArrayList<String> ();
+        final List<String> states = new ArrayList<String> ( 12 );
         states.add ( SystemUtils.getShortOsName () );
         states.add ( isEnabled () ? DecorationState.enabled : DecorationState.disabled );
+        states.add ( ltr ? DecorationState.leftToRight : DecorationState.rightToLeft );
+        states.add ( component.getComponentCount () > 0 ? DecorationState.hasChildren : DecorationState.hasNoChildren );
         if ( isFocused () )
         {
             states.add ( DecorationState.focused );
+        }
+        if ( isInFocusedParent () )
+        {
+            states.add ( DecorationState.inFocusedParent );
         }
         if ( isHover () )
         {
             states.add ( DecorationState.hover );
         }
+        if ( isInHoveredParent () )
+        {
+            states.add ( DecorationState.inHoveredParent );
+        }
         return states;
     }
 
-    /**
-     * Returns whether component has decoration associated with specified state.
-     *
-     * @param state decoration state
-     * @return true if component has decoration associated with specified state, false otherwise
-     */
-    protected boolean usesState ( final String state )
+    @Override
+    public final boolean usesState ( @NotNull final String state )
     {
         // Checking whether or not this painter uses this decoration state
         boolean usesState = usesState ( decorations, state );
@@ -428,14 +952,14 @@ public abstract class AbstractDecorationPainter<E extends JComponent, U extends 
         // Checking whether or not section painters used by this painter use it
         if ( !usesState )
         {
-            final List<SectionPainter<E, U>> sectionPainters = getSectionPainters ();
-            if ( !CollectionUtils.isEmpty ( sectionPainters ) )
+            final List<SectionPainter<C, U>> sectionPainters = getInstalledSectionPainters ();
+            if ( CollectionUtils.notEmpty ( sectionPainters ) )
             {
-                for ( final SectionPainter<E, U> section : sectionPainters )
+                for ( final SectionPainter<C, U> section : sectionPainters )
                 {
-                    if ( section instanceof AbstractDecorationPainter )
+                    if ( section instanceof IDecorationPainter )
                     {
-                        if ( usesState ( ( ( AbstractDecorationPainter ) section ).decorations, state ) )
+                        if ( ( ( IDecorationPainter ) section ).usesState ( state ) )
                         {
                             usesState = true;
                             break;
@@ -453,22 +977,23 @@ public abstract class AbstractDecorationPainter<E extends JComponent, U extends 
      *
      * @param decorations decorations
      * @param state       decoration state
-     * @return true if specified decorations are associated with specified state, false otherwise
+     * @return {@code true} if specified decorations are associated with specified state, {@code false} otherwise
      */
-    protected final boolean usesState ( final List<D> decorations, final String state )
+    protected final boolean usesState ( @Nullable final Decorations<C, D> decorations, final String state )
     {
-        if ( !CollectionUtils.isEmpty ( decorations ) )
+        boolean usesState = false;
+        if ( decorations != null && decorations.size () > 0 )
         {
             for ( final D decoration : decorations )
             {
-                final List<String> states = decoration.getStates ();
-                if ( states != null && states.contains ( state ) )
+                if ( decoration.usesState ( state ) )
                 {
-                    return true;
+                    usesState = true;
+                    break;
                 }
             }
         }
-        return false;
+        return usesState;
     }
 
     /**
@@ -477,182 +1002,268 @@ public abstract class AbstractDecorationPainter<E extends JComponent, U extends 
      * @param forStates decoration states to retrieve decoration for
      * @return decorations for the specified states
      */
-    protected List<D> getDecorations ( final List<String> forStates )
+    @NotNull
+    protected final List<D> getDecorations ( @NotNull final List<String> forStates )
     {
-        if ( !CollectionUtils.isEmpty ( decorations ) )
+        final List<D> result = new ArrayList<D> ();
+        if ( decorations != null && decorations.size () > 0 )
         {
-            final List<D> d = new ArrayList<D> ( 1 );
             for ( final D decoration : decorations )
             {
-                final List<String> states = decoration.getStates ();
-                if ( !CollectionUtils.isEmpty ( states ) )
+                if ( decoration.isApplicableTo ( forStates ) )
                 {
-                    boolean containsAll = true;
-                    for ( final String state : states )
-                    {
-                        if ( CollectionUtils.isEmpty ( forStates ) || !forStates.contains ( state ) )
-                        {
-                            containsAll = false;
-                            break;
-                        }
-                    }
-                    if ( containsAll )
-                    {
-                        d.add ( decoration );
-                    }
-                }
-                else
-                {
-                    d.add ( decoration );
+                    result.add ( decoration );
                 }
             }
-            return d;
         }
-        else
-        {
-            return null;
-        }
+        return result;
     }
 
-    /**
-     * Returns decoration matching current states.
-     * Decorations returned here are cached copies of the data presented in skins.
-     * This was made to avoid corrupting inital data and to increase the decoration retrieval speed.
-     *
-     * @return decoration matching current states
-     */
-    protected D getDecoration ()
+    @Nullable
+    @Override
+    public final D getDecoration ()
     {
-        // Optimization for painter without decorations
-        if ( !CollectionUtils.isEmpty ( decorations ) )
+        final D result;
+        if ( decorations != null && decorations.size () > 0 )
         {
             // Decoration key
             // States are properly sorted, so their order is always the same
-            final String key = TextUtils.listToString ( states, "," );
+            final String previous = this.current;
+            current = TextUtils.listToString ( states, "," );
 
-            // Creating decorations cache
-            if ( decorationCache == null )
+            // Creating decoration caches
+            if ( stateDecorationCache == null )
             {
+                // State decorations cache
+                // Entry: [ component state -> built decoration reference ]
+                // It is used for fastest possible access to component state decorations
+                stateDecorationCache = new HashMap<String, D> ( decorations.size () );
+
+                // Decoration combinations cache
+                // Entry: [ decorations combination key -> built decoration reference ]
+                // It is used to avoid excessive memory usage by duplicate decoration combinations for each specific state
                 decorationCache = new HashMap<String, D> ( decorations.size () );
             }
 
-            // Resolving decoration if it wasn't cached yet
-            if ( !decorationCache.containsKey ( key ) )
+            // Resolving state decoration if it is not yet cached
+            if ( !stateDecorationCache.containsKey ( current ) )
             {
                 // Retrieving all decorations fitting current states
                 final List<D> decorations = getDecorations ( states );
 
-                // Resolving resulting decoration
+                // Retrieving unique key for decorations combination
+                final String decorationsKey = getDecorationsKey ( decorations );
+
+                // Retrieving existing decoration or building a new one
                 final D decoration;
-                if ( CollectionUtils.isEmpty ( decorations ) )
+                if ( decorationCache.containsKey ( decorationsKey ) )
                 {
-                    // No decoration for the states available
-                    decoration = null;
-                }
-                else if ( decorations.size () == 1 )
-                {
-                    // Single existing decoration for the states
-                    decoration = MergeUtils.clone ( decorations.get ( 0 ) );
+                    // Retrieving decoration from existing built decorations cache
+                    decoration = decorationCache.get ( decorationsKey );
                 }
                 else
                 {
-                    // Merging multiple decorations together
-                    decoration = MergeUtils.clone ( decorations.get ( 0 ) );
-                    for ( int i = 1; i < decorations.size (); i++ )
+                    // Building single decoration from a set
+                    if ( CollectionUtils.isEmpty ( decorations ) )
                     {
-                        decoration.merge ( decorations.get ( i ) );
+                        // No decoration for the states available
+                        decoration = null;
                     }
+                    else if ( decorations.size () == 1 )
+                    {
+                        // Single existing decoration for the states
+                        decoration = Clone.deep ().clone ( decorations.get ( 0 ) );
+                    }
+                    else
+                    {
+                        // Filter out possible decorations of different type
+                        // We always use type of the last one available since it has higher priority
+                        final Class<? extends IDecoration> type = decorations.get ( decorations.size () - 1 ).getClass ();
+                        final Iterator<D> iterator = decorations.iterator ();
+                        while ( iterator.hasNext () )
+                        {
+                            final D d = iterator.next ();
+                            if ( d.getClass () != type )
+                            {
+                                iterator.remove ();
+                            }
+                        }
+
+                        // Merging multiple decorations together
+                        decoration = Merge.deep ().merge ( decorations );
+                    }
+
+                    // Updating built decoration settings
+                    if ( decoration != null )
+                    {
+                        // Updating section mark
+                        // This is done for each cached decoration once as it doesn't change
+                        decoration.setSection ( isSectionPainter () );
+                    }
+
+                    // Caching built decoration
+                    decorationCache.put ( decorationsKey, decoration );
                 }
 
-                // Updating section mark
-                if ( decoration != null )
-                {
-                    decoration.setSection ( isSectionPainter () );
-                }
-
-                // Caching resulting decoration
-                decorationCache.put ( key, decoration );
+                // Caching resulting decoration under the state key
+                stateDecorationCache.put ( current, decoration );
             }
 
-            return decorationCache.get ( key );
+            // Performing decoration activation and deactivation if needed
+            if ( previous == null && current == null )
+            {
+                // Activating initial decoration
+                final D initialDecoration = stateDecorationCache.get ( current );
+                if ( initialDecoration != null )
+                {
+                    initialDecoration.activate ( component );
+                }
+            }
+            else if ( Objects.notEquals ( previous, current ) )
+            {
+                // Checking that decoration was actually changed
+                final D previousDecoration = stateDecorationCache.get ( previous );
+                final D currentDecoration = stateDecorationCache.get ( current );
+                if ( previousDecoration != currentDecoration )
+                {
+                    // Deactivating previous decoration
+                    if ( previousDecoration != null )
+                    {
+                        previousDecoration.deactivate ( component );
+                    }
+                    // Activating current decoration
+                    if ( currentDecoration != null )
+                    {
+                        currentDecoration.activate ( component );
+                    }
+                }
+            }
+
+            // Returning existing decoration
+            result = stateDecorationCache.get ( current );
         }
         else
         {
-            return null;
+            // No decorations added
+            result = null;
         }
+        return result;
     }
 
     /**
-     * Performs current decoration state update.
+     * Returns unique decorations combination key.
+     *
+     * @param decorations decorations to retrieve unique combination key for
+     * @return unique decorations combination key
      */
-    protected void updateDecorationState ()
+    @NotNull
+    protected final String getDecorationsKey ( @NotNull final List<D> decorations )
+    {
+        final StringBuilder key = new StringBuilder ( 15 * decorations.size () );
+        for ( final D decoration : decorations )
+        {
+            if ( key.length () > 0 )
+            {
+                key.append ( ";" );
+            }
+            key.append ( decoration.getId () );
+        }
+        return key.toString ();
+    }
+
+    /**
+     * Performs deactivation of the recently used decoration.
+     *
+     * @param c painted component
+     */
+    protected final void deactivateLastDecoration ( @NotNull final C c )
+    {
+        final D decoration = getDecoration ();
+        if ( decoration != null )
+        {
+            decoration.deactivate ( c );
+        }
+    }
+
+    @Override
+    public final void updateDecorationState ()
     {
         final List<String> states = collectDecorationStates ();
-        if ( !CollectionUtils.equals ( this.states, states ) )
+        if ( !CollectionUtils.equals ( this.states, states, true ) )
         {
             // Saving new decoration states
             this.states = states;
 
             // Updating section painters decoration states
             // This is required to provide state changes into section painters used within this painter
-            final List<SectionPainter<E, U>> sectionPainters = getSectionPainters ();
-            if ( !CollectionUtils.isEmpty ( sectionPainters ) )
+            // Section painters that use default states collection mechanism are dependant on origin painter states
+            final List<SectionPainter<C, U>> sectionPainters = getInstalledSectionPainters ();
+            if ( CollectionUtils.notEmpty ( sectionPainters ) )
             {
-                for ( final SectionPainter<E, U> section : sectionPainters )
+                for ( final SectionPainter<C, U> section : sectionPainters )
                 {
-                    if ( section instanceof AbstractDecorationPainter )
+                    if ( section instanceof IDecorationPainter )
                     {
-                        ( ( AbstractDecorationPainter ) section ).updateDecorationState ();
+                        ( ( IDecorationPainter ) section ).updateDecorationState ();
                     }
                 }
             }
 
-            // Updating state if allowed
-            if ( isSettingsUpdateAllowed () )
-            {
-                // States debug message
-                // System.out.println ( ReflectUtils.getClassName ( getClass () ) + ": " + TextUtils.listToString ( states, "," ) );
-
-                // Updating component visual state
-                revalidate ();
-                repaint ();
-            }
+            // Updating component visual state
+            revalidate ();
+            repaint ();
         }
     }
 
-    /**
-     * Returns whether or not decoration is available.
-     *
-     * @return true if decoration is available, false otherwise
-     */
-    public boolean isDecorated ()
+    @Nullable
+    @Override
+    protected Insets getBorder ()
     {
+        final Insets insets;
         final D decoration = getDecoration ();
-        return decoration != null && decoration.isVisible ();
+        if ( decoration != null && isDecorationAvailable ( decoration ) )
+        {
+            insets = decoration.getBorderInsets ( component );
+        }
+        else
+        {
+            insets = null;
+        }
+        return insets;
     }
 
+    @NotNull
     @Override
-    public Insets getBorders ()
+    public Shape provideShape ( @NotNull final C component, @NotNull final Rectangle bounds )
     {
-        final IDecoration decoration = getDecoration ();
-        return decoration != null ? decoration.getBorderInsets ( component ) : null;
+        final Shape shape;
+        final D decoration = getDecoration ();
+        if ( decoration != null && isDecorationAvailable ( decoration ) )
+        {
+            shape = decoration.provideShape ( component, bounds );
+        }
+        else
+        {
+            shape = bounds;
+        }
+        return shape;
     }
 
-    @Override
-    public Shape provideShape ( final E component, final Rectangle bounds )
-    {
-        final IDecoration decoration = getDecoration ();
-        return decoration != null ? decoration.provideShape ( component, bounds ) : bounds;
-    }
-
+    @Nullable
     @Override
     public Boolean isOpaque ()
     {
-        // Calculates opacity state based on provided decorations
-        // In case there is an active visible decoration component should not be opaque
-        // This might be changed in future and moved into decoration to provide specific setting
-        final IDecoration decoration = getDecoration ();
-        return decoration != null ? isOpaqueDecorated () : isOpaqueUndecorated ();
+        final Boolean opaque;
+        final D decoration = getDecoration ();
+        if ( decoration != null && isDecorationAvailable ( decoration ) )
+        {
+            opaque = isOpaqueDecorated ();
+        }
+        else
+        {
+            opaque = isOpaqueUndecorated ();
+        }
+        return opaque;
     }
 
     /**
@@ -683,97 +1294,138 @@ public abstract class AbstractDecorationPainter<E extends JComponent, U extends 
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
+    public boolean contains ( @NotNull final C c, @NotNull final U ui, @NotNull final Bounds bounds, final int x, final int y )
     {
-        final Rectangle b = adjustBounds ( bounds );
-
-        // Paint simple background if opaque
-        // Otherwise component might cause various visual glitches
-        if ( isPlainBackgroundPaintAllowed ( c ) )
+        final boolean contains;
+        final D decoration = getDecoration ();
+        if ( decoration != null && isDecorationAvailable ( decoration ) )
         {
+            // Creating additional bounds
+            final Bounds marginBounds = new Bounds ( bounds, BoundsType.margin, c, decoration );
+
+            // Using decoration contains method
+            contains = decoration.contains ( c, marginBounds, x, y );
+        }
+        else
+        {
+            // Using default contains method
+            contains = super.contains ( c, ui, bounds, x, y );
+        }
+        return contains;
+    }
+
+    @Override
+    public int getBaseline ( @NotNull final C c, @NotNull final U ui, @NotNull final Bounds bounds )
+    {
+        final int baseline;
+        final D decoration = getDecoration ();
+        if ( decoration != null && isDecorationAvailable ( decoration ) )
+        {
+            // Creating additional bounds
+            final Bounds marginBounds = new Bounds ( bounds, BoundsType.margin, c, decoration );
+
+            // Calculating decoration baseline
+            baseline = decoration.getBaseline ( c, marginBounds );
+        }
+        else
+        {
+            // Calculating default baseline
+            baseline = super.getBaseline ( c, ui, bounds );
+        }
+        return baseline;
+    }
+
+    @Override
+    public Component.BaselineResizeBehavior getBaselineResizeBehavior ( @NotNull final C c, @NotNull final U ui )
+    {
+        final Component.BaselineResizeBehavior behavior;
+        final D decoration = getDecoration ();
+        if ( decoration != null && isDecorationAvailable ( decoration ) )
+        {
+            // Returning decoration baseline behavior
+            behavior = decoration.getBaselineResizeBehavior ( c );
+        }
+        else
+        {
+            // Returning default baseline behavior
+            behavior = super.getBaselineResizeBehavior ( c, ui );
+        }
+        return behavior;
+    }
+
+    @Override
+    public void paint ( @NotNull final Graphics2D g2d, @NotNull final C c, @NotNull final U ui, @NotNull final Bounds bounds )
+    {
+        // Checking whether plain background is required
+        if ( isPlainBackgroundRequired ( c ) )
+        {
+            // Painting simple background
+            // This block added to avoid various visual glitches
             g2d.setPaint ( c.getBackground () );
-            g2d.fill ( isSectionPainter () ? b : Bounds.component.of ( c, b ) );
+            g2d.fill ( bounds.get () );
         }
 
         // Painting current decoration state
         final D decoration = getDecoration ();
-        if ( isDecorationPaintAllowed ( decoration ) )
+        if ( decoration != null && isDecorationAvailable ( decoration ) )
         {
-            decoration.paint ( g2d, isSectionPainter () ? Bounds.margin.of ( c, decoration, b ) : Bounds.margin.of ( c, b ), c );
+            // Creating additional bounds
+            final Bounds marginBounds = new Bounds ( bounds, BoundsType.margin, c, decoration );
+
+            // Painting current decoration state
+            decoration.paint ( g2d, c, marginBounds );
         }
 
         // Painting content
-        paintContent ( g2d, b, c, ui );
+        paintContent ( g2d, c, ui, bounds.get () );
     }
 
     /**
-     * Returns adjusted painting bounds.
-     *
-     * @param bounds painting bounds to adjust
-     * @return adjusted painting bounds
-     */
-    protected Rectangle adjustBounds ( final Rectangle bounds )
-    {
-        return bounds;
-    }
-
-    /**
-     * Paints content decorated by this painter.
-     * todo This method should eventually be removed since all content will be painted by IContent implementations
+     * Paints additional custom content provided by this painter.
+     * todo This might eventually be removed if all contents will be painted within IContent implementations
      *
      * @param g2d    graphics context
-     * @param bounds painting bounds
      * @param c      painted component
      * @param ui     painted component UI
+     * @param bounds painting bounds
      */
-    protected void paintContent ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
+    protected void paintContent ( @NotNull final Graphics2D g2d, @NotNull final C c, @NotNull final U ui, @NotNull final Rectangle bounds )
     {
-        // No content by default
+        /**
+         * No content available by default.
+         */
     }
 
     /**
-     * Returns whether or not painting plain component background is allowed.
-     * Moved into separated method for convenient background painting blocking using additional conditions.
-     * <p>
-     * By default this condition is limited to component being opaque.
+     * Returns whether or not painting plain component background is required.
      * When component is opaque we must fill every single pixel in its bounds with something to avoid issues.
+     * By default this condition is limited to component being opaque.
      *
      * @param c component to paint background for
-     * @return true if painting plain component background is allowed, false otherwise
+     * @return {@code true} if painting plain component background is required, {@code false} otherwise
      */
-    protected boolean isPlainBackgroundPaintAllowed ( final E c )
+    protected boolean isPlainBackgroundRequired ( final C c )
     {
         return c.isOpaque ();
     }
 
     /**
-     * Returns whether or not painting specified decoration is allowed.
-     * Moved into separated method for convenient decorationg painting blocking using additional conditions.
-     * <p>
-     * By default this condition is limited to decoration existance and visibility.
+     * Returns whether or not painting specified decoration is available.
      *
      * @param decoration decoration to be painted
-     * @return true if painting specified decoration is allowed, false otherwise
+     * @return {@code true} if painting specified decoration is available, {@code false} otherwise
      */
-    protected boolean isDecorationPaintAllowed ( final D decoration )
+    protected boolean isDecorationAvailable ( @NotNull final D decoration )
     {
-        return decoration != null && decoration.isVisible ();
+        return true;
     }
 
+    @NotNull
     @Override
     public Dimension getPreferredSize ()
     {
-        return SwingUtils.max ( getDecorationSize (), super.getPreferredSize () );
-    }
-
-    /**
-     * Returns preferred decoration size.
-     *
-     * @return preferred decoration size
-     */
-    protected Dimension getDecorationSize ()
-    {
-        final D decoration = getDecoration ();
-        return decoration != null ? decoration.getPreferredSize () : null;
+        final Dimension ps = super.getPreferredSize ();
+        final D d = getDecoration ();
+        return d != null ? SwingUtils.max ( d.getPreferredSize ( component ), ps ) : ps;
     }
 }

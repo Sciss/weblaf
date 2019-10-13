@@ -17,23 +17,21 @@
 
 package com.alee.extended.window;
 
-import com.alee.laf.menu.IPopupPainter;
+import com.alee.api.jdk.Supplier;
 import com.alee.laf.rootpane.IRootPanePainter;
-import com.alee.laf.rootpane.WebRootPaneUI;
-import com.alee.utils.swing.DataProvider;
+import com.alee.laf.rootpane.WRootPaneUI;
 
 import javax.swing.*;
 import java.awt.*;
 
 /**
- * Base interface for WebPopOver component painters.
+ * Base interface for {@link WebPopOver} component painters.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @author Mikle Garin
  */
-
-public interface IPopOverPainter<E extends JRootPane, U extends WebRootPaneUI> extends IRootPanePainter<E, U>, IPopupPainter<E, U>
+public interface IPopOverPainter<C extends JRootPane, U extends WRootPaneUI> extends IRootPanePainter<C, U>
 {
     /**
      * Configures popover to be displayed as unattached at the specified screen location.
@@ -41,7 +39,7 @@ public interface IPopOverPainter<E extends JRootPane, U extends WebRootPaneUI> e
      * @param popOver  popover to configure
      * @param location location on screen
      */
-    public void configure ( final WebPopOver popOver, final PopOverLocation location );
+    public void configure ( WebPopOver popOver, PopOverLocation location );
 
     /**
      * Configures popover to be displayed as unattached at the specified location.
@@ -50,7 +48,7 @@ public interface IPopOverPainter<E extends JRootPane, U extends WebRootPaneUI> e
      * @param x       X location
      * @param y       Y location
      */
-    public void configure ( final WebPopOver popOver, final int x, final int y );
+    public void configure ( WebPopOver popOver, int x, int y );
 
     /**
      * Configures popover to be displayed as attached to the invoker component and faced to specified direction.
@@ -59,10 +57,10 @@ public interface IPopOverPainter<E extends JRootPane, U extends WebRootPaneUI> e
      *
      * @param popOver        popover to configure
      * @param invoker        invoker component
-     * @param boundsProvider source area provider
+     * @param boundsSupplier source area provider
      * @param direction      preferred display direction
      * @param alignment      preferred display alignment
      */
-    public void configure ( final WebPopOver popOver, final Component invoker, final DataProvider<Rectangle> boundsProvider,
-                            final PopOverDirection direction, final PopOverAlignment alignment );
+    public void configure ( WebPopOver popOver, Component invoker, Supplier<Rectangle> boundsSupplier,
+                            PopOverDirection direction, PopOverAlignment alignment );
 }

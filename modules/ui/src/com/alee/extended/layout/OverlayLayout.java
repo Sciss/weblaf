@@ -17,6 +17,8 @@
 
 package com.alee.extended.layout;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
 import com.alee.extended.panel.WebOverlay;
 import com.alee.utils.SwingUtils;
 
@@ -30,21 +32,31 @@ import java.util.Map;
  *
  * @author Mikle Garin
  */
-
 public class OverlayLayout extends AbstractLayoutManager implements SwingConstants
 {
-    // Positions component on the whole container area
+    /**
+     * Positions component on the whole container area.
+     */
     public static final String COMPONENT = "COMPONENT";
-    // Positions the component depending on WebOverlay settings
+
+    /**
+     * Positions the component depending on WebOverlay settings.
+     */
     public static final String OVERLAY = "OVERLAY";
 
-    // Saved layout constraints
+    /**
+     * Saved layout constraints.
+     */
     protected Map<Component, String> constraints = new HashMap<Component, String> ();
 
-    // Component side margins (this one is additional to the container margins)
+    /**
+     * Component side margins (this one is additional to the container margins).
+     */
     protected Insets componentMargin = null;
 
-    // Overlay side margins (this one is additional to the container margins)
+    /**
+     * Overlay side margins (this one is additional to the container margins).
+     */
     protected Insets overlayMargin = null;
 
     public OverlayLayout ()
@@ -93,7 +105,7 @@ public class OverlayLayout extends AbstractLayoutManager implements SwingConstan
     }
 
     @Override
-    public void addComponent ( final Component component, final Object constraints )
+    public void addComponent ( @NotNull final Component component, @Nullable final Object constraints )
     {
         final String value = ( String ) constraints;
         if ( value == null || !value.equals ( COMPONENT ) && !value.equals ( OVERLAY ) )
@@ -104,18 +116,19 @@ public class OverlayLayout extends AbstractLayoutManager implements SwingConstan
     }
 
     @Override
-    public void removeComponent ( final Component component )
+    public void removeComponent ( @NotNull final Component component )
     {
         this.constraints.remove ( component );
     }
 
+    @NotNull
     @Override
-    public Dimension preferredLayoutSize ( final Container parent )
+    public Dimension preferredLayoutSize ( @NotNull final Container container )
     {
-        final Insets bi = parent.getInsets ();
-        final Insets ci = getActualComponentInsets ( parent );
+        final Insets bi = container.getInsets ();
+        final Insets ci = getActualComponentInsets ( container );
         Dimension ps = new Dimension ();
-        for ( final Component component : parent.getComponents () )
+        for ( final Component component : container.getComponents () )
         {
             final String constraint = constraints.get ( component );
             if ( constraint != null && constraint.equals ( COMPONENT ) )
@@ -128,38 +141,42 @@ public class OverlayLayout extends AbstractLayoutManager implements SwingConstan
         return ps;
     }
 
-    protected Insets getActualComponentInsets ( final Container parent )
+    protected Insets getActualComponentInsets ( final Container container )
     {
         return componentMargin != null ?
-                ( parent.getComponentOrientation ().isLeftToRight () ? componentMargin : SwingUtils.toRTL ( componentMargin ) ) :
+                container.getComponentOrientation ().isLeftToRight () ? componentMargin : SwingUtils.toRTL ( componentMargin ) :
                 new Insets ( 0, 0, 0, 0 );
     }
 
     @Override
-    public void layoutContainer ( final Container parent )
+    public void layoutContainer ( @NotNull final Container container )
     {
-        final Insets bi = parent.getInsets ();
-        final Insets ci = getActualComponentInsets ( parent );
-        for ( final Component component : parent.getComponents () )
+        final Insets bi = container.getInsets ();
+        final Insets ci = getActualComponentInsets ( container );
+        for ( final Component component : container.getComponents () )
         {
             final String constraint = constraints.get ( component );
             if ( constraint != null )
             {
-                final int pw = parent.getWidth ();
-                final int ph = parent.getHeight ();
+                final int pw = container.getWidth ();
+                final int ph = container.getHeight ();
                 if ( constraint.equals ( COMPONENT ) )
                 {
-                    component.setBounds ( bi.left + ci.left, bi.top + ci.top, pw - bi.left - bi.right - ci.left - ci.right,
-                            ph - bi.top - bi.bottom - ci.top - ci.bottom );
+                    final int x = bi.left + ci.left;
+                    final int y = bi.top + ci.top;
+                    final int w = pw - bi.left - bi.right - ci.left - ci.right;
+                    final int h = ph - bi.top - bi.bottom - ci.top - ci.bottom;
+                    component.setBounds ( limit ( pw, ph, new Rectangle ( x, y, w, h ), bi ) );
                 }
                 else if ( constraint.equals ( OVERLAY ) )
                 {
-                    final WebOverlay webOverlay = ( WebOverlay ) parent;
-                    final OverlayData data = webOverlay.getOverlayData ( component );
+                    final WebOverlay webOverlay = ( WebOverlay ) container;
+                    final OverlayData data = webOverlay.getOverlayData ( ( JComponent ) component );
                     final Insets om = overlayMargin != null ? overlayMargin : new Insets ( 0, 0, 0, 0 );
+                    final Rectangle bounds;
                     if ( data.getLocation ().equals ( OverlayLocation.fill ) )
                     {
-                        component.setBounds ( bi.left + om.left, bi.top + om.top, pw - bi.left - om.left - bi.right - om.right,
+                        bounds = new Rectangle ( bi.left + om.left, bi.top + om.top, pw - bi.left - om.left - bi.right - om.right,
                                 ph - bi.top - om.top - bi.bottom - om.bottom );
                     }
                     else if ( data.getLocation ().equals ( OverlayLocation.align ) )
@@ -193,16 +210,27 @@ public class OverlayLayout extends AbstractLayoutManager implements SwingConstan
                         {
                             y = ph / 2 - ps.height / 2;
                         }
-                        component.setBounds ( x, y, halign == -1 ? pw - bi.left - om.left - bi.right - om.right : ps.width,
-                                valign == -1 ? ph - bi.top - om.top - bi.bottom - om.bottom : ps.height );
+                        final int w = halign == -1 ? pw - bi.left - om.left - bi.right - om.right : ps.width;
+                        final int h = valign == -1 ? ph - bi.top - om.top - bi.bottom - om.bottom : ps.height;
+                        bounds = new Rectangle ( x, y, w, h );
                     }
                     else
                     {
-                        component.setBounds ( data.getRectangleProvider ().provide () );
+                        bounds = new Rectangle ( data.getBoundsSupplier ().get () );
                     }
+                    component.setBounds ( limit ( pw, ph, bounds, bi ) );
                 }
             }
         }
+    }
+
+    protected Rectangle limit ( final int pw, final int ph, final Rectangle bounds, final Insets insets )
+    {
+        final int x = Math.max ( bounds.x, insets.left );
+        final int y = Math.max ( bounds.y, insets.top );
+        final int w = Math.min ( bounds.width, pw - insets.left - insets.right );
+        final int h = Math.min ( bounds.height, ph - insets.top - insets.bottom );
+        return new Rectangle ( x, y, w, h );
     }
 
     protected int getActualHalign ( final Component component, final OverlayData data )

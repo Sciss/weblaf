@@ -17,7 +17,10 @@
 
 package com.alee.demo.content.text.field;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
@@ -27,34 +30,45 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JTextFieldExample extends AbstractExample
+public class JTextFieldExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "jtextfield";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "textfield";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.swing;
     }
 
+    @NotNull
+    @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Use Text Fields", "textfield" );
+    }
+
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicField e1 = new BasicField ( "basic", StyleId.textfield );
-        final BasicField e2 = new BasicField ( "undecorated", StyleId.textfieldUndecorated );
-        final BasicField e3 = new BasicField ( "nofocus", StyleId.textfieldNoFocus );
-        return CollectionUtils.<Preview>asList ( e1, e2, e3 );
+        return CollectionUtils.<Preview>asList (
+                new BasicField ( "basic", StyleId.textfield ),
+                new BasicField ( "transparent", StyleId.textfieldTransparent ),
+                new BasicField ( "nofocus", StyleId.textfieldNoFocus )
+        );
     }
 
     /**
@@ -73,8 +87,9 @@ public class JTextFieldExample extends AbstractExample
             super ( JTextFieldExample.this, id, FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JTextField textField = new JTextField ( "Sample text", 20 );
             textField.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );

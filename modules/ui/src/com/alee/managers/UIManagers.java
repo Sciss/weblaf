@@ -17,54 +17,61 @@
 
 package com.alee.managers;
 
+import com.alee.laf.WebLookAndFeel;
+import com.alee.managers.animation.AnimationManager;
 import com.alee.managers.drag.DragManager;
 import com.alee.managers.focus.FocusManager;
 import com.alee.managers.hotkey.HotkeyManager;
+import com.alee.managers.hover.HoverManager;
 import com.alee.managers.icon.IconManager;
-import com.alee.managers.language.WebLanguageManager;
-import com.alee.managers.log.Log;
-import com.alee.managers.proxy.WebProxyManager;
-import com.alee.managers.settings.WebSettingsManager;
+import com.alee.managers.language.UILanguageManager;
+import com.alee.managers.proxy.UIProxyManager;
+import com.alee.managers.settings.UISettingsManager;
 import com.alee.managers.style.StyleManager;
 import com.alee.managers.tooltip.TooltipManager;
-import com.alee.managers.version.VersionManager;
+import com.alee.utils.XmlUtils;
 
 /**
  * WebLaF managers simple initialization class.
- * Used by WebLookAndFeel to initialize managers together with or separately from the L&amp;F.
+ * Used by WebLookAndFeel to initialize managers together with or separately from the LaF.
  *
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebLaF">How to use WebLaF</a>
- * @see com.alee.managers.log.Log
- * @see com.alee.managers.version.VersionManager
- * @see com.alee.managers.language.WebLanguageManager
- * @see com.alee.managers.settings.WebSettingsManager
- * @see com.alee.managers.hotkey.HotkeyManager
- * @see com.alee.managers.focus.FocusManager
- * @see com.alee.managers.tooltip.TooltipManager
- * @see com.alee.managers.style.StyleManager
- * @see com.alee.managers.proxy.WebProxyManager
- * @see com.alee.managers.drag.DragManager
+ * @see UILanguageManager
+ * @see UISettingsManager
+ * @see HotkeyManager
+ * @see FocusManager
+ * @see TooltipManager
+ * @see IconManager
+ * @see StyleManager
+ * @see AnimationManager
+ * @see UIProxyManager
+ * @see DragManager
  */
-
-public class UIManagers
+public final class UIManagers
 {
     /**
-     * Initializes WebLaF managers.
-     * Managers initialization order does matter.
+     * Initializes LaF UI managers.
+     * This method should be performed on EDT like other Swing UI operations.
+     * Initialization order is important and any changes should be performed with care.
      */
     public static synchronized void initialize ()
     {
-        Log.initialize ();
-        VersionManager.initialize ();
-        WebLanguageManager.initialize ();
-        WebSettingsManager.initialize ();
+        // Ensuring that operation is performed on EDT
+        WebLookAndFeel.checkEventDispatchThread ();
+
+        // Initializing managers
+        XmlUtils.getXStream ();
+        UILanguageManager.initialize ();
+        UISettingsManager.initialize ();
         HotkeyManager.initialize ();
         FocusManager.initialize ();
+        HoverManager.initialize ();
         TooltipManager.initialize ();
         IconManager.initialize ();
         StyleManager.initialize ();
-        WebProxyManager.initialize ();
+        AnimationManager.initialize ();
+        UIProxyManager.initialize ();
         DragManager.initialize ();
     }
 }

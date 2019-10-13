@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.text.area;
 
-import com.alee.demo.api.AbstractExampleGroup;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.AbstractExampleGroup;
 import com.alee.utils.CollectionUtils;
 
 import java.util.List;
@@ -25,9 +26,9 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
 public class TextAreasGroup extends AbstractExampleGroup
 {
+    @NotNull
     @Override
     public String getId ()
     {
@@ -37,8 +38,13 @@ public class TextAreasGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleClasses ()
     {
-        return CollectionUtils
-                .<Class>asList ( JTextAreaExample.class, WebTextAreaExample.class, JEditorPaneExample.class, WebEditorPaneExample.class,
-                        JTextPaneExample.class, WebTextPaneExample.class );
+        return CollectionUtils.<Class>asList (
+                JTextAreaExample.class,
+                WebTextAreaExample.class,
+                JEditorPaneExample.class,
+                WebEditorPaneExample.class,
+                JTextPaneExample.class,
+                WebTextPaneExample.class
+        );
     }
 }

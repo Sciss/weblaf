@@ -17,7 +17,10 @@
 
 package com.alee.demo.content.data.list;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
+import com.alee.demo.api.example.wiki.OracleWikiPage;
+import com.alee.demo.api.example.wiki.WikiPage;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
@@ -29,33 +32,44 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class JListExample extends AbstractExample
+public class JListExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "jlist";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "list";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.swing;
     }
 
+    @NotNull
+    @Override
+    public WikiPage getWikiPage ()
+    {
+        return new OracleWikiPage ( "How to Use Lists", "list" );
+    }
+
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicList basic = new BasicList ( StyleId.list );
-        final ScrollableList scrollable = new ScrollableList ( StyleId.list );
-        return CollectionUtils.<Preview>asList ( basic, scrollable );
+        return CollectionUtils.<Preview>asList (
+                new BasicList ( StyleId.list ),
+                new ScrollableList ( StyleId.list )
+        );
     }
 
     /**
@@ -73,8 +87,9 @@ public class JListExample extends AbstractExample
             super ( JListExample.this, "basic", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JList list = new JList ( createShortData () );
             list.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );
@@ -97,8 +112,9 @@ public class JListExample extends AbstractExample
             super ( JListExample.this, "scrollable", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final JList list = new JList ( createLongData () );
             list.putClientProperty ( StyleId.STYLE_PROPERTY, getStyleId () );

@@ -24,8 +24,7 @@ import com.thoughtworks.xstream.annotations.XStreamAlias;
  *
  * @author Mikle Garin
  */
-
-@XStreamAlias ("GradientType")
+@XStreamAlias ( "GradientType" )
 public enum GradientType
 {
     /**

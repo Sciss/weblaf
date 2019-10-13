@@ -1,5 +1,6 @@
 package com.alee.laf.text;
 
+import com.alee.api.annotations.Nullable;
 import com.alee.painter.AdaptivePainter;
 import com.alee.painter.Painter;
 
@@ -7,19 +8,20 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Simple FormattedTextFieldPainter adapter class.
- * It is used to install simple non-specific painters into WebFormattedTextFieldUI.
+ * Simple {@link FormattedTextFieldPainter} adapter class.
+ * It is used to install simple non-specific painters into {@link WFormattedTextFieldUI}.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Alexandr Zernov
  */
-
-public final class AdaptiveFormattedTextFieldPainter<E extends JFormattedTextField, U extends WebFormattedTextFieldUI>
-        extends AdaptivePainter<E, U> implements IFormattedTextFieldPainter<E, U>
+public final class AdaptiveFormattedTextFieldPainter<C extends JFormattedTextField, U extends WFormattedTextFieldUI>
+        extends AdaptivePainter<C, U> implements IFormattedTextFieldPainter<C, U>
 {
     /**
-     * Constructs new AdaptiveFormattedTextFieldPainter for the specified painter.
+     * Constructs new {@link AdaptiveFormattedTextFieldPainter} for the specified painter.
      *
-     * @param painter painter to adapt
+     * @param painter {@link Painter} to adapt
      */
     public AdaptiveFormattedTextFieldPainter ( final Painter painter )
     {
@@ -38,12 +40,14 @@ public final class AdaptiveFormattedTextFieldPainter<E extends JFormattedTextFie
         return false;
     }
 
+    @Nullable
     @Override
     public Component getLeadingComponent ()
     {
         return null;
     }
 
+    @Nullable
     @Override
     public Component getTrailingComponent ()
     {

@@ -1,15 +1,32 @@
-<skin>
+<skin xmlns="http://weblookandfeel.com/XmlSkin">
 
-    <!-- com.alee.extended.filechooser.WebPathField -->
+    <!-- com.alee.extended.pathfield.WebPathField -->
 
-    <!-- Main panel -->
+    <!-- Path field -->
     <style type="panel" id="pathfield" extends="focusable">
 
         <!-- Path content panel -->
         <style type="panel" id="content" extends="transparent">
+            <painter>
+                <decorations>
+                    <decoration>
+                        <WebShape round="0" />
+                        <WebShadow type="outer" width="0" />
+                        <LineBorder opacity="0" />
+                        <ColorBackground color="white" />
+                    </decoration>
+                    <decoration states="focused">
+                        <LineBorder color="85,130,190" />
+                    </decoration>
+                    <decoration states="disabled">
+                        <WebShadow type="outer" opacity="0" />
+                        <LineBorder color="lightGray" />
+                    </decoration>
+                </decorations>
+            </painter>
 
             <!-- Path field -->
-            <style type="textfield" id="path-field" extends="undecorated">
+            <style type="textfield" id="path-field" extends="transparent">
 
                 <!-- Autocomplete popup list scroll -->
                 <style type="scrollpane" id="scroll">
@@ -62,6 +79,28 @@
 
         </style>
 
+    </style>
+
+    <!-- Non-opaque path field -->
+    <style type="panel" id="pathfield-non-opaque" extends="pathfield">
+        <component>
+            <opaque>false</opaque>
+        </component>
+        <painter>
+            <decorations overwrite="true">
+                <decoration>
+                    <BoundsShape />
+                    <ColorBackground color="white" />
+                </decoration>
+            </decorations>
+        </painter>
+    </style>
+
+    <!-- Transparent path field -->
+    <style type="panel" id="pathfield-transparent" extends="pathfield-non-opaque">
+        <painter>
+            <decorations overwrite="true" />
+        </painter>
     </style>
 
 </skin>

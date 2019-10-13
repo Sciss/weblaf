@@ -17,8 +17,10 @@
 
 package com.alee.painter.common;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.managers.style.Bounds;
 import com.alee.painter.AbstractPainter;
-import com.alee.utils.SwingUtils;
 import com.alee.utils.ninepatch.NinePatchIcon;
 
 import javax.swing.*;
@@ -30,15 +32,14 @@ import java.net.URL;
 /**
  * Custom painter for 9-patch icon.
  *
- * @param <E> component type
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Mikle Garin
- * @see NinePatchIcon
- * @see NinePatchStatePainter
+ * @see com.alee.utils.ninepatch.NinePatchIcon
  * @see com.alee.painter.AbstractPainter
  * @see com.alee.painter.Painter
  */
-
-public class NinePatchIconPainter<E extends JComponent, U extends ComponentUI> extends AbstractPainter<E, U>
+public class NinePatchIconPainter<C extends JComponent, U extends ComponentUI> extends AbstractPainter<C, U>
 {
     /**
      * 9-patch icon to paint.
@@ -66,17 +67,17 @@ public class NinePatchIconPainter<E extends JComponent, U extends ComponentUI> e
     /**
      * Constructs new 9-patch icon painter.
      *
-     * @param iconSrc 9-patch image source
+     * @param path 9-patch image path
      */
-    public NinePatchIconPainter ( final String iconSrc )
+    public NinePatchIconPainter ( final String path )
     {
-        this ( new NinePatchIcon ( iconSrc ) );
+        this ( new NinePatchIcon ( path ) );
     }
 
     /**
      * Constructs new 9-patch icon painter.
      *
-     * @param imageIcon 9-patch image
+     * @param imageIcon 9-patch image icon
      */
     public NinePatchIconPainter ( final ImageIcon imageIcon )
     {
@@ -111,7 +112,7 @@ public class NinePatchIconPainter<E extends JComponent, U extends ComponentUI> e
     public NinePatchIconPainter ( final NinePatchIcon icon )
     {
         super ();
-        this.icon = icon;
+        setNinePatchIcon ( icon );
     }
 
     /**
@@ -131,46 +132,74 @@ public class NinePatchIconPainter<E extends JComponent, U extends ComponentUI> e
      */
     public void setNinePatchIcon ( final NinePatchIcon icon )
     {
+        if ( this.icon != null && isInstalled () )
+        {
+            this.icon.setComponent ( null );
+        }
         this.icon = icon;
+        if ( this.icon != null && isInstalled () )
+        {
+            this.icon.setComponent ( component );
+        }
         updateAll ();
     }
 
     @Override
-    public Insets getBorders ()
+    protected void installPropertiesAndListeners ()
     {
-        final Insets margin = super.getBorders ();
-        if ( icon != null )
-        {
-            icon.setComponent ( component );
-            return SwingUtils.max ( margin, icon.getMargin () );
-        }
-        else
-        {
-            return margin;
-        }
+        super.installPropertiesAndListeners ();
+        installIconComponent ();
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final U ui )
+    protected void uninstallPropertiesAndListeners ()
+    {
+        uninstallIconComponent ();
+        super.uninstallPropertiesAndListeners ();
+    }
+
+    /**
+     * Attaches {@link NinePatchIcon} to {@link JComponent} used by this UI.
+     */
+    protected void installIconComponent ()
     {
         if ( icon != null )
         {
-            icon.setComponent ( c );
-            icon.paintIcon ( c, g2d );
+            icon.setComponent ( component );
         }
     }
 
+    /**
+     * Detaches {@link NinePatchIcon} from {@link JComponent} used by this UI.
+     */
+    protected void uninstallIconComponent ()
+    {
+        if ( icon != null )
+        {
+            icon.setComponent ( null );
+        }
+    }
+
+    @Nullable
+    @Override
+    protected Insets getBorder ()
+    {
+        return icon != null ? icon.getMargin () : null;
+    }
+
+    @Override
+    public void paint ( @NotNull final Graphics2D g2d, @NotNull final C c, @NotNull final U ui, @NotNull final Bounds bounds )
+    {
+        if ( icon != null )
+        {
+            icon.paintIcon ( g2d, bounds.get () );
+        }
+    }
+
+    @NotNull
     @Override
     public Dimension getPreferredSize ()
     {
-        if ( icon != null )
-        {
-            icon.setComponent ( component );
-            return icon.getPreferredSize ();
-        }
-        else
-        {
-            return super.getPreferredSize ();
-        }
+        return icon != null ? icon.getPreferredSize () : super.getPreferredSize ();
     }
 }

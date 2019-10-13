@@ -17,17 +17,19 @@
 
 package com.alee.managers.hotkey;
 
-import com.alee.utils.swing.KeyEventRunnable;
+import com.alee.api.annotations.NotNull;
+import com.alee.utils.swing.extensions.KeyEventRunnable;
 
 import java.awt.event.KeyEvent;
 
 /**
- * This interface allows you to create action for hotkey events which can be used together with HotkeyManager methods.
- * Unlike Runnable this interface provides KeyEvent as action source.
+ * This interface allows you to create action for hotkey events which can be used together with {@link HotkeyManager} methods.
+ * Unlike {@link Runnable} this interface provides {@link KeyEvent} as action source.
  *
  * @author Mikle Garin
+ * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-HotkeyManager">How to use HotkeyManager</a>
+ * @see HotkeyManager
  */
-
 public interface HotkeyRunnable extends KeyEventRunnable
 {
     /**
@@ -36,9 +38,11 @@ public interface HotkeyRunnable extends KeyEventRunnable
     public static final HotkeyRunnable NONE = new HotkeyRunnable ()
     {
         @Override
-        public void run ( final KeyEvent e )
+        public void run ( @NotNull final KeyEvent e )
         {
-            // Do nothing
+            /**
+             * Take no action.
+             */
         }
     };
 
@@ -48,5 +52,5 @@ public interface HotkeyRunnable extends KeyEventRunnable
      * @param e occured key event
      */
     @Override
-    public void run ( KeyEvent e );
+    public void run ( @NotNull KeyEvent e );
 }

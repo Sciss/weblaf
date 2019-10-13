@@ -17,9 +17,9 @@
 
 package com.alee.painter.decoration.background;
 
+import com.alee.api.merge.behavior.OverwriteOnMerge;
 import com.alee.painter.decoration.DecorationUtils;
 import com.alee.painter.decoration.IDecoration;
-import com.alee.utils.CollectionUtils;
 import com.alee.utils.GraphicsUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
@@ -31,22 +31,21 @@ import java.awt.geom.Point2D;
 import java.util.List;
 
 /**
- * Gradient background.
+ * Gradient {@link IBackground} implementation.
  * Fills component shape with a gradient using multiple colors.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <D> decoration type
  * @param <I> background type
  * @author Mikle Garin
  */
-
 @XStreamAlias ( "GradientBackground" )
-public class GradientBackground<E extends JComponent, D extends IDecoration<E, D>, I extends GradientBackground<E, D, I>>
-        extends AbstractBackground<E, D, I>
+public class GradientBackground<C extends JComponent, D extends IDecoration<C, D>, I extends GradientBackground<C, D, I>>
+        extends AbstractBackground<C, D, I>
 {
     /**
      * Gradient type.
-     * {@link com.alee.painter.decoration.background.GradientType#linear} is used if it is not specified.
+     * {@link GradientType#linear} is used if it is not specified.
      */
     @XStreamAsAttribute
     protected GradientType type;
@@ -70,6 +69,7 @@ public class GradientBackground<E extends JComponent, D extends IDecoration<E, D
      * Must always be provided to properly render separator.
      */
     @XStreamImplicit ( itemFieldName = "color" )
+    @OverwriteOnMerge
     protected List<GradientColor> colors;
 
     /**
@@ -77,7 +77,7 @@ public class GradientBackground<E extends JComponent, D extends IDecoration<E, D
      *
      * @return gradient type
      */
-    public GradientType getType ()
+    protected GradientType getType ()
     {
         return type != null ? type : GradientType.linear;
     }
@@ -87,7 +87,7 @@ public class GradientBackground<E extends JComponent, D extends IDecoration<E, D
      *
      * @return bounds width/height percentage representing gradient start point
      */
-    public Point2D.Float getFrom ()
+    protected Point2D.Float getFrom ()
     {
         return from != null ? from : new Point2D.Float ( 0, 0 );
     }
@@ -97,13 +97,13 @@ public class GradientBackground<E extends JComponent, D extends IDecoration<E, D
      *
      * @return bounds width/height percentage representing gradient end point
      */
-    public Point2D.Float getTo ()
+    protected Point2D.Float getTo ()
     {
         return to != null ? to : new Point2D.Float ( 0, 1 );
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final D d, final Shape shape )
+    public void paint ( final Graphics2D g2d, final Rectangle bounds, final C c, final D d, final Shape shape )
     {
         final float opacity = getOpacity ();
         if ( opacity > 0 )
@@ -122,28 +122,5 @@ public class GradientBackground<E extends JComponent, D extends IDecoration<E, D
             GraphicsUtils.restorePaint ( g2d, op );
             GraphicsUtils.restoreComposite ( g2d, oc, opacity < 1f );
         }
-    }
-
-    @Override
-    public I merge ( final I background )
-    {
-        super.merge ( background );
-        if ( background.type != null )
-        {
-            type = background.type;
-        }
-        if ( background.from != null )
-        {
-            from = background.from;
-        }
-        if ( background.to != null )
-        {
-            to = background.to;
-        }
-        if ( background.colors != null )
-        {
-            colors = CollectionUtils.copy ( background.colors );
-        }
-        return ( I ) this;
     }
 }

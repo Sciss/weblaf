@@ -18,6 +18,8 @@
 package com.alee.extended.tab;
 
 import com.alee.laf.splitpane.WebSplitPane;
+import com.alee.managers.style.StyleId;
+import com.alee.utils.CoreSwingUtils;
 import com.alee.utils.SwingUtils;
 import com.alee.utils.swing.Customizer;
 
@@ -30,11 +32,11 @@ import java.beans.PropertyChangeListener;
  * Data for single split pane within document pane.
  * It basically contains split pane and links to two other elements contained within split pane.
  *
+ * @param <T> {@link DocumentData} type
  * @author Mikle Garin
  * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebDocumentPane">How to use WebDocumentPane</a>
  * @see com.alee.extended.tab.WebDocumentPane
  */
-
 public final class SplitData<T extends DocumentData> implements StructureData<T>
 {
     /**
@@ -67,13 +69,12 @@ public final class SplitData<T extends DocumentData> implements StructureData<T>
      */
     public SplitData ( final WebDocumentPane<T> documentPane, final int orientation, final StructureData first, final StructureData last )
     {
-        super ();
         this.orientation = orientation;
         this.first = first;
         this.last = last;
 
         // Creating split pane
-        this.splitPane = createSplit ( orientation, first, last );
+        this.splitPane = createSplit ( documentPane, orientation, first, last );
 
         // Customizing split pane
         updateSplitPaneCustomizer ( documentPane );
@@ -82,25 +83,31 @@ public final class SplitData<T extends DocumentData> implements StructureData<T>
     /**
      * Returns new split component.
      *
-     * @param orientation split orientation
-     * @param first       first split element
-     * @param last        last split element   @return new split component
+     * @param documentPane parent {@link WebDocumentPane}
+     * @param orientation  split orientation
+     * @param first        first split element
+     * @param last         last split element
      * @return new split component
      */
-    protected WebSplitPane createSplit ( final int orientation, final StructureData first, final StructureData last )
+    protected WebSplitPane createSplit ( final WebDocumentPane<T> documentPane, final int orientation,
+                                         final StructureData first, final StructureData last )
     {
-        final WebSplitPane splitPane = new WebSplitPane ( orientation, first.getComponent (), last.getComponent () );
+        // todo Change to WebMultiSplitPane for better resize solution
+        // final WebMultiSplitPane splitPane = new WebMultiSplitPane ( StyleId.documentpaneSplit.at (), Orientation.get ( orientation ) );
+        // splitPane.putClientProperty ( WebDocumentPane.DATA_KEY, this );
+        // splitPane.setContinuousLayout ( true );
+
+        final StyleId splitStyleId = StyleId.documentpaneSplit.at ( documentPane );
+        final WebSplitPane splitPane = new WebSplitPane ( splitStyleId, orientation, first.getComponent (), last.getComponent () );
         splitPane.putClientProperty ( WebDocumentPane.DATA_KEY, this );
         splitPane.setContinuousLayout ( true );
-        splitPane.setDrawDividerBorder ( true );
-        splitPane.setDividerSize ( 8 );
         splitPane.setResizeWeight ( 0.5 );
         splitPane.addPropertyChangeListener ( JSplitPane.DIVIDER_LOCATION_PROPERTY, new PropertyChangeListener ()
         {
             @Override
             public void propertyChange ( final PropertyChangeEvent evt )
             {
-                SwingUtilities.invokeLater ( new Runnable ()
+                CoreSwingUtils.invokeLater ( new Runnable ()
                 {
                     @Override
                     public void run ()
@@ -116,7 +123,7 @@ public final class SplitData<T extends DocumentData> implements StructureData<T>
     /**
      * Updates split customizer.
      *
-     * @param documentPane parent WebDocumentPane
+     * @param documentPane parent {@link WebDocumentPane}
      */
     protected void updateSplitPaneCustomizer ( final WebDocumentPane<T> documentPane )
     {
@@ -137,6 +144,12 @@ public final class SplitData<T extends DocumentData> implements StructureData<T>
     public PaneData<T> findClosestPane ()
     {
         return getFirst ().findClosestPane ();
+    }
+
+    @Override
+    public DocumentPaneState getDocumentPaneState ()
+    {
+        return new DocumentPaneState ( this );
     }
 
     /**

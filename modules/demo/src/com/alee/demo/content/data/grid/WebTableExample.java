@@ -17,48 +17,56 @@
 
 package com.alee.demo.content.data.grid;
 
-import com.alee.demo.api.*;
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.demo.api.example.*;
+import com.alee.demo.content.SampleData;
 import com.alee.laf.scroll.WebScrollPane;
-import com.alee.laf.table.WebTable;
+import com.alee.laf.table.*;
+import com.alee.managers.language.LM;
 import com.alee.managers.style.StyleId;
 import com.alee.utils.CollectionUtils;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
+import javax.swing.table.JTableHeader;
 import java.util.List;
 
 /**
  * @author Mikle Garin
  */
-
-public class WebTableExample extends AbstractExample
+public class WebTableExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
         return "webtable";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "table";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.swing;
     }
 
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final BasicTable basic = new BasicTable ( StyleId.table );
-        final ScrollableTable scrollable = new ScrollableTable ( StyleId.table );
-        final EditableTable editable = new EditableTable ( StyleId.table );
-        return CollectionUtils.<Preview>asList ( basic, scrollable, editable );
+        return CollectionUtils.<Preview>asList (
+                new BasicTable ( StyleId.table ),
+                new ScrollableTable ( StyleId.table ),
+                new EditableTable ( StyleId.table ),
+                new TableTooltips ( StyleId.table )
+        );
     }
 
     /**
@@ -76,11 +84,13 @@ public class WebTableExample extends AbstractExample
             super ( WebTableExample.this, "basic", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final WebTable table = new WebTable ( getStyleId (), createShortTableModel () );
+            final WebTable table = new WebTable ( getStyleId (), SampleData.createShortTableModel ( false ) );
             table.optimizeColumnWidths ( true );
+            table.setOptimizeRowHeight ( true );
             return CollectionUtils.asList ( table );
         }
     }
@@ -100,13 +110,15 @@ public class WebTableExample extends AbstractExample
             super ( WebTableExample.this, "scrollable", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final WebTable table = new WebTable ( getStyleId (), createLongTableModel () );
+            final WebTable table = new WebTable ( getStyleId (), SampleData.createLongTableModel ( false ) );
             table.setAutoResizeMode ( JTable.AUTO_RESIZE_OFF );
             table.setVisibleRowCount ( 5 );
             table.optimizeColumnWidths ( true );
+            table.setOptimizeRowHeight ( true );
             return CollectionUtils.asList ( new WebScrollPane ( table ).setPreferredWidth ( 300 ) );
         }
     }
@@ -126,51 +138,64 @@ public class WebTableExample extends AbstractExample
             super ( WebTableExample.this, "editable", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
-            final WebTable table = new WebTable ( getStyleId (), createLongTableModel () );
+            final WebTable table = new WebTable ( getStyleId (), SampleData.createLongTableModel ( true ) );
             table.setAutoResizeMode ( JTable.AUTO_RESIZE_OFF );
             table.setVisibleRowCount ( 5 );
             table.optimizeColumnWidths ( true );
+            table.setOptimizeRowHeight ( true );
             table.setEditable ( true );
             return CollectionUtils.asList ( new WebScrollPane ( table ).setPreferredWidth ( 300 ) );
         }
     }
 
     /**
-     * Returns sample short table model.
-     *
-     * @return sample short table model
+     * Custom table tooltips preview.
      */
-    protected static TableModel createShortTableModel ()
+    protected class TableTooltips extends AbstractStylePreview
     {
-        final Object[] columns = { "First Name", "Last Name", "Sport", "# of Years", "Vegetarian" };
-        final Object[] kathy = { "Kathy", "Smith", "Snowboarding", 5, false };
-        final Object[] john = { "John", "Doe", "Rowing", 3, true };
-        final Object[] sue = { "Sue", "Black", "Knitting", 2, false };
-        final Object[] jane = { "Jane", "White", "Speed reading", 20, true };
-        final Object[][] data = { kathy, john, sue, jane };
-        return new DefaultTableModel ( data, columns );
-    }
+        /**
+         * Constructs new style preview.
+         *
+         * @param styleId preview style ID
+         */
+        public TableTooltips ( final StyleId styleId )
+        {
+            super ( WebTableExample.this, "tooltips", FeatureState.updated, styleId );
+        }
 
-    /**
-     * Returns sample long table model.
-     *
-     * @return sample long table model
-     */
-    protected static TableModel createLongTableModel ()
-    {
-        final Object[] columns = { "First Name", "Last Name", "Sport", "# of Years", "Vegetarian" };
-        final Object[] kathy = { "Kathy", "Smith", "Snowboarding", 5, false };
-        final Object[] john = { "John", "Doe", "Rowing", 3, true };
-        final Object[] sue = { "Sue", "Black", "Knitting", 2, false };
-        final Object[] jane = { "Jane", "White", "Speed reading", 20, true };
-        final Object[] joe = { "Joe", "Brown", "Pool", 10, false };
-        final Object[] sven = { "Sven", "Alister", "Boxing", 36, false };
-        final Object[] allen = { "Allen", "Snow", "Diving", 18, true };
-        final Object[] mikle = { "Mikle", "Garin", "Judo", 26, false };
-        final Object[][] data = { kathy, john, sue, jane, joe, sven, allen, mikle };
-        return new DefaultTableModel ( data, columns );
+        @NotNull
+        @Override
+        protected List<? extends JComponent> createPreviewElements ()
+        {
+            final WebTable table = new WebTable ( getStyleId (), SampleData.createLongTableModel ( true ) );
+            table.setAutoResizeMode ( JTable.AUTO_RESIZE_OFF );
+            table.setVisibleRowCount ( 5 );
+            table.optimizeColumnWidths ( true );
+            table.setOptimizeRowHeight ( true );
+            table.setHeaderToolTipProvider ( new TableHeaderToolTipProvider<String> ()
+            {
+                @Nullable
+                @Override
+                protected String getToolTipText ( @NotNull final JTableHeader tableHeader,
+                                                  @NotNull final TableHeaderCellArea<String, JTableHeader> area )
+                {
+                    return LM.get ( getPreviewLanguageKey ( "header" ), area.column (), area.getValue ( tableHeader ) );
+                }
+            } );
+            table.setToolTipProvider ( new TableToolTipProvider<Object> ()
+            {
+                @Nullable
+                @Override
+                protected String getToolTipText ( @NotNull final JTable table, @NotNull final TableCellArea<Object, JTable> area )
+                {
+                    return LM.get ( getPreviewLanguageKey ( "cell" ), area.row (), area.column (), area.getValue ( table ) );
+                }
+            } );
+            return CollectionUtils.asList ( new WebScrollPane ( table ).setPreferredWidth ( 300 ) );
+        }
     }
 }

@@ -24,17 +24,18 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Simple PopupMenuPainter adapter class.
- * It is used to install simple non-specific painters into WebPopupMenuUI.
+ * Simple {@link PopupMenuPainter} adapter class.
+ * It is used to install simple non-specific painters into {@link WPopupMenuUI}.
  *
+ * @param <C> component type
+ * @param <U> component UI type
  * @author Mikle Garin
  */
-
-public final class AdaptivePopupMenuPainter<E extends JPopupMenu, U extends WebPopupMenuUI> extends AdaptivePainter<E, U>
-        implements IPopupMenuPainter<E, U>
+public final class AdaptivePopupMenuPainter<C extends JPopupMenu, U extends WPopupMenuUI> extends AdaptivePainter<C, U>
+        implements IPopupMenuPainter<C, U>
 {
     /**
-     * Constructs new AdaptiveLabelPainter for the specified painter.
+     * Constructs new {@link AdaptivePopupMenuPainter} for the specified painter.
      *
      * @param painter painter to adapt
      */
@@ -44,14 +45,16 @@ public final class AdaptivePopupMenuPainter<E extends JPopupMenu, U extends WebP
     }
 
     @Override
-    public Point preparePopupMenu ( final E popupMenu, final Component invoker, final int x, final int y )
+    public Point preparePopupMenu ( final C popupMenu, final Component invoker, final int x, final int y )
     {
-        return p ( x, y );
+        return new Point ( x, y );
     }
 
     @Override
-    public void configurePopup ( final E popupMenu, final Component invoker, final int x, final int y, final Popup popup )
+    public void configurePopup ( final C popupMenu, final Component invoker, final int x, final int y, final Popup popup )
     {
-        // Do nothing by default
+        /**
+         * Do nothing by default.
+         */
     }
 }

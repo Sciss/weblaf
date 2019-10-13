@@ -17,7 +17,9 @@
 
 package com.alee.painter.decoration;
 
+import com.alee.api.annotations.NotNull;
 import com.alee.painter.Painter;
+import com.alee.painter.PainterException;
 import com.alee.painter.SectionPainter;
 
 import javax.swing.*;
@@ -28,55 +30,152 @@ import java.util.List;
 /**
  * Abstract decoration painter that can be used by any section painter.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @param <D> decoration type
  * @author Mikle Garin
  */
-
-public abstract class AbstractSectionDecorationPainter<E extends JComponent, U extends ComponentUI, D extends IDecoration<E, D>>
-        extends AbstractDecorationPainter<E, U, D> implements SectionPainter<E, U>
+public abstract class AbstractSectionDecorationPainter<C extends JComponent, U extends ComponentUI, D extends IDecoration<C, D>>
+        extends AbstractDecorationPainter<C, U, D> implements SectionPainter<C, U>
 {
     /**
-     * Origin painter.
+     * Origin {@link Painter}.
      * It is mainly used to provide origin decoration state duplication behavior.
-     * It is kept within weak reference to avoid memory leaks as section painters might be easily replaced.
+     * It is kept within {@link WeakReference} to avoid memory leaks as section painters might be easily replaced.
      */
-    protected WeakReference<Painter<E, U>> origin;
+    protected transient WeakReference<Painter<C, U>> origin;
 
-    /**
-     * Returns origin painter.
-     *
-     * @return origin painter
-     */
-    public Painter<E, U> getOrigin ()
+    @Override
+    public void install ( final C c, final U ui, final Painter<C, U> origin )
     {
-        return origin != null ? origin.get () : null;
+        this.origin = new WeakReference<Painter<C, U>> ( origin );
+        super.install ( c, ui );
     }
 
-    /**
-     * Sets origin painter.
-     *
-     * @param origin origin painter
-     */
-    public void setOrigin ( final Painter<E, U> origin )
+    @Override
+    public void uninstall ( final C c, final U ui, final Painter<C, U> origin )
     {
-        this.origin = new WeakReference<Painter<E, U>> ( origin );
-    }
-
-    /**
-     * Clears origin painter reference.
-     */
-    public void clearOrigin ()
-    {
+        super.uninstall ( c, ui );
         this.origin = null;
     }
 
     @Override
-    protected List<String> getDecorationStates ()
+    public Painter<C, U> getOrigin ()
     {
-        final Painter<E, U> origin = getOrigin ();
-        return origin != null && origin instanceof AbstractDecorationPainter ?
-                ( ( AbstractDecorationPainter ) origin ).getDecorationStates () : super.getDecorationStates ();
+        if ( origin == null )
+        {
+            throw new PainterException ( "Origin Painter was not specified for painter: " + this );
+        }
+        final Painter<C, U> originPainter = origin.get ();
+        if ( originPainter == null )
+        {
+            throw new PainterException ( "Origin Painter was destroyed before its SectionPainter: " + this );
+        }
+        return originPainter;
+    }
+
+    @Override
+    protected boolean usesContainerView ()
+    {
+        return false;
+    }
+
+    /**
+     * We do not want {@link SectionPainter} to perform any default tracking as it is already done within {@link #origin}.
+     * Maybe in some rare cases in the future this will be enabled but so far there are none.
+     *
+     * @return {@code false}
+     */
+    @Override
+    protected boolean usesFocusedView ()
+    {
+        return false;
+    }
+
+    /**
+     * We do not want {@link SectionPainter} to perform any default tracking as it is already done within {@link #origin}.
+     * Maybe in some rare cases in the future this will be enabled but so far there are none.
+     *
+     * @return {@code false}
+     */
+    @Override
+    protected boolean usesInFocusedParentView ()
+    {
+        return false;
+    }
+
+    /**
+     * We do not want {@link SectionPainter} to perform any default tracking as it is already done within {@link #origin}.
+     * Maybe in some rare cases in the future this will be enabled but so far there are none.
+     *
+     * @return {@code false}
+     */
+    @Override
+    protected boolean usesHoverView ()
+    {
+        return false;
+    }
+
+    /**
+     * We do not want {@link SectionPainter} to perform any default tracking as it is already done within {@link #origin}.
+     * Maybe in some rare cases in the future this will be enabled but so far there are none.
+     *
+     * @return {@code false}
+     */
+    @Override
+    protected boolean usesInHoveredParentView ()
+    {
+        return false;
+    }
+
+    /**
+     * We do not want {@link SectionPainter} to perform any default tracking as it is already done within {@link #origin}.
+     * Maybe in some rare cases in the future this will be enabled but so far there are none.
+     *
+     * @return {@code false}
+     */
+    @Override
+    protected boolean usesHierarchyBasedView ()
+    {
+        return false;
+    }
+
+    /**
+     * Returns decoration states from {@link #origin} {@link Painter} if possible.
+     * That is quite useful to retain all origin component states from its {@link Painter} and further expand on them for the section.
+     *
+     * @return current component section decoration states
+     */
+    @NotNull
+    @Override
+    public List<String> getDecorationStates ()
+    {
+        final List<String> states;
+        final Painter<C, U> origin = getOrigin ();
+        if ( origin != null && origin instanceof IDecorationPainter )
+        {
+            // Retrieving origin decoration states
+            final IDecorationPainter painter = ( IDecorationPainter ) origin;
+            states = painter.getDecorationStates ();
+        }
+        else
+        {
+            // Retrieving default decoration states
+            states = super.getDecorationStates ();
+        }
+        return states;
+    }
+
+    /**
+     * Plain background is rarely needed in section painters.
+     * It was designed mostly for base component painters that might want to fill background by default.
+     *
+     * @param c component to paint background for
+     * @return always {@code false}
+     */
+    @Override
+    protected boolean isPlainBackgroundRequired ( final C c )
+    {
+        return false;
     }
 }

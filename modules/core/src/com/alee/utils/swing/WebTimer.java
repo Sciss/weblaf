@@ -17,15 +17,15 @@
 
 package com.alee.utils.swing;
 
-import com.alee.managers.log.Log;
 import com.alee.utils.CollectionUtils;
 import com.alee.utils.CoreSwingUtils;
-import com.alee.utils.TextUtils;
 import com.alee.utils.TimeUtils;
+import com.alee.utils.parsing.DurationUnits;
 
+import javax.swing.event.EventListenerList;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.ArrayList;
+import java.io.Serializable;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +34,7 @@ import java.util.Map;
  * This timer is a small extension for standard javax.swing.Timer. Instead of running in a single queue it creates separate Threads for
  * each timer and does not affect event-dispatching thread, until events are dispatched. This basically means that you can use any number
  * of Timer instances and you can run them altogether without having any issues.
- * <p>
+ *
  * Also this Timer implementation offers a variety of additional features and improvements which standard timer doesn't have (for example
  * you can dispatch events in a separate non-EDT thread and as a result avoid using EDT at all where it is not necessary).
  *
@@ -42,7 +42,7 @@ import java.util.Map;
  * @see javax.swing.Timer
  * @see com.alee.utils.swing.TimerActionListener
  */
-public class WebTimer
+public class WebTimer implements Serializable
 {
     /**
      * Default name for timer thread.
@@ -58,46 +58,6 @@ public class WebTimer
      * Whether EDT should be used as the default timer action execution thread.
      */
     public static boolean useEdtByDefault = true;
-
-    /**
-     * Timer event listeners list.
-     */
-    protected final List<ActionListener> listeners = new ArrayList<ActionListener> ( 1 );
-
-    /**
-     * Unique (within one timer instance) ID of currently running thread.
-     */
-    protected int id = 0;
-
-    /**
-     * ID of previously executed thread.
-     */
-    protected int lastId;
-
-    /**
-     * Map of marks for currently active threads.
-     */
-    protected final Map<Integer, Boolean> running = new Hashtable<Integer, Boolean> ();
-
-    /**
-     * Last timer cycle start time.
-     */
-    protected long sleepStart = 0;
-
-    /**
-     * Last timer cycle delay time.
-     */
-    protected long sleepTime = 0;
-
-    /**
-     * Number of executed cycles;
-     */
-    protected int cycleCount = 0;
-
-    /**
-     * Last timer thread.
-     */
-    protected Thread exec = null;
 
     /**
      * Delay between timer cycles in milliseconds.
@@ -116,7 +76,7 @@ public class WebTimer
 
     /**
      * Whether each action should be fired from a separate invoke and wait call or not.
-     * This might be useful if you are going to use multiply action listeners and make some interface changes on each action.
+     * This might be useful if you are going to use multiple action listeners and make some interface changes on each action.
      */
     protected boolean coalesce = true;
 
@@ -157,13 +117,53 @@ public class WebTimer
     protected int cyclesLimit = 0;
 
     /**
+     * Timer event listeners list.
+     */
+    protected final EventListenerList listeners = new EventListenerList ();
+
+    /**
+     * Unique (within one timer instance) ID of currently running thread.
+     */
+    protected transient int id = 0;
+
+    /**
+     * ID of previously executed thread.
+     */
+    protected transient int lastId;
+
+    /**
+     * Map of marks for currently active threads.
+     */
+    protected transient final Map<Integer, Boolean> running = new Hashtable<Integer, Boolean> ();
+
+    /**
+     * Last timer cycle start time.
+     */
+    protected transient long sleepStart = 0;
+
+    /**
+     * Last timer cycle delay time.
+     */
+    protected transient long sleepTime = 0;
+
+    /**
+     * Number of executed cycles;
+     */
+    protected transient int cycleCount = 0;
+
+    /**
+     * Last timer thread.
+     */
+    protected transient Thread exec = null;
+
+    /**
      * Constructs timer with specified delay.
      *
      * @param delay delay between timer cycles
      */
     public WebTimer ( final String delay )
     {
-        this ( TextUtils.parseDelay ( delay ) );
+        this ( DurationUnits.get ().fromString ( delay ) );
     }
 
     /**
@@ -184,7 +184,7 @@ public class WebTimer
      */
     public WebTimer ( final String name, final String delay )
     {
-        this ( name, TextUtils.parseDelay ( delay ) );
+        this ( name, DurationUnits.get ().fromString ( delay ) );
     }
 
     /**
@@ -229,7 +229,7 @@ public class WebTimer
      */
     public WebTimer ( final String delay, final ActionListener listener )
     {
-        this ( TextUtils.parseDelay ( delay ), listener );
+        this ( DurationUnits.get ().fromString ( delay ), listener );
     }
 
     /**
@@ -252,7 +252,7 @@ public class WebTimer
      */
     public WebTimer ( final String name, final String delay, final ActionListener listener )
     {
-        this ( name, TextUtils.parseDelay ( delay ), listener );
+        this ( name, DurationUnits.get ().fromString ( delay ), listener );
     }
 
     /**
@@ -289,7 +289,7 @@ public class WebTimer
      */
     public WebTimer ( final String name, final String delay, final String initialDelay, final ActionListener listener )
     {
-        this ( name, TextUtils.parseDelay ( delay ), TextUtils.parseDelay ( initialDelay ), listener );
+        this ( name, DurationUnits.get ().fromString ( delay ), DurationUnits.get ().fromString ( initialDelay ), listener );
     }
 
     /**
@@ -326,7 +326,7 @@ public class WebTimer
      */
     public String getInitialStringDelay ()
     {
-        return TextUtils.toStringDelay ( initialDelay );
+        return DurationUnits.get ().toString ( initialDelay );
     }
 
     /**
@@ -337,7 +337,7 @@ public class WebTimer
      */
     public WebTimer setInitialDelay ( final String initialDelay )
     {
-        setInitialDelay ( TextUtils.parseDelay ( initialDelay ) );
+        setInitialDelay ( DurationUnits.get ().fromString ( initialDelay ) );
         return this;
     }
 
@@ -377,7 +377,7 @@ public class WebTimer
      */
     public String getStringDelay ()
     {
-        return TextUtils.toStringDelay ( delay );
+        return DurationUnits.get ().toString ( delay );
     }
 
     /**
@@ -388,7 +388,7 @@ public class WebTimer
      */
     public WebTimer setDelay ( final String delay )
     {
-        setDelay ( TextUtils.parseDelay ( delay ) );
+        setDelay ( DurationUnits.get ().fromString ( delay ) );
         return this;
     }
 
@@ -833,7 +833,7 @@ public class WebTimer
                         }
                     }
                 }
-                catch ( final InterruptedException e )
+                catch ( final InterruptedException ignored )
                 {
                     // Execution interrupted
                 }
@@ -900,9 +900,9 @@ public class WebTimer
                     // Wait for execution to stop
                     exec.join ();
                 }
-                catch ( final InterruptedException e )
+                catch ( final InterruptedException ignored )
                 {
-                    Log.error ( this, e );
+                    // No need to log interruption
                 }
             }
         }
@@ -919,7 +919,7 @@ public class WebTimer
     {
         if ( listener != null )
         {
-            listeners.add ( listener );
+            listeners.add ( ActionListener.class, listener );
         }
         return this;
     }
@@ -934,7 +934,7 @@ public class WebTimer
     {
         if ( listener != null )
         {
-            listeners.remove ( listener );
+            listeners.remove ( ActionListener.class, listener );
         }
         return this;
     }
@@ -946,7 +946,7 @@ public class WebTimer
      */
     public List<ActionListener> getListeners ()
     {
-        return listeners;
+        return CollectionUtils.asList ( listeners.getListeners ( ActionListener.class ) );
     }
 
     /**
@@ -956,13 +956,13 @@ public class WebTimer
      */
     public void fireActionPerformed ( final int id )
     {
-        if ( listeners.size () > 0 )
+        if ( listeners.getListenerCount ( ActionListener.class ) > 0 )
         {
+            // Working with local array
+            final ActionListener[] listenerList = listeners.getListeners ( ActionListener.class );
+
             // Event
             final ActionEvent actionEvent = createActionEvent ();
-
-            // Working with local array
-            final List<ActionListener> listenerList = CollectionUtils.copy ( listeners );
 
             // Dispatch event in chosen way
             if ( useEventDispatchThread )
@@ -973,7 +973,9 @@ public class WebTimer
                     if ( shouldContinue ( cycleCount, id ) )
                     {
                         // Merge all events into single call to event dispatch thread
-                        CoreSwingUtils.invokeAndWaitSafely ( new Runnable ()
+                        // This approach is handy when you need to fire all timer listeners at once
+                        // Thought it might diminish UI responsiveness when fires take a lot of processing time
+                        CoreSwingUtils.invokeAndWait ( new Runnable ()
                         {
                             @Override
                             public void run ()
@@ -983,25 +985,27 @@ public class WebTimer
                                     listener.actionPerformed ( actionEvent );
                                 }
                             }
-                        } );
+                        }, true );
                     }
                 }
                 else
                 {
                     // Make separate event calls to event dispatch thread
+                    // This approach is handy when all timer listeners don't need to be fired all at once
+                    // It will spread workload on EDT allowing UI to be responsive between the separate fires
                     for ( final ActionListener listener : listenerList )
                     {
                         // Check execution stop
                         if ( shouldContinue ( cycleCount, id ) )
                         {
-                            CoreSwingUtils.invokeAndWaitSafely ( new Runnable ()
+                            CoreSwingUtils.invokeAndWait ( new Runnable ()
                             {
                                 @Override
                                 public void run ()
                                 {
                                     listener.actionPerformed ( actionEvent );
                                 }
-                            } );
+                            }, true );
                         }
                     }
                 }
@@ -1042,7 +1046,7 @@ public class WebTimer
      */
     public static WebTimer delay ( final String delay, final ActionListener listener )
     {
-        return delay ( TextUtils.parseDelay ( delay ), listener );
+        return delay ( DurationUnits.get ().fromString ( delay ), listener );
     }
 
     /**
@@ -1067,7 +1071,7 @@ public class WebTimer
      */
     public static WebTimer delay ( final String name, final String delay, final ActionListener listener )
     {
-        return delay ( name, TextUtils.parseDelay ( delay ), listener );
+        return delay ( name, DurationUnits.get ().fromString ( delay ), listener );
     }
 
     /**
@@ -1093,7 +1097,7 @@ public class WebTimer
      */
     public static WebTimer delay ( final String delay, final boolean useEventDispatchThread, final ActionListener listener )
     {
-        return delay ( TextUtils.parseDelay ( delay ), useEventDispatchThread, listener );
+        return delay ( DurationUnits.get ().fromString ( delay ), useEventDispatchThread, listener );
     }
 
     /**
@@ -1121,7 +1125,7 @@ public class WebTimer
     public static WebTimer delay ( final String name, final String delay, final boolean useEventDispatchThread,
                                    final ActionListener listener )
     {
-        return delay ( name, TextUtils.parseDelay ( delay ), useEventDispatchThread, listener );
+        return delay ( name, DurationUnits.get ().fromString ( delay ), useEventDispatchThread, listener );
     }
 
     /**
@@ -1152,7 +1156,7 @@ public class WebTimer
      */
     public static WebTimer repeat ( final String delay, final ActionListener listener )
     {
-        final long pd = TextUtils.parseDelay ( delay );
+        final long pd = DurationUnits.get ().fromString ( delay );
         return repeat ( defaultThreadName, pd, pd, defaultCyclesLimit, useEdtByDefault, listener );
     }
 
@@ -1166,7 +1170,7 @@ public class WebTimer
      */
     public static WebTimer repeat ( final String delay, final int cyclesLimit, final ActionListener listener )
     {
-        final long pd = TextUtils.parseDelay ( delay );
+        final long pd = DurationUnits.get ().fromString ( delay );
         return repeat ( defaultThreadName, pd, pd, cyclesLimit, useEdtByDefault, listener );
     }
 
@@ -1205,7 +1209,7 @@ public class WebTimer
      */
     public static WebTimer repeat ( final String name, final String delay, final ActionListener listener )
     {
-        final long pd = TextUtils.parseDelay ( delay );
+        final long pd = DurationUnits.get ().fromString ( delay );
         return repeat ( name, pd, pd, defaultCyclesLimit, useEdtByDefault, listener );
     }
 
@@ -1220,7 +1224,7 @@ public class WebTimer
      */
     public static WebTimer repeat ( final String name, final String delay, final int cyclesLimit, final ActionListener listener )
     {
-        final long pd = TextUtils.parseDelay ( delay );
+        final long pd = DurationUnits.get ().fromString ( delay );
         return repeat ( name, pd, pd, cyclesLimit, useEdtByDefault, listener );
     }
 
@@ -1261,7 +1265,7 @@ public class WebTimer
      */
     public static WebTimer repeat ( final String delay, final boolean useEventDispatchThread, final ActionListener listener )
     {
-        final long pd = TextUtils.parseDelay ( delay );
+        final long pd = DurationUnits.get ().fromString ( delay );
         return repeat ( defaultThreadName, pd, pd, defaultCyclesLimit, useEventDispatchThread, listener );
     }
 
@@ -1277,7 +1281,7 @@ public class WebTimer
     public static WebTimer repeat ( final String delay, final int cyclesLimit, final boolean useEventDispatchThread,
                                     final ActionListener listener )
     {
-        final long pd = TextUtils.parseDelay ( delay );
+        final long pd = DurationUnits.get ().fromString ( delay );
         return repeat ( defaultThreadName, pd, pd, cyclesLimit, useEventDispatchThread, listener );
     }
 
@@ -1321,7 +1325,7 @@ public class WebTimer
     public static WebTimer repeat ( final String name, final String delay, final boolean useEventDispatchThread,
                                     final ActionListener listener )
     {
-        final long pd = TextUtils.parseDelay ( delay );
+        final long pd = DurationUnits.get ().fromString ( delay );
         return repeat ( name, pd, pd, defaultCyclesLimit, useEventDispatchThread, listener );
     }
 
@@ -1338,7 +1342,7 @@ public class WebTimer
     public static WebTimer repeat ( final String name, final String delay, final int cyclesLimit, final boolean useEventDispatchThread,
                                     final ActionListener listener )
     {
-        final long pd = TextUtils.parseDelay ( delay );
+        final long pd = DurationUnits.get ().fromString ( delay );
         return repeat ( name, pd, pd, cyclesLimit, useEventDispatchThread, listener );
     }
 

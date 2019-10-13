@@ -17,9 +17,9 @@
 
 package com.alee.demo.content.button;
 
-import com.alee.demo.api.*;
-import com.alee.demo.icons.DemoIcons;
-import com.alee.demo.svg.SvgIcon;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.*;
+import com.alee.demo.skin.DemoIcons;
 import com.alee.extended.button.WebSplitButton;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.grouping.GroupPane;
@@ -36,35 +36,39 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
-public class WebSplitButtonExample extends AbstractExample
+public class WebSplitButtonExample extends AbstractStylePreviewExample
 {
+    @NotNull
     @Override
     public String getId ()
     {
-        return "websplitbutton";
+        return "splitbutton";
     }
 
+    @NotNull
     @Override
     protected String getStyleFileName ()
     {
         return "splitbutton";
     }
 
+    @NotNull
     @Override
     public FeatureType getFeatureType ()
     {
         return FeatureType.extended;
     }
 
+    @NotNull
     @Override
     protected List<Preview> createPreviews ()
     {
-        final TextButton e1 = new TextButton ( StyleId.splitbutton );
-        final TextButton e2 = new TextButton ( StyleId.splitbuttonHover );
-        final IconButton e3 = new IconButton ( StyleId.splitbuttonIcon );
-        final IconButton e4 = new IconButton ( StyleId.splitbuttonIconHover );
-        return CollectionUtils.<Preview>asList ( e1, e2, e3, e4 );
+        return CollectionUtils.<Preview>asList (
+                new TextButton ( StyleId.splitbutton ),
+                new TextButton ( StyleId.splitbuttonHover ),
+                new IconButton ( StyleId.splitbuttonIcon ),
+                new IconButton ( StyleId.splitbuttonIconHover )
+        );
     }
 
     /**
@@ -82,21 +86,22 @@ public class WebSplitButtonExample extends AbstractExample
             super ( WebSplitButtonExample.this, "text", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebSplitButton button = new WebSplitButton ( getStyleId (), "Select one..." );
             button.setPopupMenu ( createSamplePopupMenu ( button, false, true ) );
 
             final WebSplitButton first = new WebSplitButton ( getStyleId (), "Select one..." );
-            first.setSplitIcon ( DemoIcons.menu16 );
+            first.setMenuIcon ( DemoIcons.menu16 );
             first.setPopupMenu ( createSamplePopupMenu ( first, false, true ) );
 
             final WebSplitButton second = new WebSplitButton ( getStyleId (), "Select one...", WebLookAndFeel.getIcon ( 16 ) );
             second.setPopupMenu ( createSamplePopupMenu ( second, true, true ) );
 
             final WebSplitButton icon = new WebSplitButton ( getStyleId (), "Select one...", WebLookAndFeel.getIcon ( 16 ) );
-            icon.setSplitIcon ( DemoIcons.menu16 );
+            icon.setMenuIcon ( DemoIcons.menu16 );
             icon.setPopupMenu ( createSamplePopupMenu ( icon, true, true ) );
 
             return CollectionUtils.asList ( button, new GroupPane ( first, second ), icon );
@@ -118,11 +123,12 @@ public class WebSplitButtonExample extends AbstractExample
             super ( WebSplitButtonExample.this, "icon", FeatureState.updated, styleId );
         }
 
+        @NotNull
         @Override
-        protected List<? extends JComponent> createPreviewElements ( final StyleId containerStyleId )
+        protected List<? extends JComponent> createPreviewElements ()
         {
             final WebSplitButton button = new WebSplitButton ( getStyleId (), WebLookAndFeel.getIcon ( 16 ) );
-            button.setSplitIcon ( DemoIcons.menu16 );
+            button.setMenuIcon ( DemoIcons.menu16 );
             button.setPopupMenu ( createSamplePopupMenu ( button, true, false ) );
 
             final WebSplitButton first = new WebSplitButton ( getStyleId (), WebLookAndFeel.getIcon ( 16 ) );
@@ -168,7 +174,7 @@ public class WebSplitButtonExample extends AbstractExample
      * @param text      menu item text
      */
     protected static void createPopupMenuItem ( final WebSplitButton button, final boolean addIcon, final boolean addText,
-                                                final PopupMenuGenerator generator, final SvgIcon icon, final String text )
+                                                final PopupMenuGenerator generator, final Icon icon, final String text )
     {
         generator.addItem ( icon, text, new ActionListener ()
         {

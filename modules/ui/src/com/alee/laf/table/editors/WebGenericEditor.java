@@ -27,7 +27,6 @@ import java.lang.reflect.Constructor;
 /**
  * @author Mikle Garin
  */
-
 public class WebGenericEditor extends WebDefaultCellEditor<GenericCellEditor>
 {
     private final Class[] argTypes = new Class[]{ String.class };
@@ -76,7 +75,7 @@ public class WebGenericEditor extends WebDefaultCellEditor<GenericCellEditor>
             return null;
         }
 
-        editorComponent.setStyleId ( StyleId.tableGenericEditor.at ( table ) );
+        editorComponent.setStyleId ( StyleId.tableCellEditorGemeric.at ( table ) );
 
         final Component cellEditorComponent = super.getTableCellEditorComponent ( table, value, isSelected, row, column );
         updateValidationState ( cellEditorComponent, true );

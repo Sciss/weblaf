@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.text.field;
 
-import com.alee.demo.api.AbstractExampleGroup;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.AbstractExampleGroup;
 import com.alee.utils.CollectionUtils;
 
 import java.util.List;
@@ -25,9 +26,9 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
 public class TextFieldsGroup extends AbstractExampleGroup
 {
+    @NotNull
     @Override
     public String getId ()
     {
@@ -37,7 +38,13 @@ public class TextFieldsGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleClasses ()
     {
-        return CollectionUtils.<Class>asList ( JTextFieldExample.class, WebTextFieldExample.class, JPasswordFieldExample.class,
-                WebPasswordFieldExample.class, JFormattedTextFieldExample.class, WebFormattedTextFieldExample.class );
+        return CollectionUtils.<Class>asList (
+                JTextFieldExample.class,
+                WebTextFieldExample.class,
+                JPasswordFieldExample.class,
+                WebPasswordFieldExample.class,
+                JFormattedTextFieldExample.class,
+                WebFormattedTextFieldExample.class
+        );
     }
 }

@@ -17,35 +17,40 @@
 
 package com.alee.painter.decoration.background;
 
+import com.alee.api.clone.behavior.OmitOnClone;
+import com.alee.api.jdk.Objects;
+import com.alee.api.merge.behavior.OmitOnMerge;
 import com.alee.painter.decoration.IDecoration;
-import com.alee.utils.CompareUtils;
 import com.alee.utils.GraphicsUtils;
 
 import javax.swing.*;
 import java.awt.*;
 
 /**
- * Abstract texure background.
+ * Convenient base class for any texture-based {@link IBackground} implementation.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <D> decoration type
  * @param <I> background type
  * @author Mikle Garin
  */
-
-public abstract class AbstractTextureBackground<E extends JComponent, D extends IDecoration<E, D>, I extends AbstractTextureBackground<E, D, I>>
-        extends AbstractBackground<E, D, I>
+public abstract class AbstractTextureBackground<C extends JComponent, D extends IDecoration<C, D>, I extends AbstractTextureBackground<C, D, I>>
+        extends AbstractBackground<C, D, I>
 {
     /**
      * Cached texture paint.
      * It is cached for performance reasons.
      * You can clean the cache at any time in implementation of this abstract class.
      */
+    @OmitOnClone
+    @OmitOnMerge
     protected transient TexturePaint paint = null;
 
     /**
      * Cached texture bounds.
      */
+    @OmitOnClone
+    @OmitOnMerge
     protected transient Rectangle bounds = null;
 
     /**
@@ -58,7 +63,7 @@ public abstract class AbstractTextureBackground<E extends JComponent, D extends 
     }
 
     @Override
-    public void paint ( final Graphics2D g2d, final Rectangle bounds, final E c, final D d, final Shape shape )
+    public void paint ( final Graphics2D g2d, final Rectangle bounds, final C c, final D d, final Shape shape )
     {
         final float opacity = getOpacity ();
         if ( opacity > 0 )
@@ -68,7 +73,7 @@ public abstract class AbstractTextureBackground<E extends JComponent, D extends 
             {
                 // Updating cached texture paint
                 final Rectangle b = shape.getBounds ();
-                if ( paint == null || !CompareUtils.equals ( this.bounds, b ) )
+                if ( paint == null || Objects.notEquals ( this.bounds, b ) )
                 {
                     paint = getTexturePaint ( b );
                 }

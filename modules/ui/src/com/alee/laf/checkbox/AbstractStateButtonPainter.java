@@ -1,24 +1,29 @@
 package com.alee.laf.checkbox;
 
+import com.alee.api.annotations.Nullable;
 import com.alee.laf.button.AbstractButtonPainter;
 import com.alee.laf.radiobutton.IAbstractStateButtonPainter;
 import com.alee.painter.DefaultPainter;
-import com.alee.painter.decoration.IDecoration;
-import com.alee.painter.PainterSupport;
 import com.alee.painter.SectionPainter;
+import com.alee.painter.decoration.IDecoration;
 import com.alee.utils.GraphicsUtils;
 
 import javax.swing.*;
-import javax.swing.plaf.basic.BasicButtonUI;
+import javax.swing.plaf.ButtonUI;
 import java.awt.*;
 import java.util.List;
 
 /**
+ * Abstract painter for stateful {@link AbstractButton} implementations.
+ *
+ * @param <C> component type
+ * @param <U> component UI type
+ * @param <D> decoration type
  * @author Alexandr Zernov
+ * @author Mikle Garin
  */
-
-public abstract class AbstractStateButtonPainter<E extends AbstractButton, U extends BasicButtonUI, D extends IDecoration<E, D>>
-        extends AbstractButtonPainter<E, U, D> implements IAbstractStateButtonPainter<E, U>
+public abstract class AbstractStateButtonPainter<C extends AbstractButton, U extends ButtonUI, D extends IDecoration<C, D>>
+        extends AbstractButtonPainter<C, U, D> implements IAbstractStateButtonPainter<C, U>
 {
     /**
      * State icon painter.
@@ -26,34 +31,30 @@ public abstract class AbstractStateButtonPainter<E extends AbstractButton, U ext
     @DefaultPainter ( ButtonStatePainter.class )
     protected IButtonStatePainter checkStatePainter;
 
+    /**
+     * Runtime icon bounds.
+     */
+    protected transient Rectangle iconBounds;
+
+    @Nullable
     @Override
-    public void install ( final E c, final U ui )
+    protected List<SectionPainter<C, U>> getSectionPainters ()
     {
-        super.install ( c, ui );
+        return asList ( checkStatePainter );
+    }
 
-        // Properly installing section painters
-        this.checkStatePainter = PainterSupport.installSectionPainter ( this, checkStatePainter, null, c, ui );
-
-        // State icon that uses {@code checkStatePainter}
+    @Override
+    protected void installPropertiesAndListeners ()
+    {
+        super.installPropertiesAndListeners ();
         component.setIcon ( createIcon () );
     }
 
     @Override
-    public void uninstall ( final E c, final U ui )
+    protected void uninstallPropertiesAndListeners ()
     {
-        // Removing custom icon
         component.setIcon ( null );
-
-        // Properly uninstalling section painters
-        this.checkStatePainter = PainterSupport.uninstallSectionPainter ( checkStatePainter, c, ui );
-
-        super.uninstall ( c, ui );
-    }
-
-    @Override
-    protected List<SectionPainter<E, U>> getSectionPainters ()
-    {
-        return asList ( checkStatePainter );
+        super.uninstallPropertiesAndListeners ();
     }
 
     /**
@@ -62,9 +63,9 @@ public abstract class AbstractStateButtonPainter<E extends AbstractButton, U ext
      * @return icon bounds
      */
     @Override
-    public Rectangle getIconRect ()
+    public Rectangle getIconBounds ()
     {
-        return iconRect != null ? new Rectangle ( iconRect ) : new Rectangle ();
+        return iconBounds != null ? new Rectangle ( iconBounds ) : new Rectangle ();
     }
 
     /**
@@ -86,14 +87,14 @@ public abstract class AbstractStateButtonPainter<E extends AbstractButton, U ext
         public void paintIcon ( final Component c, final Graphics g, final int x, final int y )
         {
             // Updating actual icon rect
-            iconRect = new Rectangle ( new Point ( x, y ), getSize () );
+            iconBounds = new Rectangle ( new Point ( x, y ), getSize () );
 
             // Painting check state icon
             if ( checkStatePainter != null )
             {
                 final Graphics2D g2d = ( Graphics2D ) g;
                 final Object aa = GraphicsUtils.setupAntialias ( g2d );
-                checkStatePainter.paint ( g2d, iconRect, component, ui );
+                paintSection ( checkStatePainter, g2d, iconBounds );
                 GraphicsUtils.restoreAntialias ( g2d, aa );
             }
         }

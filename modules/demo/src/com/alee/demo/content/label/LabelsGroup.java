@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.label;
 
-import com.alee.demo.api.AbstractExampleGroup;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.AbstractExampleGroup;
 import com.alee.utils.CollectionUtils;
 
 import java.util.List;
@@ -25,9 +26,9 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
 public class LabelsGroup extends AbstractExampleGroup
 {
+    @NotNull
     @Override
     public String getId ()
     {
@@ -37,7 +38,11 @@ public class LabelsGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleClasses ()
     {
-        return CollectionUtils
-                .<Class>asList ( JLabelExample.class, WebStyledLabelExample.class, WebLinkLabelExample.class, WebHotkeyLabelExample.class );
+        return CollectionUtils.<Class>asList (
+                JLabelExample.class,
+                WebStyledLabelExample.class,
+                WebLinkExample.class,
+                WebHotkeyLabelExample.class
+        );
     }
 }

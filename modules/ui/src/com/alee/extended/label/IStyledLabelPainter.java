@@ -20,17 +20,16 @@ package com.alee.extended.label;
 import com.alee.laf.label.IAbstractLabelPainter;
 
 /**
- * Base interface for WebStyledLabel component painters.
+ * Base interface for {@link WebStyledLabel} component painters.
  *
- * @param <E> component type
+ * @param <C> component type
  * @param <U> component UI type
  * @author Mikle Garin
+ * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-WebStyledLabel">How to use WebStyledLabel</a>
  */
-
-public interface IStyledLabelPainter<E extends WebStyledLabel, U extends WebStyledLabelUI> extends IAbstractLabelPainter<E, U>
+public interface IStyledLabelPainter<C extends WebStyledLabel, U extends WStyledLabelUI<C>> extends IAbstractLabelPainter<C, U>
 {
     /**
-     * Forces text ranges to be updated according to current style ranges and text.
+     * This interface doesn't offer any additional methods to implement.
      */
-    public void updateTextRanges ();
 }

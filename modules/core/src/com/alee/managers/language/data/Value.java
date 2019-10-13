@@ -17,288 +17,210 @@
 
 package com.alee.managers.language.data;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.api.jdk.Objects;
+import com.alee.managers.language.LanguageManager;
+import com.alee.managers.language.LanguageUtils;
 import com.alee.utils.CollectionUtils;
-import com.alee.utils.CompareUtils;
-import com.alee.utils.MergeUtils;
 import com.alee.utils.TextUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
+import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 import com.thoughtworks.xstream.annotations.XStreamConverter;
+import com.thoughtworks.xstream.annotations.XStreamImplicit;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
+ * {@link Value} can store multiple {@link Text}s for different states.
+ * It can also provide single {@link Text} for any specific state if it exists.
+ *
  * @author Mikle Garin
+ * @see <a href="https://github.com/mgarin/weblaf/wiki/How-to-use-LanguageManager">How to use LanguageManager</a>
+ * @see LanguageManager
+ * @see com.alee.managers.language.Language
+ * @see Record
+ * @see Text
  */
-
-@XStreamAlias ("value")
-@XStreamConverter (ValueConverter.class)
-public final class Value implements Serializable, Cloneable
+@XStreamAlias ( "value" )
+@XStreamConverter ( ValueConverter.class )
+public final class Value implements Cloneable, Serializable
 {
-    private String lang;
-    private Character mnemonic;
-    private String hotkey;
-    private List<Text> texts;
-    private List<Tooltip> tooltips;
+    /**
+     * {@link Locale} of this {@link Value}.
+     */
+    @XStreamAsAttribute
+    @XStreamAlias ( "lang" )
+    private Locale locale;
 
+    /**
+     * {@link Text}s of this {@link Value}.
+     */
+    @NotNull
+    @XStreamImplicit
+    private List<Text> texts;
+
+    /**
+     * Contructs new {@link Value}.
+     * {@link Locale#getDefault()} is used instead of {@link LanguageManager#getLocale()}
+     */
     public Value ()
     {
-        super ();
+        this ( Locale.getDefault (), new ArrayList<Text> ( 0 ) );
     }
 
-    public Value ( final String lang, final String text )
+    /**
+     * Contructs new {@link Value}.
+     *
+     * @param locale {@link Locale} for this {@link Value}
+     */
+    public Value ( @NotNull final Locale locale )
     {
-        super ();
-        this.lang = lang;
-        this.texts = CollectionUtils.asList ( new Text ( text ) );
+        this ( locale, new ArrayList<Text> ( 0 ) );
     }
 
-    public Value ( final String lang, final Character mnemonic, final String text )
+    /**
+     * Contructs new {@link Value}.
+     *
+     * @param locale {@link Locale} for this {@link Value}
+     * @param texts  {@link Text}s for this {@link Value}
+     */
+    public Value ( @NotNull final Locale locale, @NotNull final Text... texts )
     {
-        super ();
-        this.lang = lang;
-        this.mnemonic = mnemonic;
-        this.texts = CollectionUtils.asList ( new Text ( text ) );
+        this ( locale, CollectionUtils.asList ( texts ) );
     }
 
-    public Value ( final String lang, final String hotkey, final String text )
+    /**
+     * Contructs new {@link Value}.
+     *
+     * @param locale {@link Locale} for this {@link Value}
+     * @param texts  {@link Text}s for this {@link Value}
+     */
+    public Value ( @NotNull final Locale locale, @NotNull final List<Text> texts )
     {
-        super ();
-        this.lang = lang;
-        this.hotkey = hotkey;
-        this.texts = CollectionUtils.asList ( new Text ( text ) );
+        this.locale = locale;
+        this.texts = texts;
     }
 
-    public Value ( final String lang, final Character mnemonic, final String hotkey, final String text )
+    /**
+     * Returns {@link Locale} of this {@link Value}.
+     *
+     * @return {@link Locale} of this {@link Value}
+     */
+    @NotNull
+    public Locale getLocale ()
     {
-        super ();
-        this.lang = lang;
-        this.mnemonic = mnemonic;
-        this.hotkey = hotkey;
-        this.texts = CollectionUtils.asList ( new Text ( text ) );
+        return locale;
     }
 
-    public String getLang ()
+    /**
+     * Sets {@link Locale} for this {@link Value}.
+     *
+     * @param locale new {@link Locale} for this {@link Value}
+     */
+    public void setLocale ( @NotNull final Locale locale )
     {
-        return lang;
+        this.locale = locale;
     }
 
-    public void setLang ( final String lang )
-    {
-        this.lang = lang;
-    }
-
-    public Character getMnemonic ()
-    {
-        return mnemonic;
-    }
-
-    public void setMnemonic ( final Character mnemonic )
-    {
-        this.mnemonic = mnemonic;
-    }
-
-    public String getHotkey ()
-    {
-        return hotkey;
-    }
-
-    public void setHotkey ( final String hotkey )
-    {
-        this.hotkey = hotkey;
-    }
-
+    /**
+     * Returns {@link Text}s of this {@link Value}.
+     *
+     * @return {@link Text}s of this {@link Value}
+     */
+    @NotNull
     public List<Text> getTexts ()
     {
         return texts;
     }
 
-    public void setTexts ( final List<Text> texts )
+    /**
+     * Sets {@link Text}s for this {@link Value}.
+     *
+     * @param texts new {@link Text}s for this {@link Value}
+     */
+    public void setTexts ( @NotNull final List<Text> texts )
     {
         this.texts = texts;
     }
 
-    public String getText ()
+    /**
+     * Adds {@link Text} for this {@link Value}.
+     *
+     * @param text new {@link Text} for this {@link Value}
+     */
+    public void addText ( @NotNull final Text text )
+    {
+        texts.add ( text );
+    }
+
+    /**
+     * Removes {@link Text} from this {@link Value}
+     *
+     * @param text {@link Text} to remove
+     */
+    public void removeText ( @NotNull final Text text )
+    {
+        texts.remove ( text );
+    }
+
+    /**
+     * Removes all {@link Text}s from this {@link Value}.
+     */
+    public void clearTexts ()
+    {
+        texts.clear ();
+    }
+
+    /**
+     * Returns amount of {@link Text}s within this {@link Value}.
+     *
+     * @return amount of {@link Text}s within this {@link Value}
+     */
+    public int textsCount ()
+    {
+        return texts.size ();
+    }
+
+    /**
+     * Returns {@link Text} for default state.
+     *
+     * @return {@link Text} for default state
+     */
+    @Nullable
+    public Text getText ()
     {
         return getText ( null );
     }
 
-    public String getText ( final String state )
+    /**
+     * Returns {@link Text} for the specified state.
+     *
+     * @param state {@link Text} state
+     * @return {@link Text} for the specified state
+     */
+    @Nullable
+    public Text getText ( @Nullable final String state )
     {
-        return getText ( state, false );
-    }
-
-    public String getText ( final String state, final boolean defaultState )
-    {
-        final Text text = getTextObject ( state, defaultState );
-        return text != null ? text.getText () : null;
-    }
-
-    public Text getTextObject ()
-    {
-        return getTextObject ( null );
-    }
-
-    public Text getTextObject ( final String state )
-    {
-        return getTextObject ( state, false );
-    }
-
-    public Text getTextObject ( final String state, final boolean defaultState )
-    {
-        if ( texts != null )
+        Text result = null;
+        for ( final Text text : texts )
         {
-            for ( final Text text : texts )
+            if ( Objects.equals ( text.getState (), state ) )
             {
-                if ( CompareUtils.equals ( text.getState (), state ) || defaultState && text.getState () == null )
-                {
-                    return text;
-                }
+                result = text;
+                break;
             }
         }
-        return null;
+        return result;
     }
 
-    public Text getTextObject ( final int index )
-    {
-        return texts.get ( index );
-    }
-
-    public Text addText ( final String text )
-    {
-        return addText ( new Text ( text ) );
-    }
-
-    public Text addText ( final String text, final String state )
-    {
-        return addText ( new Text ( text, state ) );
-    }
-
-    public Text addText ( final Text text )
-    {
-        //        for ( Text existing : texts )
-        //        {
-        //            if ( SwingUtils.equals ( existing.getState (), text.getState () ) )
-        //            {
-        //                existing.setText ( text.getText () );
-        //                return existing;
-        //            }
-        //        }
-
-        if ( texts == null )
-        {
-            texts = new ArrayList<Text> ( 1 );
-        }
-        this.texts.add ( text );
-
-        return text;
-    }
-
-    public void removeText ( final Text text )
-    {
-        this.texts.remove ( text );
-    }
-
-    public List<Tooltip> getTooltips ()
-    {
-        return tooltips;
-    }
-
-    public void setTooltips ( final List<Tooltip> tooltips )
-    {
-        this.tooltips = tooltips;
-    }
-
-    public Tooltip addTooltip ( final String text )
-    {
-        return addTooltip ( new Tooltip ( text ) );
-    }
-
-    public Tooltip addTooltip ( final Integer delay, final String text )
-    {
-        return addTooltip ( new Tooltip ( delay, text ) );
-    }
-
-    public Tooltip addTooltip ( final TooltipWay way, final String text )
-    {
-        return addTooltip ( new Tooltip ( way, text ) );
-    }
-
-    public Tooltip addTooltip ( final TooltipWay way, final Integer delay, final String text )
-    {
-        return addTooltip ( new Tooltip ( way, delay, text ) );
-    }
-
-    public Tooltip addTooltip ( final TooltipType type, final String text )
-    {
-        return addTooltip ( new Tooltip ( type, text ) );
-    }
-
-    public Tooltip addTooltip ( final Tooltip tooltip )
-    {
-        //        for ( Tooltip existing : tooltips )
-        //        {
-        //            if ( existing.getType () == tooltip.getType () &&
-        //                    existing.getWay () == tooltip.getWay () )
-        //            {
-        //                existing.setDelay ( tooltip.getDelay () );
-        //                existing.setText ( tooltip.getText () );
-        //                return existing;
-        //            }
-        //        }
-
-        if ( tooltips == null )
-        {
-            tooltips = new ArrayList<Tooltip> ( 1 );
-        }
-        tooltips.add ( tooltip );
-
-        return tooltip;
-    }
-
-    public void removeTooltip ( final Tooltip tooltip )
-    {
-        this.tooltips.remove ( tooltip );
-    }
-
-    public Tooltip getTooltipObject ( final int index )
-    {
-        return tooltips.get ( index );
-    }
-
-    private String langText ()
-    {
-        return lang != null ? lang : "all";
-    }
-
-    private String listTexts ()
-    {
-        if ( texts == null || texts.size () == 0 )
-        {
-            return "";
-        }
-        else if ( texts.size () == 1 )
-        {
-            return texts.get ( 0 ).toString ();
-        }
-        else
-        {
-            return "{" + TextUtils.listToString ( texts, ";" ) + "}";
-        }
-    }
-
-    @Override
-    public Value clone ()
-    {
-        return MergeUtils.cloneByFieldsSafely ( this );
-    }
-
+    @NotNull
     @Override
     public String toString ()
     {
-        return langText () + " -> " + listTexts () + ( mnemonic != null ? " (" + mnemonic + ")" : "" ) +
-                ( hotkey != null ? " (" + hotkey + ")" : "" ) +
-                ( tooltips != null && tooltips.size () > 0 ? " (tooltips: " + tooltips.size () + ")" : "" );
+        return LanguageUtils.toString ( getLocale () ) + " -> {" + TextUtils.listToString ( texts, ";" ) + "}";
     }
 }

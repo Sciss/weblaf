@@ -17,7 +17,8 @@
 
 package com.alee.demo.content.data.grid;
 
-import com.alee.demo.api.AbstractExampleGroup;
+import com.alee.api.annotations.NotNull;
+import com.alee.demo.api.example.AbstractExampleGroup;
 import com.alee.utils.CollectionUtils;
 
 import java.util.List;
@@ -25,9 +26,9 @@ import java.util.List;
 /**
  * @author Mikle Garin
  */
-
 public class GridsGroup extends AbstractExampleGroup
 {
+    @NotNull
     @Override
     public String getId ()
     {
@@ -37,6 +38,10 @@ public class GridsGroup extends AbstractExampleGroup
     @Override
     protected List<Class> getExampleClasses ()
     {
-        return CollectionUtils.<Class>asList ( JTableExample.class, WebTableExample.class, WebFileTableExample.class );
+        return CollectionUtils.<Class>asList (
+                JTableExample.class,
+                WebTableExample.class,
+                WebFileTableExample.class
+        );
     }
 }

@@ -17,10 +17,12 @@
 
 package com.alee.utils;
 
+import com.alee.api.annotations.NotNull;
+import com.alee.api.annotations.Nullable;
+import com.alee.api.jdk.Function;
+import com.alee.api.jdk.Supplier;
+import com.alee.managers.language.LM;
 import com.alee.utils.compare.Filter;
-import com.alee.utils.text.DelayFormatException;
-import com.alee.utils.text.SimpleTextProvider;
-import com.alee.utils.text.TextProvider;
 import com.alee.utils.xml.ColorConverter;
 import com.alee.utils.xml.InsetsConverter;
 import com.alee.utils.xml.PointConverter;
@@ -28,37 +30,37 @@ import com.alee.utils.xml.RectangleConverter;
 
 import java.awt.*;
 import java.lang.reflect.Array;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
 /**
  * This class provides a set of utilities to work with various text usage cases.
  *
  * @author Mikle Garin
  */
-
 public final class TextUtils
 {
     /**
-     * Constants for time calculations.
-     */
-    private static final int msInWeek = 604800000;
-    private static final int msInDay = 86400000;
-    private static final int msInHour = 3600000;
-    private static final int msInMinute = 60000;
-    private static final int msInSecond = 1000;
-
-    /**
      * Separators used to determine words in text.
      */
-    private static final List<String> textSeparators =
-            Arrays.asList ( " ", ".", ",", ":", ";", "/", "\\", "\n", "\t", "|", "{", "}", "[", "]", "(", ")", "<", ">", "-", "+", "\"",
-                    "'", "*", "%", "$", "#", "@", "!", "~", "^", "&", "?" );
+    @NotNull
+    private static final List<Character> textSeparators = CollectionUtils.asList (
+            ' ', '.', ',', ':', ';', '/', '|', '{', '}', '[', ']', '(', ')', '<', '>',
+            '\\', '\n', '\t', '\'', '\'', '-', '+', '*', '%', '$', '#', '@', '!', '~', '^', '&', '?'
+    );
 
     /**
      * Text provider for any type of objects.
      */
-    private static final SimpleTextProvider simpleTextProvider = new SimpleTextProvider ();
+    @NotNull
+    private static final Function<Object, String> simpleTextProvider = new Function<Object, String> ()
+    {
+        @Override
+        public String apply ( final Object object )
+        {
+            return object != null ? object.toString () : "null";
+        }
+    };
 
     /**
      * Default ID part length.
@@ -68,12 +70,59 @@ public final class TextUtils
     /**
      * Default ID prefix.
      */
+    @NotNull
     private static final String defaultIdPrefix = "WebLaF";
 
     /**
      * Default ID suffix.
      */
+    @NotNull
     private static final String defaultIdSuffix = "ID";
+
+    /**
+     * Default separator.
+     */
+    @NotNull
+    private static final String defaultSeparator = ",";
+
+    /**
+     * Preferred system text lines separator cache.
+     */
+    private static String systemLineSeparator;
+
+    /**
+     * Private constructor to avoid instantiation.
+     */
+    private TextUtils ()
+    {
+        throw new UtilityException ( "Utility classes are not meant to be instantiated" );
+    }
+
+    /**
+     * Returns preferred system text lines separator.
+     *
+     * @return preferred system text lines separator
+     */
+    @NotNull
+    public static String getSystemLineSeparator ()
+    {
+        if ( systemLineSeparator == null )
+        {
+            try
+            {
+                systemLineSeparator = System.getProperty ( "line.separator" );
+            }
+            catch ( final SecurityException ignored )
+            {
+                // Ignore possible security exception
+            }
+            if ( systemLineSeparator == null )
+            {
+                systemLineSeparator = "\n";
+            }
+        }
+        return systemLineSeparator;
+    }
 
     /**
      * Returns message formatted with common string representations of the provided objects.
@@ -82,32 +131,18 @@ public final class TextUtils
      * @param objects objects to use for message formatting
      * @return message formatted with common string representations of the provided objects
      */
-    public static String format ( final String text, final Object... objects )
+    @NotNull
+    public static String format ( @NotNull final String text, @Nullable final Object... objects )
     {
         final Object[] data = new Object[ objects != null ? objects.length : 0 ];
         if ( objects != null )
         {
             for ( int i = 0; i < objects.length; i++ )
             {
-                data[ i ] = toString ( objects[ i ] );
+                data[ i ] = asString ( objects[ i ] );
             }
         }
         return String.format ( text, data );
-    }
-
-    /**
-     * Returns text with replaced character at the specified index.
-     *
-     * @param text      text to replace character in
-     * @param index     index of the character to replace
-     * @param character replacement character
-     * @return text with replaced character at the specified index
-     */
-    public static String replace ( final String text, final int index, final char character )
-    {
-        final StringBuilder sb = new StringBuilder ( text );
-        sb.setCharAt ( index, character );
-        return sb.toString ();
     }
 
     /**
@@ -118,20 +153,68 @@ public final class TextUtils
      * @param object object to return common string representation for
      * @return common string representation of the specified object
      */
-    public static String toString ( final Object object )
+    @NotNull
+    private static String asString ( @Nullable final Object object )
     {
+        final String string;
         if ( object == null )
         {
-            return "null";
+            string = "null";
         }
         else if ( object instanceof String )
         {
-            return ( String ) object;
+            string = ( String ) object;
         }
         else
         {
-            return object.toString ();
+            final String toString = object.toString ();
+            string = toString != null ? toString : "null";
         }
+        return string;
+    }
+
+    /**
+     * Returns text with replaced character at the specified index.
+     *
+     * @param text      text to replace character in
+     * @param index     index of the character to replace
+     * @param character replacement character
+     * @return text with replaced character at the specified index
+     */
+    @NotNull
+    public static String replace ( @NotNull final String text, final int index, final char character )
+    {
+        final StringBuilder sb = new StringBuilder ( text );
+        sb.setCharAt ( index, character );
+        return sb.toString ();
+    }
+
+    /**
+     * Returns whether the first {@link String} equals to second one.
+     * This method will compare {@link String} even if they are null without throwing any exceptions.
+     *
+     * @param string      {@link String} to compare
+     * @param compareWith {@link String} to compare with
+     * @return {@code true} if the first {@link String} equals second one, {@code false} otherwise
+     */
+    @SuppressWarnings ( "StringEquality" )
+    public static boolean equals ( @Nullable final String string, @Nullable final String compareWith )
+    {
+        return string == compareWith || string != null && string.equals ( compareWith );
+    }
+
+    /**
+     * Returns whether the first {@link String} equals to second one ignoring case.
+     * This method will compare {@link String} even if they are null without throwing any exceptions.
+     *
+     * @param string      {@link String} to compare
+     * @param compareWith {@link String} to compare with
+     * @return {@code true} if the first {@link String} equals second one ignoring case, {@code false} otherwise
+     */
+    @SuppressWarnings ( "StringEquality" )
+    public static boolean equalsIgnoreCase ( @Nullable final String string, @Nullable final String compareWith )
+    {
+        return string == compareWith || string != null && string.equalsIgnoreCase ( compareWith );
     }
 
     /**
@@ -142,7 +225,8 @@ public final class TextUtils
      * @param to      range end
      * @return list of strings based on single pattern parsed using different number values in range
      */
-    public static List<String> numbered ( final String pattern, final int from, final int to )
+    @NotNull
+    public static List<String> numbered ( @NotNull final String pattern, final int from, final int to )
     {
         final List<String> list = new ArrayList<String> ( Math.abs ( from - to ) );
         if ( from < to )
@@ -168,9 +252,22 @@ public final class TextUtils
      * @param text text to remove line breaks from
      * @return text with all line breaks removed
      */
-    public static String removeLineBreaks ( final String text )
+    @NotNull
+    public static String removeLineBreaks ( @NotNull final String text )
     {
         return text.replaceAll ( "\\r\\n|\\r|\\n", "" );
+    }
+
+    /**
+     * Returns text with all spacings removed.
+     *
+     * @param text text to remove spacings from
+     * @return text with all spacings removed
+     */
+    @NotNull
+    public static String removeSpacings ( @NotNull final String text )
+    {
+        return text.replaceAll ( "[ \\t]", "" );
     }
 
     /**
@@ -179,9 +276,10 @@ public final class TextUtils
      * @param text text to search through
      * @return first found number
      */
-    public static Integer findFirstNumber ( final String text )
+    @NotNull
+    public static Integer findFirstNumber ( @NotNull final String text )
     {
-        final StringBuilder sb = new StringBuilder ( "" );
+        final StringBuilder sb = new StringBuilder ();
         for ( int j = 0; j < text.length (); j++ )
         {
             final char ch = text.charAt ( j );
@@ -204,41 +302,78 @@ public final class TextUtils
      * @param location word location
      * @return word
      */
-    public static String getWord ( final String text, final int location )
+    @Nullable
+    public static String getWord ( @NotNull final String text, final int location )
     {
-        int wordStart = location;
-        int wordEnd = location;
-
-        // At the word start
-        while ( wordEnd < text.length () - 1 && !textSeparators.contains ( text.substring ( wordEnd, wordEnd + 1 ) ) )
+        final String word;
+        if ( 0 <= location && location < text.length () )
         {
-            wordEnd++;
-        }
+            if ( !textSeparators.contains ( text.charAt ( location ) ) )
+            {
+                int wordStart = location;
+                int wordEnd = location;
 
-        // At the word end
-        while ( wordStart > 0 && !textSeparators.contains ( text.substring ( wordStart - 1, wordStart ) ) )
+                // At the word start
+                while ( wordEnd < text.length () - 1 && !textSeparators.contains ( text.charAt ( wordEnd ) ) )
+                {
+                    wordEnd++;
+                }
+
+                // At the word end
+                while ( wordStart > 0 && !textSeparators.contains ( text.charAt ( wordStart - 1 ) ) )
+                {
+                    wordStart--;
+                }
+
+                word = wordStart == wordEnd ? null : text.substring ( wordStart, wordEnd );
+            }
+            else
+            {
+                // There is no word at the specified location
+                word = null;
+            }
+        }
+        else
         {
-            wordStart--;
+            // Location is outside of the text boundaries
+            word = null;
         }
-
-        return wordStart == wordEnd ? null : text.substring ( wordStart, wordEnd );
+        return word;
     }
 
     /**
-     * Returns a word start index at the specified location.
+     * Returns index of the first character in the word at the specified location.
      *
      * @param text     text to retrieve the word start index from
      * @param location word location
-     * @return word start index
+     * @return index of the first character in the word at the specified location
      */
-    public static int getWordStart ( final String text, final int location )
+    public static int getWordStart ( @NotNull final String text, final int location )
     {
-        int wordStart = location;
-        while ( wordStart > 0 && !textSeparators.contains ( text.substring ( wordStart - 1, wordStart ) ) )
+        final int start;
+        if ( 0 <= location && location < text.length () )
         {
-            wordStart--;
+            if ( !textSeparators.contains ( text.charAt ( location ) ) )
+            {
+                int wordStart = location;
+                while ( wordStart > 0 && !textSeparators.contains ( text.charAt ( wordStart - 1 ) ) )
+                {
+                    wordStart--;
+                }
+                start = wordStart;
+            }
+            else
+            {
+                // Location points at a separator character
+                start = -1;
+            }
         }
-        return wordStart;
+        else
+        {
+            // Location is outside of the text boundaries
+            start = -1;
+        }
+        return start;
     }
 
     /**
@@ -248,14 +383,123 @@ public final class TextUtils
      * @param location word location
      * @return word end index
      */
-    public static int getWordEnd ( final String text, final int location )
+    public static int getWordEnd ( @NotNull final String text, final int location )
     {
-        int wordEnd = location;
-        while ( wordEnd < text.length () - 1 && !textSeparators.contains ( text.substring ( wordEnd, wordEnd + 1 ) ) )
+        final int end;
+        if ( 0 <= location && location < text.length () )
         {
-            wordEnd++;
+            if ( !textSeparators.contains ( text.charAt ( location ) ) )
+            {
+                int wordEnd = location;
+                while ( wordEnd < text.length () && !textSeparators.contains ( text.charAt ( wordEnd ) ) )
+                {
+                    wordEnd++;
+                }
+                end = wordEnd;
+            }
+            else
+            {
+                // Location points at a separator character
+                end = -1;
+            }
         }
-        return wordEnd;
+        else
+        {
+            // Location is outside of the text boundaries
+            end = -1;
+        }
+        return end;
+    }
+
+    /**
+     * Returns begin index of last word in the specified text.
+     *
+     * @param string text to process
+     * @return begin index of last word in the specified text
+     */
+    public static int findLastRowWordStartIndex ( @NotNull final String string )
+    {
+        int index = -1;
+        boolean spaceFound = false;
+        boolean skipSpace = true;
+        for ( int i = string.length () - 1; i >= 0; i-- )
+        {
+            final char c = string.charAt ( i );
+            if ( !spaceFound && !skipSpace )
+            {
+                if ( c == ' ' || c == '\t' || c == '\r' || c == '\n' )
+                {
+                    spaceFound = true;
+                }
+            }
+            else
+            {
+                if ( c != ' ' && c != '\t' && c != '\r' && c != '\n' )
+                {
+                    if ( spaceFound )
+                    {
+                        index = i;
+                        break;
+                    }
+                    skipSpace = false;
+                }
+            }
+        }
+        return index;
+    }
+
+    /**
+     * Returns begin index of first word after specified index.
+     *
+     * @param string text to process
+     * @param from   index to start search from
+     * @return begin index of first word after specified index
+     */
+    public static int findFirstWordFromIndex ( @NotNull final String string, final int from )
+    {
+        int index = -1;
+        for ( int i = from; i < string.length (); i++ )
+        {
+            final char c = string.charAt ( i );
+            if ( c != ' ' && c != '\t' && c != '\r' && c != '\n' )
+            {
+                index = i;
+                break;
+            }
+        }
+        return index;
+    }
+
+    /**
+     * Returns last index of the first word end.
+     *
+     * @param string text to process
+     * @return last index of the first word end
+     */
+    public static int findFirstRowWordEndIndex ( @NotNull final String string )
+    {
+        int index = string.length ();
+        boolean spaceFound = false;
+        for ( int i = 0; i < string.length (); i++ )
+        {
+            final char c = string.charAt ( i );
+            if ( !spaceFound )
+            {
+                if ( c == ' ' || c == '\t' || c == '\r' || c == '\n' )
+                {
+                    spaceFound = true;
+                }
+            }
+            else
+            {
+                if ( c != ' ' && c != '\t' && c != '\r' && c != '\n' )
+                {
+                    index = i;
+                    break;
+                }
+            }
+        }
+        return index;
     }
 
     /**
@@ -265,7 +509,8 @@ public final class TextUtils
      * @param count lines count to crop
      * @return cropped text
      */
-    public static String removeFirstLines ( final String text, final int count )
+    @NotNull
+    public static String removeFirstLines ( @NotNull final String text, final int count )
     {
         int found = 0;
         int index = 0;
@@ -279,10 +524,10 @@ public final class TextUtils
             }
             else
             {
-                return "";
+                break;
             }
         }
-        return text.substring ( index );
+        return index != -1 ? text.substring ( index ) : "";
     }
 
     /**
@@ -291,9 +536,10 @@ public final class TextUtils
      * @param text text to extract point from
      * @return extracted point
      */
-    public static Point parsePoint ( final String text )
+    @Nullable
+    public static Point parsePoint ( @NotNull final String text )
     {
-        return parsePoint ( text, "," );
+        return parsePoint ( text, defaultSeparator );
     }
 
     /**
@@ -303,35 +549,14 @@ public final class TextUtils
      * @param separator point values separator
      * @return extracted point
      */
-    public static Point parsePoint ( final String text, final String separator )
+    @Nullable
+    public static Point parsePoint ( @NotNull final String text, @NotNull final String separator )
     {
         final String[] parts = text.split ( separator );
-        return parts.length == 2 ? new Point ( Integer.parseInt ( parts[ 0 ].trim () ), Integer.parseInt ( parts[ 1 ].trim () ) ) : null;
-    }
-
-    /**
-     * Returns text with all control symbols removed.
-     * This method works faster than simple replaceAll("\\p{Cntrl}", "").
-     *
-     * @param text text to modify
-     * @return text without control symbols
-     */
-    public static String removeControlSymbols ( final String text )
-    {
-        final int length = text.length ();
-        final char[] oldChars = new char[ length ];
-        text.getChars ( 0, length, oldChars, 0 );
-        int newLen = 0;
-        for ( int j = 0; j < length; j++ )
-        {
-            final char ch = oldChars[ j ];
-            if ( ch >= ' ' )
-            {
-                oldChars[ newLen ] = ch;
-                newLen++;
-            }
-        }
-        return text;
+        return parts.length == 2 ? new Point (
+                Integer.parseInt ( parts[ 0 ].trim () ),
+                Integer.parseInt ( parts[ 1 ].trim () )
+        ) : null;
     }
 
     /**
@@ -342,7 +567,8 @@ public final class TextUtils
      * @param addDots   add dots at the end of the text when shortened
      * @return shortened text
      */
-    public static String shortenText ( final String text, final int maxLength, final boolean addDots )
+    @NotNull
+    public static String shortenText ( @NotNull final String text, final int maxLength, final boolean addDots )
     {
         return text.length () <= maxLength ? text :
                 text.substring ( 0, maxLength > 3 && addDots ? maxLength - 3 : maxLength ) + ( addDots ? "..." : "" );
@@ -356,10 +582,23 @@ public final class TextUtils
      * @param addDots   add dots at the end of the text when shortened
      * @return shortened text
      */
-    public static String shortenTextEnd ( final String text, final int maxLength, final boolean addDots )
+    @NotNull
+    public static String shortenTextEnd ( @NotNull final String text, final int maxLength, final boolean addDots )
     {
         return text.length () <= maxLength ? text :
                 ( addDots ? "..." : "" ) + text.substring ( text.length () - ( maxLength > 3 && addDots ? maxLength - 3 : maxLength ) );
+    }
+
+    /**
+     * Returns a list of text parts split using specified separator.
+     *
+     * @param string text to split
+     * @return list of split parts
+     */
+    @NotNull
+    public static List<String> stringToList ( @Nullable final String string )
+    {
+        return stringToList ( string, defaultSeparator );
     }
 
     /**
@@ -369,7 +608,8 @@ public final class TextUtils
      * @param separator text parts separator
      * @return list of split parts
      */
-    public static List<String> stringToList ( final String string, final String separator )
+    @NotNull
+    public static List<String> stringToList ( @Nullable final String string, @NotNull final String separator )
     {
         final List<String> strings = new ArrayList<String> ();
         if ( string != null )
@@ -386,26 +626,47 @@ public final class TextUtils
     /**
      * Returns a list of integer parts split using specified separator.
      *
+     * @param string text to split
+     * @return list of split parts
+     */
+    @NotNull
+    public static List<Integer> stringToIntList ( @Nullable final String string )
+    {
+        return stringToIntList ( string, defaultSeparator );
+    }
+
+    /**
+     * Returns a list of integer parts split using specified separator.
+     *
      * @param string    text to split
      * @param separator text parts separator
      * @return list of split parts
      */
-    public static List<Integer> stringToIntList ( final String string, final String separator )
+    @NotNull
+    public static List<Integer> stringToIntList ( @Nullable final String string, @NotNull final String separator )
     {
-        final List<String> stringList = stringToList ( string, separator );
-        if ( stringList != null )
+        final List<Integer> intList = new ArrayList<Integer> ();
+        if ( string != null )
         {
-            final List<Integer> intList = new ArrayList<Integer> ( stringList.size () );
-            for ( final String s : stringList )
+            final StringTokenizer tokenizer = new StringTokenizer ( string, separator, false );
+            while ( tokenizer.hasMoreTokens () )
             {
-                intList.add ( Integer.parseInt ( s ) );
+                intList.add ( Integer.parseInt ( tokenizer.nextToken ().trim () ) );
             }
-            return intList;
         }
-        else
-        {
-            return null;
-        }
+        return intList;
+    }
+
+    /**
+     * Returns a list of float parts split using specified separator.
+     *
+     * @param string text to split
+     * @return list of split parts
+     */
+    @NotNull
+    public static List<Float> stringToFloatList ( @Nullable final String string )
+    {
+        return stringToFloatList ( string, defaultSeparator );
     }
 
     /**
@@ -415,62 +676,80 @@ public final class TextUtils
      * @param separator text parts separator
      * @return list of split parts
      */
-    public static List<Float> stringToFloatList ( final String string, final String separator )
+    @NotNull
+    public static List<Float> stringToFloatList ( @Nullable final String string, @NotNull final String separator )
     {
-        final List<String> stringList = stringToList ( string, separator );
-        if ( stringList != null )
+        final List<Float> floatList = new ArrayList<Float> ();
+        if ( string != null )
         {
-            final List<Float> intList = new ArrayList<Float> ( stringList.size () );
-            for ( final String s : stringList )
+            final StringTokenizer tokenizer = new StringTokenizer ( string, separator, false );
+            while ( tokenizer.hasMoreTokens () )
             {
-                intList.add ( Float.parseFloat ( s ) );
+                floatList.add ( Float.parseFloat ( tokenizer.nextToken ().trim () ) );
             }
-            return intList;
         }
-        else
-        {
-            return null;
-        }
+        return floatList;
     }
 
     /**
-     * Returns single text combined using list of strings and specified separator.
+     * Returns single text combined from list of elements using default separator.
+     *
+     * @param list list to combine into single text
+     * @param <T>  elements type
+     * @return single text combined from list of elements using default separator
+     */
+    @Nullable
+    public static <T> String listToString ( @Nullable final List<T> list )
+    {
+        return listToString ( list, defaultSeparator, ( Function<T, String> ) simpleTextProvider, null );
+    }
+
+    /**
+     * Returns single text combined from list of elements using specified separator.
      *
      * @param list      list to combine into single text
-     * @param separator text parts separator
-     * @return single text
+     * @param separator elements separator
+     * @param <T>       elements type
+     * @return single text combined from list of elements using specified separator
      */
-    public static String listToString ( final List list, final String separator )
+    @Nullable
+    public static <T> String listToString ( @Nullable final List<T> list, @NotNull final String separator )
     {
-        return listToString ( list, separator, simpleTextProvider );
+        return listToString ( list, separator, ( Function<T, String> ) simpleTextProvider, null );
     }
 
     /**
-     * Returns single text combined using list of strings and specified separator.
+     * Returns single text combined from list of elements using specified separator.
      *
      * @param list         list to combine into single text
-     * @param separator    text parts separator
-     * @param textProvider text provider
-     * @return single text
+     * @param separator    elements separator
+     * @param textProvider {@link Function} providing text
+     * @param <T>          elements type
+     * @return single text combined from list of elements using specified separator
      */
-    public static <T> String listToString ( final List<T> list, final String separator, final TextProvider<T> textProvider )
+    @Nullable
+    public static <T> String listToString ( @Nullable final List<T> list, @NotNull final String separator,
+                                            @NotNull final Function<T, String> textProvider )
     {
         return listToString ( list, separator, textProvider, null );
     }
 
     /**
-     * Returns single text combined using list of strings and specified separator.
+     * Returns single text combined from list of elements using specified separator.
      *
      * @param list         list to combine into single text
-     * @param separator    text parts separator
-     * @param textProvider text provider
-     * @param filter       list elements filter
-     * @return single text
+     * @param separator    elements separator
+     * @param textProvider {@link Function} providing text
+     * @param filter       {@link Filter} for elements
+     * @param <T>          elements type
+     * @return single text combined from list of elements using specified separator
      */
-    public static <T> String listToString ( final List<T> list, final String separator, final TextProvider<T> textProvider,
-                                            final Filter<T> filter )
+    @Nullable
+    public static <T> String listToString ( @Nullable final List<T> list, @NotNull final String separator,
+                                            @NotNull final Function<T, String> textProvider, @Nullable final Filter<T> filter )
     {
-        if ( list != null && list.size () > 0 )
+        final String result;
+        if ( CollectionUtils.notEmpty ( list ) )
         {
             final StringBuilder stringBuilder = new StringBuilder ();
             boolean hasPreviouslyAccepted = false;
@@ -482,16 +761,143 @@ public final class TextUtils
                     {
                         stringBuilder.append ( separator );
                     }
-                    stringBuilder.append ( textProvider.getText ( object ) );
+                    stringBuilder.append ( textProvider.apply ( object ) );
                     hasPreviouslyAccepted = true;
                 }
             }
-            return stringBuilder.toString ();
+            result = stringBuilder.toString ();
         }
         else
         {
-            return null;
+            result = null;
         }
+        return result;
+    }
+
+    /**
+     * Returns single text combined from array of elements using default separator.
+     *
+     * @param array array to combine into single text
+     * @param <T>   elements type
+     * @return single text combined from array of elements using default separator
+     */
+    @Nullable
+    public static <T> String arrayToString ( @Nullable final T... array )
+    {
+        return arrayToString ( defaultSeparator, simpleTextProvider, null, array );
+    }
+
+    /**
+     * Returns single text combined from array of elements using specified separator.
+     *
+     * @param separator elements separator
+     * @param array     array to combine into single text
+     * @param <T>       elements type
+     * @return single text combined from array of elements using specified separator
+     */
+    @Nullable
+    public static <T> String arrayToString ( @NotNull final String separator, @Nullable final T... array )
+    {
+        return arrayToString ( separator, simpleTextProvider, null, array );
+    }
+
+    /**
+     * Returns single text combined from array of elements using specified separator.
+     *
+     * @param separator    elements separator
+     * @param textProvider {@link Function} providing text
+     * @param array        array to combine into single text
+     * @param <T>          elements type
+     * @return single text combined from array of elements using specified separator
+     */
+    @Nullable
+    public static <T> String arrayToString ( @NotNull final String separator, @NotNull final Function<T, String> textProvider,
+                                             @Nullable final T... array )
+    {
+        return arrayToString ( separator, textProvider, null, array );
+    }
+
+    /**
+     * Returns single text combined from array of elements using specified separator.
+     *
+     * @param separator    elements separator
+     * @param textProvider {@link Function} providing text
+     * @param filter       {@link Filter} for elements
+     * @param array        array to combine into single text
+     * @param <T>          elements type
+     * @return single text combined from array of elements using specified separator
+     */
+    @Nullable
+    public static <T> String arrayToString ( @NotNull final String separator, @NotNull final Function<T, String> textProvider,
+                                             @Nullable final Filter<T> filter, @Nullable final T... array )
+    {
+        final String result;
+        if ( array != null && array.length > 0 )
+        {
+            final StringBuilder stringBuilder = new StringBuilder ();
+            boolean hasPreviouslyAccepted = false;
+            for ( final T object : array )
+            {
+                if ( filter == null || filter.accept ( object ) )
+                {
+                    if ( hasPreviouslyAccepted )
+                    {
+                        stringBuilder.append ( separator );
+                    }
+                    stringBuilder.append ( textProvider.apply ( object ) );
+                    hasPreviouslyAccepted = true;
+                }
+            }
+            result = stringBuilder.toString ();
+        }
+        else
+        {
+            result = null;
+        }
+        return result;
+    }
+
+    /**
+     * Converts array of enumeration constants into string with list of enumeration constants and returns it.
+     *
+     * @param enumArray enumeration constants array
+     * @param <E>       enumeration type
+     * @return string with list of enumeration constants
+     */
+    @Nullable
+    public static <E extends Enum<E>> String enumArrayToString ( @Nullable final E... enumArray )
+    {
+        return enumArrayToString ( defaultSeparator, enumArray );
+    }
+
+    /**
+     * Converts array of enumeration constants into string with list of enumeration constants and returns it.
+     *
+     * @param separator text parts separator
+     * @param enumArray enumeration constants array
+     * @param <E>       enumeration type
+     * @return string with list of enumeration constants
+     */
+    @Nullable
+    public static <E extends Enum<E>> String enumArrayToString ( @NotNull final String separator, @Nullable final E... enumArray )
+    {
+        final String result;
+        if ( enumArray != null && enumArray.length > 0 )
+        {
+            final int end = enumArray.length - 1;
+            final StringBuilder stringBuilder = new StringBuilder ();
+            for ( int i = 0; i <= end; i++ )
+            {
+                stringBuilder.append ( enumArray[ i ] );
+                stringBuilder.append ( i != end ? separator : "" );
+            }
+            result = stringBuilder.toString ();
+        }
+        else
+        {
+            result = null;
+        }
+        return result;
     }
 
     /**
@@ -501,8 +907,24 @@ public final class TextUtils
      * @param <E>      enumeration type
      * @return string with list of enumeration constants
      */
-    public static <E extends Enum<E>> String enumListToString ( final List<E> enumList )
+    @Nullable
+    public static <E extends Enum<E>> String enumListToString ( @Nullable final List<E> enumList )
     {
+        return enumListToString ( enumList, defaultSeparator );
+    }
+
+    /**
+     * Converts list of enumeration constants into string with list of enumeration constants and returns it.
+     *
+     * @param enumList  enumeration constants list
+     * @param separator text parts separator
+     * @param <E>       enumeration type
+     * @return string with list of enumeration constants
+     */
+    @Nullable
+    public static <E extends Enum<E>> String enumListToString ( @Nullable final List<E> enumList, @NotNull final String separator )
+    {
+        final String result;
         if ( enumList != null && enumList.size () > 0 )
         {
             final int end = enumList.size () - 1;
@@ -510,14 +932,15 @@ public final class TextUtils
             for ( int i = 0; i <= end; i++ )
             {
                 stringBuilder.append ( enumList.get ( i ) );
-                stringBuilder.append ( i != end ? "," : "" );
+                stringBuilder.append ( i != end ? separator : "" );
             }
-            return stringBuilder.toString ();
+            result = stringBuilder.toString ();
         }
         else
         {
-            return null;
+            result = null;
         }
+        return result;
     }
 
     /**
@@ -528,12 +951,29 @@ public final class TextUtils
      * @param <E>        enumeration type
      * @return list of enumeration constants
      */
-    public static <E extends Enum<E>> List<E> enumStringToList ( final String enumString, final Class<E> enumClass )
+    @NotNull
+    public static <E extends Enum<E>> List<E> enumStringToList ( @Nullable final String enumString, @NotNull final Class<E> enumClass )
+    {
+        return enumStringToList ( enumString, enumClass, defaultSeparator );
+    }
+
+    /**
+     * Converts string with list of enumeration constants into real list of enumeration constants and returns it.
+     *
+     * @param enumString enumeration constants string list
+     * @param enumClass  enumeration class
+     * @param separator  text parts separator
+     * @param <E>        enumeration type
+     * @return list of enumeration constants
+     */
+    @NotNull
+    public static <E extends Enum<E>> List<E> enumStringToList ( @Nullable final String enumString, @NotNull final Class<E> enumClass,
+                                                                 @NotNull final String separator )
     {
         final List<E> enumerations;
         if ( enumString != null )
         {
-            final StringTokenizer tokenizer = new StringTokenizer ( enumString, ",", false );
+            final StringTokenizer tokenizer = new StringTokenizer ( enumString, separator, false );
             enumerations = new ArrayList<E> ();
             while ( tokenizer.hasMoreTokens () )
             {
@@ -554,8 +994,10 @@ public final class TextUtils
      * @param parts     parts to unite
      * @return united non-null parts
      */
-    public static String unite ( final String separator, final String... parts )
+    @NotNull
+    public static String unite ( @NotNull final String separator, @Nullable final String... parts )
     {
+        final String result;
         if ( parts != null && parts.length > 0 )
         {
             final StringBuilder sb = new StringBuilder ();
@@ -572,23 +1014,119 @@ public final class TextUtils
                     hasPrevious = true;
                 }
             }
-            return sb.toString ();
+            result = sb.toString ();
         }
         else
         {
-            return "";
+            result = "";
         }
+        return result;
     }
 
     /**
-     * Returns whether specified text is empty or not.
+     * Returns specified text length.
      *
-     * @param text text to process
-     * @return true if specified text is empty, false otherwise
+     * @param text text to check
+     * @return specified text length
      */
-    public static boolean isEmpty ( final String text )
+    public static int length ( @Nullable final String text )
     {
-        return text == null || text.trim ().isEmpty ();
+        return text != null ? text.length () : 0;
+    }
+
+    /**
+     * Returns whether or not specified text is {@code null} or empty.
+     *
+     * @param text text to check
+     * @return {@code true} if specified text is {@code null} or empty, {@code false} otherwise
+     */
+    public static boolean isEmpty ( @Nullable final String text )
+    {
+        return text == null || text.isEmpty ();
+    }
+
+    /**
+     * Returns whether or not specified text is {@code null} or empty.
+     *
+     * @param text text to check
+     * @return {@code true} if specified text is not {@code null} or empty, {@code false} otherwise
+     */
+    public static boolean notEmpty ( @Nullable final String text )
+    {
+        return !isEmpty ( text );
+    }
+
+    /**
+     * Returns whether or not specified text is {@code null} or empty excluding linebreaks and whitespaces.
+     *
+     * @param text text to check
+     * @return {@code true} if specified text is {@code null} or empty excluding linebreaks and whitespaces, {@code false} otherwise
+     */
+    public static boolean isBlank ( @Nullable final String text )
+    {
+        return text == null || text.isEmpty () || removeLineBreaks ( text ).trim ().isEmpty ();
+    }
+
+    /**
+     * Returns whether or not specified text is {@code null} or empty excluding linebreaks and whitespaces.
+     *
+     * @param text text to check
+     * @return {@code true} if specified text is not {@code null} or empty excluding linebreaks and whitespaces, {@code false} otherwise
+     */
+    public static boolean notBlank ( @Nullable final String text )
+    {
+        return !isBlank ( text );
+    }
+
+    /**
+     * Checks that the specified text is not {@code null} or empty and throws a {@link NullPointerException} if it is.
+     *
+     * @param text text to check for being {@code null} or empty
+     * @return text if not {@code null} or empty
+     * @throws NullPointerException if text is {@code null} or empty
+     */
+    @NotNull
+    public static String requireNonEmpty ( @Nullable final String text )
+    {
+        return requireNonEmpty ( text, "Text must not be empty" );
+    }
+
+    /**
+     * Checks that the specified text is not {@code null} or empty and throws a {@link NullPointerException} if it is.
+     *
+     * @param text    text to check for being {@code null} or empty
+     * @param message detailed message used in {@link NullPointerException}
+     * @return text if not {@code null} or empty
+     * @throws NullPointerException if text is {@code null} or empty
+     */
+    @NotNull
+    public static String requireNonEmpty ( @Nullable final String text, @NotNull final String message )
+    {
+        if ( isEmpty ( text ) )
+        {
+            throw new NullPointerException (
+                    LM.contains ( message ) ? LM.get ( message ) : message
+            );
+        }
+        return text;
+    }
+
+    /**
+     * Checks that the specified text is not {@code null} or empty and throws a {@link RuntimeException} if it is.
+     *
+     * @param text              text to check for being {@code null} or empty
+     * @param exceptionSupplier {@link Supplier} for a customized {@link RuntimeException}
+     * @return text if not {@code null} or empty
+     * @throws RuntimeException if text is {@code null} or empty
+     */
+    @NotNull
+    public static String requireNonEmpty ( @Nullable final String text, @NotNull final Supplier<RuntimeException> exceptionSupplier )
+    {
+        if ( isEmpty ( text ) )
+        {
+            throw exceptionSupplier.get ();
+        }
+        return text;
     }
 
     /**
@@ -598,14 +1136,25 @@ public final class TextUtils
      * @param length    string length
      * @return new string filled with specified amount of same characters
      */
-    public static String createString ( final String character, int length )
+    @NotNull
+    public static String createString ( @NotNull final String character, final int length )
     {
-        final StringBuilder sb = new StringBuilder ( length );
-        while ( length-- > 0 )
-        {
-            sb.append ( character );
-        }
-        return sb.toString ();
+        return createString ( character.charAt ( 0 ), length );
+    }
+
+    /**
+     * Creates new string filled with specified amount of same characters.
+     *
+     * @param character character to fill string with
+     * @param length    string length
+     * @return new string filled with specified amount of same characters
+     */
+    @NotNull
+    public static String createString ( final char character, final int length )
+    {
+        final char[] characters = new char[ length ];
+        Arrays.fill ( characters, character );
+        return new String ( characters );
     }
 
     /**
@@ -614,10 +1163,12 @@ public final class TextUtils
      * @param text       text to replace string occurrences in
      * @param ignoreCase whether should ignore case while searching for occurrences or not
      * @param str        text to replace
-     * @param provider   text replacement
+     * @param replacer   text replacement {@link Function}
      * @return text with replaced occurrences of the specified str
      */
-    public static String replaceAll ( final String text, final boolean ignoreCase, final String str, final TextProvider<String> provider )
+    @NotNull
+    public static String replaceAll ( @NotNull final String text, final boolean ignoreCase, @NotNull final String str,
+                                      @NotNull final Function<String, String> replacer )
     {
         final String exp = ignoreCase ? str.toLowerCase ( Locale.ROOT ) : str;
         int match = 0;
@@ -642,8 +1193,8 @@ public final class TextUtils
             {
                 final int start = i - exp.length () + 1;
                 final String part = text.substring ( start, start + exp.length () );
-                builder.append ( text.substring ( prev, start ) );
-                builder.append ( provider.getText ( part ) );
+                builder.append ( text, prev, start );
+                builder.append ( replacer.apply ( part ) );
                 prev = start + exp.length ();
                 match = 0;
             }
@@ -660,6 +1211,7 @@ public final class TextUtils
      *
      * @return ID
      */
+    @NotNull
     public static String generateId ()
     {
         return generateId ( null, null );
@@ -671,7 +1223,8 @@ public final class TextUtils
      * @param prefix id prefix
      * @return ID
      */
-    public static String generateId ( final String prefix )
+    @NotNull
+    public static String generateId ( @Nullable final String prefix )
     {
         return generateId ( prefix, null );
     }
@@ -683,10 +1236,15 @@ public final class TextUtils
      * @param suffix id suffix
      * @return ID
      */
-    public static String generateId ( final String prefix, final String suffix )
+    @NotNull
+    public static String generateId ( @Nullable final String prefix, @Nullable final String suffix )
     {
-        return ( prefix == null ? defaultIdPrefix : prefix ) + "-" + generateId ( idPartLength ) + "-" + generateId ( idPartLength ) + "-" +
-                generateId ( idPartLength ) + "-" + generateId ( idPartLength ) + "-" + ( suffix == null ? defaultIdSuffix : suffix );
+        return ( prefix == null ? defaultIdPrefix : prefix ) + "-" +
+                generateId ( idPartLength ) + "-" +
+                generateId ( idPartLength ) + "-" +
+                generateId ( idPartLength ) + "-" +
+                generateId ( idPartLength ) + "-" +
+                ( suffix == null ? defaultIdSuffix : suffix );
     }
 
     /**
@@ -695,6 +1253,7 @@ public final class TextUtils
      * @param length part length in symbols
      * @return ID part
      */
+    @NotNull
     public static String generateId ( final int length )
     {
         final StringBuilder stringBuilder = new StringBuilder ( length );
@@ -735,7 +1294,8 @@ public final class TextUtils
      * @param settings settings to combine
      * @return key for the specified shape settings
      */
-    public static String getSettingsKey ( final Object... settings )
+    @NotNull
+    public static String getSettingsKey ( @NotNull final Object... settings )
     {
         final StringBuilder stringBuilder = new StringBuilder ();
         for ( final Object object : settings )
@@ -770,7 +1330,7 @@ public final class TextUtils
             }
             else
             {
-                stringBuilder.append ( getSettingKey ( object ) );
+                stringBuilder.append ( getSettingKey ( null ) );
             }
         }
         return stringBuilder.toString ();
@@ -782,146 +1342,35 @@ public final class TextUtils
      * @param setting setting to be converted
      * @return setting string representation
      */
-    private static String getSettingKey ( final Object setting )
+    @NotNull
+    private static String getSettingKey ( @Nullable final Object setting )
     {
+        final String key;
         if ( setting == null )
         {
-            return "null";
+            key = "null";
         }
         else if ( setting instanceof Insets )
         {
-            return InsetsConverter.insetsToString ( ( Insets ) setting );
+            key = InsetsConverter.insetsToString ( ( Insets ) setting );
         }
         else if ( setting instanceof Rectangle )
         {
-            return RectangleConverter.rectangleToString ( ( Rectangle ) setting );
+            key = RectangleConverter.rectangleToString ( ( Rectangle ) setting );
         }
         else if ( setting instanceof Point )
         {
-            return PointConverter.pointToString ( ( Point ) setting );
+            key = PointConverter.pointToString ( ( Point ) setting );
         }
         else if ( setting instanceof Color )
         {
-            return ColorConverter.colorToString ( ( Color ) setting );
+            key = ColorConverter.colorToString ( ( Color ) setting );
         }
         else
         {
-            return setting.toString ();
+            final String toString = setting.toString ();
+            key = toString != null ? toString : "null";
         }
-    }
-
-    /**
-     * Either returns delay retrieved from string or throws an exception if it cannot be parsed.
-     * Full string format is "Xd Yh Zm s ms" but you can skip any part of it. Yet you must specify atleast one value.
-     * For example string "2h 5s" will be a valid delay declaration and will be converted into (2*60*60*1000+5*1000) long value.
-     *
-     * @param delay string delay
-     * @return delay retrieved from string
-     * @throws com.alee.utils.text.DelayFormatException when delay cannot be parsed
-     */
-    public static long parseDelay ( final String delay ) throws DelayFormatException
-    {
-        try
-        {
-            long summ = 0;
-            final String[] parts = delay.split ( " " );
-            for ( final String part : parts )
-            {
-                if ( !TextUtils.isEmpty ( part ) )
-                {
-                    for ( int i = 0; i < part.length (); i++ )
-                    {
-                        if ( !Character.isDigit ( part.charAt ( i ) ) )
-                        {
-                            final int time = Integer.parseInt ( part.substring ( 0, i ) );
-                            final PartType type = PartType.valueOf ( part.substring ( i ) );
-                            switch ( type )
-                            {
-                                case w:
-                                    summ += time * msInWeek;
-                                    break;
-
-                                case d:
-                                    summ += time * msInDay;
-                                    break;
-
-                                case h:
-                                    summ += time * msInHour;
-                                    break;
-
-                                case m:
-                                    summ += time * msInMinute;
-                                    break;
-
-                                case s:
-                                    summ += time * msInSecond;
-                                    break;
-
-                                case ms:
-                                    summ += time;
-                                    break;
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-            return summ;
-        }
-        catch ( final Throwable e )
-        {
-            throw new DelayFormatException ( e );
-        }
-    }
-
-    /**
-     * Returns delay string representation.
-     * Delay cannot be less or equal to zero.
-     *
-     * @param delay delay to process
-     * @return delay string representation
-     */
-    public static String toStringDelay ( final long delay )
-    {
-        if ( delay <= 0 )
-        {
-            throw new IllegalArgumentException ( "Invalid delay: " + delay );
-        }
-
-        long time = delay;
-
-        final long w = time / msInWeek;
-        time = time - w * msInWeek;
-
-        final long d = time / msInDay;
-        time = time - d * msInDay;
-
-        final long h = time / msInHour;
-        time = time - h * msInHour;
-
-        final long m = time / msInMinute;
-        time = time - m * msInMinute;
-
-        final long s = time / msInSecond;
-        time = time - s * msInSecond;
-
-        final long ms = time;
-
-        final String stringDelay = ( w > 0 ? w + "w " : "" ) +
-                ( d > 0 ? d + "d " : "" ) +
-                ( h > 0 ? h + "h " : "" ) +
-                ( m > 0 ? m + "m " : "" ) +
-                ( s > 0 ? s + "s " : "" ) +
-                ( ms > 0 ? ms + "ms " : "" );
-
-        return stringDelay.trim ();
-    }
-
-    /**
-     * Time part type enumeration used to parse string delay.
-     */
-    protected static enum PartType
-    {
-        w, d, h, m, s, ms
+        return key;
     }
 }
