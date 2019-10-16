@@ -184,6 +184,16 @@ public final class StyleId implements Identifiable
     public static final StyleId separatorVertical = StyleId.of ( "vertical" );
 
     /**
+     * {@link com.alee.laf.menu.WebPopupMenu} style identifiers.
+     */
+    public static final StyleId popupmenu = StyleId.of ( "popupmenu" );
+
+    /**
+     * {@link com.alee.laf.menu.WebPopupMenuSeparator} style identifiers.
+     */
+    public static final StyleId popupmenuseparator = StyleId.of ( "popupmenuseparator" );
+
+    /**
      * {@link com.alee.laf.menu.WebMenuBar} style identifiers.
      */
     public static final StyleId menubar = StyleId.of ( "menubar" );
@@ -193,31 +203,26 @@ public final class StyleId implements Identifiable
      * {@link com.alee.laf.menu.WebMenu} style identifiers.
      */
     public static final StyleId menu = StyleId.of ( "menu" );
-
-    /**
-     * {@link com.alee.laf.menu.WebPopupMenu} style identifiers.
-     */
-    public static final StyleId popupmenu = StyleId.of ( "popupmenu" );
+    public static final StyleId menuStyled = StyleId.of ( "styled" );
+    public static final ChildStyleId menuPopupMenu = ChildStyleId.of ( "popupmenu" );
 
     /**
      * {@link com.alee.laf.menu.WebMenuItem} style identifiers.
      */
     public static final StyleId menuitem = StyleId.of ( "menuitem" );
+    public static final StyleId menuitemStyled = StyleId.of ( "styled" );
 
     /**
      * {@link com.alee.laf.menu.WebCheckBoxMenuItem} style identifiers.
      */
     public static final StyleId checkboxmenuitem = StyleId.of ( "checkboxmenuitem" );
+    public static final StyleId checkboxmenuitemStyled = StyleId.of ( "styled" );
 
     /**
      * {@link com.alee.laf.menu.WebRadioButtonMenuItem} style identifiers.
      */
     public static final StyleId radiobuttonmenuitem = StyleId.of ( "radiobuttonmenuitem" );
-
-    /**
-     * {@link com.alee.laf.menu.WebPopupMenuSeparator} style identifiers.
-     */
-    public static final StyleId popupmenuseparator = StyleId.of ( "popupmenuseparator" );
+    public static final StyleId radiobuttonmenuitemStyled = StyleId.of ( "styled" );
 
     /**
      * {@link com.alee.laf.panel.WebPanel} style identifiers.
@@ -365,7 +370,9 @@ public final class StyleId implements Identifiable
     public static final StyleId scrollpaneUndecoratedButtonless = StyleId.of ( "undecorated-buttonless" );
     public static final StyleId scrollpaneTransparentButtonless = StyleId.of ( "transparent-buttonless" );
     public static final StyleId scrollpaneHovering = StyleId.of ( "hovering" );
+    public static final StyleId scrollpaneHoveringExtending = StyleId.of ( "hovering-extending" );
     public static final StyleId scrollpaneTransparentHovering = StyleId.of ( "transparent-hovering" );
+    public static final StyleId scrollpaneTransparentHoveringExtending = StyleId.of ( "transparent-hovering-extending" );
     public static final StyleId scrollpanePopup = StyleId.of ( "popup" );
     public static final ChildStyleId scrollpaneViewport = ChildStyleId.of ( "viewport" );
     public static final ChildStyleId scrollpaneBar = ChildStyleId.of ( "scrollbar" );

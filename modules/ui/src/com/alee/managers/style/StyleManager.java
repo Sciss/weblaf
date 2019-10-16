@@ -294,6 +294,7 @@ public final class StyleManager
         XmlUtils.processAnnotations ( ColorBackground.class );
         XmlUtils.processAnnotations ( GradientBackground.class );
         XmlUtils.processAnnotations ( PresetTextureBackground.class );
+        XmlUtils.processAnnotations ( ImageTextureBackground.class );
         XmlUtils.processAnnotations ( AlphaLayerBackground.class );
         XmlUtils.processAnnotations ( MovingHighlightBackground.class );
         XmlUtils.processAnnotations ( BreadcrumbProgressBackground.class );
@@ -321,6 +322,7 @@ public final class StyleManager
         XmlUtils.processAnnotations ( LocaleTextContent.class );
         XmlUtils.processAnnotations ( ToolTipText.class );
         XmlUtils.processAnnotations ( StyledToolTipText.class );
+        XmlUtils.processAnnotations ( TabText.class );
         XmlUtils.processAnnotations ( ButtonLayout.class );
         XmlUtils.processAnnotations ( ButtonIcon.class );
         XmlUtils.processAnnotations ( ButtonText.class );
